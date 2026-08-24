@@ -1,20 +1,11 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import {
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  Cpu,
-  Clock,
-  AlertTriangle,
-  Layers,
-  Filter,
-  Info,
-  Server,
-  Play,
+  ZoomIn, ZoomOut, Maximize2, Minimize2,
+  Cpu, AlertTriangle, Info, Search, RotateCcw, Grid,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import type { BusinessProcess, ProcessNode, ProcessEdge } from '@/types/process'
+import { Input } from '@/components/ui/input'
+import type { BusinessProcess, ProcessNode } from '@/types/process'
 
 interface ProcessVisualizerProps {
   process: BusinessProcess
@@ -22,521 +13,457 @@ interface ProcessVisualizerProps {
   selectedNodeId?: string
 }
 
+const GRID_MINOR = 10
+const GRID_MAJOR = 100
+const MIN_ZOOM = 0.15
+const MAX_ZOOM = 3.0
+
+function snap(v: number) { return Math.round(v / GRID_MINOR) * GRID_MINOR }
+
+function edgePath(
+  src: ProcessNode,
+  tgt: ProcessNode,
+  pts: { x: number; y: number }[],
+): { d: string; lx: number; ly: number } {
+  if (pts && pts.length >= 2) {
+    const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
+    const mid = pts[Math.floor(pts.length / 2)]
+    return { d, lx: mid.x, ly: mid.y - 8 }
+  }
+
+  const sw = src.geometry.width  || 160
+  const sh = src.geometry.height || 70
+  const tw = tgt.geometry.width  || 160
+  const th = tgt.geometry.height || 70
+
+  let x1 = src.geometry.x + sw
+  let y1 = src.geometry.y + sh / 2
+  let x2 = tgt.geometry.x
+  let y2 = tgt.geometry.y + th / 2
+
+  const vertBelow = tgt.geometry.y > src.geometry.y + sh + 5
+  const hClose    = Math.abs(tgt.geometry.x - src.geometry.x) < sw
+
+  if (vertBelow && hClose) {
+    x1 = src.geometry.x + sw / 2
+    y1 = src.geometry.y + sh
+    x2 = tgt.geometry.x + tw / 2
+    y2 = tgt.geometry.y
+    return {
+      d: `M${x1},${y1} L${x1},${y2} L${x2},${y2}`,
+      lx: x1 + 6,
+      ly: (y1 + y2) / 2,
+    }
+  }
+
+  const midX = snap((x1 + x2) / 2)
+  const d = Math.abs(y1 - y2) < 4
+    ? `M${x1},${y1} L${x2},${y2}`
+    : `M${x1},${y1} L${midX},${y1} L${midX},${y2} L${x2},${y2}`
+
+  return { d, lx: midX, ly: (y1 + y2) / 2 - 10 }
+}
+
+function wrapText(text: string, maxChars: number): string[] {
+  if (!text) return []
+  const words = text.split(' ')
+  const lines: string[] = []
+  let cur = ''
+  for (const w of words) {
+    if ((cur + ' ' + w).trim().length <= maxChars) {
+      cur = (cur + ' ' + w).trim()
+    } else {
+      if (cur) lines.push(cur)
+      cur = w.length > maxChars ? w.slice(0, maxChars - 1) + '\u2026' : w
+    }
+  }
+  if (cur) lines.push(cur)
+  return lines.slice(0, 3)
+}
+
 export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   process,
   onSelectNode,
   selectedNodeId,
 }) => {
-  const [zoom, setZoom] = useState(1.0)
-  const [activeFilter, setActiveFilter] = useState<'all' | 'rpa' | 'bottlenecks' | 'manual'>('all')
+  const [zoom, setZoom]                 = useState(0.85)
+  const [showGrid, setShowGrid]         = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [activeFilter, setActiveFilter] = useState<'all' | 'rpa' | 'bottlenecks'>('all')
+  const [searchQuery, setSearchQuery]   = useState('')
+  const [panPos, setPanPos]             = useState({ x: 24, y: 24 })
+  const [isPanning, setIsPanning]       = useState(false)
+  const panRef   = useRef({ ox: 0, oy: 0, px: 0, py: 0 })
+  const wrapRef  = useRef<HTMLDivElement>(null)
 
-  // Calculate canvas bounding box
   const bounds = useMemo(() => {
-    let maxX = 1300
-    let maxY = 700
-    for (const lane of process.lanes) {
-      maxX = Math.max(maxX, lane.geometry.x + lane.geometry.width + 80)
-      maxY = Math.max(maxY, lane.geometry.y + lane.geometry.height + 80)
+    let mx = 1600, my = 900
+    for (const l of process.lanes) {
+      mx = Math.max(mx, l.geometry.x + l.geometry.width  + 80)
+      my = Math.max(my, l.geometry.y + l.geometry.height + 80)
     }
-    for (const node of process.nodes) {
-      maxX = Math.max(maxX, node.geometry.x + node.geometry.width + 120)
-      maxY = Math.max(maxY, node.geometry.y + node.geometry.height + 120)
+    for (const n of process.nodes) {
+      mx = Math.max(mx, n.geometry.x + (n.geometry.width  || 160) + 80)
+      my = Math.max(my, n.geometry.y + (n.geometry.height || 70)  + 80)
     }
-    return { width: Math.max(maxX, 1400), height: Math.max(maxY, 850) }
+    return { w: mx, h: my }
   }, [process])
 
-  const filteredNodes = useMemo(() => {
-    if (activeFilter === 'all') return process.nodes
-    if (activeFilter === 'rpa') return process.nodes.filter((n) => n.category === 'rpa_bot')
-    if (activeFilter === 'manual') return process.nodes.filter((n) => n.category === 'manual')
-    if (activeFilter === 'bottlenecks') return process.nodes.filter((n) => (n.slaMinutes || 0) >= 120)
-    return process.nodes
-  }, [process.nodes, activeFilter])
-
-  const filteredNodeIds = useMemo(() => new Set(filteredNodes.map((n) => n.id)), [filteredNodes])
-
-  // Helper to calculate exact orthogonal arrow routes
-  const calculateEdgePath = (edge: ProcessEdge) => {
-    const src = process.nodes.find((n) => n.id === edge.sourceId)
-    const tgt = process.nodes.find((n) => n.id === edge.targetId)
-    if (!src || !tgt) return { path: '', labelX: 0, labelY: 0 }
-
-    if (edge.points && edge.points.length >= 2) {
-      const path = edge.points.reduce((acc, p, idx) => {
-        return `${acc} ${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
-      }, '')
-      const midIdx = Math.floor(edge.points.length / 2)
-      return {
-        path,
-        labelX: edge.points[midIdx].x,
-        labelY: edge.points[midIdx].y - 8,
-      }
+  const visibleIds = useMemo(() => {
+    let list = process.nodes
+    if (activeFilter === 'rpa')         list = list.filter(n => n.category === 'rpa_bot')
+    if (activeFilter === 'bottlenecks') list = list.filter(n => (n.slaMinutes || 0) >= 120)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      list = list.filter(n =>
+        n.name.toLowerCase().includes(q) ||
+        (n.code   && n.code .toLowerCase().includes(q)) ||
+        (n.role   && n.role .toLowerCase().includes(q)) ||
+        (n.system && n.system.toLowerCase().includes(q)),
+      )
     }
+    return new Set(list.map(n => n.id))
+  }, [process.nodes, activeFilter, searchQuery])
 
-    const srcW = src.geometry.width || 120
-    const srcH = src.geometry.height || 60
-    const tgtW = tgt.geometry.width || 120
-    const tgtH = tgt.geometry.height || 60
+  const fitToScreen = useCallback(() => {
+    if (!wrapRef.current) return
+    const { width, height } = wrapRef.current.getBoundingClientRect()
+    const s = Math.min(
+      Math.max((width  - 48) / bounds.w, MIN_ZOOM),
+      Math.max((height - 48) / bounds.h, MIN_ZOOM),
+      1.0,
+    )
+    setZoom(+s.toFixed(2))
+    setPanPos({ x: 24, y: 24 })
+  }, [bounds])
 
-    // Decide ports based on relative positions
-    let srcX = src.geometry.x + srcW
-    let srcY = src.geometry.y + srcH / 2
-    let tgtX = tgt.geometry.x
-    let tgtY = tgt.geometry.y + tgtH / 2
+  const onMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('.nb')) return
+    e.preventDefault()
+    setIsPanning(true)
+    panRef.current = { ox: e.clientX, oy: e.clientY, px: panPos.x, py: panPos.y }
+  }
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!isPanning) return
+    setPanPos({
+      x: panRef.current.px + e.clientX - panRef.current.ox,
+      y: panRef.current.py + e.clientY - panRef.current.oy,
+    })
+  }
+  const onMouseUp = () => setIsPanning(false)
 
-    // If target is directly below source (e.g. Reject branch or downward gateway flow)
-    const isTargetBelow = tgt.geometry.y > src.geometry.y + srcH - 10 && Math.abs(tgt.geometry.x - src.geometry.x) < 80
-    if (isTargetBelow) {
-      srcX = src.geometry.x + srcW / 2
-      srcY = src.geometry.y + srcH
-      tgtX = tgt.geometry.x + tgtW / 2
-      tgtY = tgt.geometry.y
-      return {
-        path: `M ${srcX} ${srcY} L ${srcX} ${tgtY}`,
-        labelX: srcX + 10,
-        labelY: (srcY + tgtY) / 2,
-      }
-    }
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? -0.1 : 0.1
+    setZoom(z => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, +(z + delta).toFixed(2))))
+  }
 
-    // Horizontal / Orthogonal routing
-    let path = ''
-    const midX = (srcX + tgtX) / 2
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsFullscreen(false) }
+    window.addEventListener('keydown', fn)
+    return () => window.removeEventListener('keydown', fn)
+  }, [])
 
-    if (Math.abs(srcY - tgtY) < 6) {
-      // Straight horizontal line
-      path = `M ${srcX} ${srcY} L ${tgtX} ${tgtY}`
-    } else {
-      // Step orthogonal line
-      path = `M ${srcX} ${srcY} L ${midX} ${srcY} L ${midX} ${tgtY} L ${tgtX} ${tgtY}`
-    }
-
-    return {
-      path,
-      labelX: midX,
-      labelY: (srcY + tgtY) / 2 - 10,
-    }
+  const patternOffset = {
+    x: ((panPos.x % (GRID_MAJOR * zoom)) + GRID_MAJOR * zoom) % (GRID_MAJOR * zoom),
+    y: ((panPos.y % (GRID_MAJOR * zoom)) + GRID_MAJOR * zoom) % (GRID_MAJOR * zoom),
   }
 
   return (
-    <div className="flex flex-col h-full bg-card rounded-xl border shadow-sm overflow-hidden">
-      {/* Visualizer Toolbar */}
-      <div className="p-3 border-b bg-muted/40 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-emerald-600" />
-          <span className="text-xs font-bold text-foreground uppercase tracking-wider">
-            Интерактивная карта BPMN (Draw.io → PIX)
+    <div className={`flex flex-col bg-white dark:bg-[#1e1e1e] rounded-xl border shadow-sm overflow-hidden transition-all duration-200 ${
+      isFullscreen ? 'fixed inset-0 z-50 rounded-none border-none' : 'h-full min-h-[620px]'
+    }`}>
+      {/* Toolbar */}
+      <div className="px-3 py-2 border-b bg-white dark:bg-slate-900 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide">BPMN Карта</span>
+          <span className="text-[10px] text-muted-foreground bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+            {process.nodes.length} эл. · {process.lanes.length} дорожек
           </span>
-          <Badge variant="outline" className="text-[11px]">
-            Масштаб: {Math.round(zoom * 100)}%
-          </Badge>
+          <div className="h-4 w-px bg-slate-200 mx-1" />
+          {(['all', 'rpa', 'bottlenecks'] as const).map(f => (
+            <button key={f} onClick={() => setActiveFilter(f)}
+              className={`flex items-center gap-1 px-2.5 py-1 text-xs rounded transition-colors ${
+                activeFilter === f
+                  ? f === 'rpa' ? 'bg-emerald-600 text-white'
+                  : f === 'bottlenecks' ? 'bg-amber-500 text-white'
+                  : 'bg-slate-700 text-white'
+                  : 'border hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground'
+              }`}>
+              {f === 'all' && `Все (${process.nodes.length})`}
+              {f === 'rpa' && <><Cpu className="w-3 h-3 mr-0.5" />RPA ({process.nodes.filter(n=>n.category==='rpa_bot').length})</>}
+              {f === 'bottlenecks' && <><AlertTriangle className="w-3 h-3 mr-0.5" />SLA</>}
+            </button>
+          ))}
         </div>
 
-        {/* Filter buttons */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs text-muted-foreground mr-1 flex items-center gap-1">
-            <Filter className="w-3 h-3" /> Фильтр:
-          </span>
-          <button
-            onClick={() => setActiveFilter('all')}
-            className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
-              activeFilter === 'all'
-                ? 'bg-primary text-primary-foreground font-medium'
-                : 'bg-background hover:bg-muted text-muted-foreground border'
-            }`}
-          >
-            Все элементы ({process.nodes.length})
-          </button>
-          <button
-            onClick={() => setActiveFilter('rpa')}
-            className={`flex items-center gap-1 px-2.5 py-1 text-xs rounded-md transition-colors ${
-              activeFilter === 'rpa'
-                ? 'bg-emerald-600 text-white font-medium'
-                : 'bg-background hover:bg-muted text-muted-foreground border'
-            }`}
-          >
-            <Cpu className="w-3 h-3 text-emerald-500" />
-            PIX RPA ({process.nodes.filter((n) => n.category === 'rpa_bot').length})
-          </button>
-          <button
-            onClick={() => setActiveFilter('bottlenecks')}
-            className={`flex items-center gap-1 px-2.5 py-1 text-xs rounded-md transition-colors ${
-              activeFilter === 'bottlenecks'
-                ? 'bg-amber-600 text-white font-medium'
-                : 'bg-background hover:bg-muted text-muted-foreground border'
-            }`}
-          >
-            <AlertTriangle className="w-3 h-3 text-amber-500" />
-            Узкие места SLA
-          </button>
-
-          {/* Zoom controls */}
-          <div className="flex items-center gap-1 ml-2 border-l pl-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => setZoom((z) => Math.max(0.4, z - 0.15))}
-              title="Уменьшить"
-            >
+        <div className="flex items-center gap-1.5">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+            <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Поиск..." className="pl-6 h-7 text-xs w-32" />
+          </div>
+          <div className="flex items-center gap-1 border-l pl-2">
+            <Button variant={showGrid ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7"
+              onClick={() => setShowGrid(v => !v)} title="Сетка 10px">
+              <Grid className="w-3.5 h-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7"
+              onClick={() => setZoom(z => Math.max(MIN_ZOOM, +(z-0.15).toFixed(2)))}>
               <ZoomOut className="w-3.5 h-3.5" />
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => setZoom(1.0)}
-              title="Сбросить масштаб 100%"
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => setZoom((z) => Math.min(1.8, z + 0.15))}
-              title="Увеличить"
-            >
+            <span className="text-[11px] w-9 text-center font-mono text-muted-foreground">{Math.round(zoom*100)}%</span>
+            <Button variant="ghost" size="icon" className="h-7 w-7"
+              onClick={() => setZoom(z => Math.min(MAX_ZOOM, +(z+0.15).toFixed(2)))}>
               <ZoomIn className="w-3.5 h-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={fitToScreen} title="Вписать">
+              <RotateCcw className="w-3.5 h-3.5" />
+            </Button>
+            <Button variant={isFullscreen ? 'default' : 'ghost'} size="sm" className="h-7 gap-1 text-xs px-2"
+              onClick={() => setIsFullscreen(v => !v)}>
+              {isFullscreen ? <><Minimize2 className="w-3.5 h-3.5" />Свернуть</> : <><Maximize2 className="w-3.5 h-3.5" />На весь экран</>}
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Canvas Area */}
-      <div className="relative flex-1 overflow-auto bg-slate-100/60 dark:bg-slate-950 p-6 min-h-[580px]">
-        <div
-          style={{
-            transform: `scale(${zoom})`,
-            transformOrigin: 'top left',
-            width: `${bounds.width}px`,
-            height: `${bounds.height}px`,
-            position: 'relative',
-          }}
-          className="transition-transform duration-100 ease-out"
-        >
-          {/* 1. Render Swimlanes (Lanes / Departments) */}
-          {process.lanes.map((lane, idx) => (
-            <div
-              key={lane.id}
-              style={{
-                position: 'absolute',
-                left: `${lane.geometry.x}px`,
-                top: `${lane.geometry.y}px`,
-                width: `${lane.geometry.width}px`,
-                height: `${lane.geometry.height}px`,
-              }}
-              className={`border-b-2 border-slate-300 dark:border-slate-800 ${
-                idx % 2 === 0
-                  ? 'bg-white/90 dark:bg-slate-900/60'
-                  : 'bg-slate-50/90 dark:bg-slate-900/30'
-              } overflow-hidden shadow-2xs`}
-            >
-              {/* Lane Header Banner */}
-              <div className="h-full w-10 bg-slate-200/80 dark:bg-slate-800/80 border-r border-slate-300 dark:border-slate-700 flex items-center justify-center float-left select-none">
-                <span
-                  style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-                  className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider px-1 text-center"
-                >
+      {/* SVG Canvas */}
+      <div
+        ref={wrapRef}
+        className={`relative flex-1 overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+        onWheel={onWheel}
+      >
+        <svg width="100%" height="100%" style={{ display: 'block' }}>
+          <defs>
+            {/* Draw.io style grid: minor 10px lines + major 100px lines */}
+            <pattern id="g-minor" width={GRID_MINOR * zoom} height={GRID_MINOR * zoom} patternUnits="userSpaceOnUse"
+              x={patternOffset.x} y={patternOffset.y}>
+              <path d={`M ${GRID_MINOR * zoom} 0 L 0 0 0 ${GRID_MINOR * zoom}`}
+                fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="0.5" />
+            </pattern>
+            <pattern id="g-major" width={GRID_MAJOR * zoom} height={GRID_MAJOR * zoom} patternUnits="userSpaceOnUse"
+              x={patternOffset.x} y={patternOffset.y}>
+              <rect width={GRID_MAJOR * zoom} height={GRID_MAJOR * zoom} fill="url(#g-minor)" />
+              <path d={`M ${GRID_MAJOR * zoom} 0 L 0 0 0 ${GRID_MAJOR * zoom}`}
+                fill="none" stroke="rgba(0,0,0,0.14)" strokeWidth="1" />
+            </pattern>
+            <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0,8 3,0 6" fill="#64748b" />
+            </marker>
+            <marker id="arr-hi" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0,8 3,0 6" fill="#2563eb" />
+            </marker>
+          </defs>
+
+          {/* White canvas (no tinted background) */}
+          <rect width="100%" height="100%" fill="white" />
+
+          {/* Grid overlay */}
+          {showGrid && <rect width="100%" height="100%" fill="url(#g-major)" />}
+
+          {/* All diagram content in one transform group */}
+          <g transform={`translate(${panPos.x},${panPos.y}) scale(${zoom})`}>
+
+            {/* 1. Swimlane backgrounds */}
+            {process.lanes.map((lane, idx) => (
+              <g key={lane.id}>
+                <rect x={lane.geometry.x} y={lane.geometry.y}
+                  width={lane.geometry.width} height={lane.geometry.height}
+                  fill={idx % 2 === 0 ? '#ffffff' : '#f8fafc'}
+                  stroke="#94a3b8" strokeWidth="1" />
+                <rect x={lane.geometry.x} y={lane.geometry.y}
+                  width={40} height={lane.geometry.height}
+                  fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1" />
+                <text
+                  x={lane.geometry.x + 20}
+                  y={lane.geometry.y + lane.geometry.height / 2}
+                  textAnchor="middle" dominantBaseline="central"
+                  transform={`rotate(-90,${lane.geometry.x + 20},${lane.geometry.y + lane.geometry.height / 2})`}
+                  fontSize="11" fontWeight="700" fill="#334155"
+                  style={{ userSelect: 'none' }}>
                   {lane.name}
-                </span>
-              </div>
-            </div>
-          ))}
+                </text>
+              </g>
+            ))}
 
-          {/* 2. Render SVG Arrows & Transitions */}
-          <svg
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ width: `${bounds.width}px`, height: `${bounds.height}px` }}
-          >
-            <defs>
-              <marker
-                id="arrowhead-norm"
-                markerWidth="8"
-                markerHeight="6"
-                refX="7"
-                refY="3"
-                orient="auto"
-              >
-                <polygon points="0 0, 8 3, 0 6" fill="#64748b" />
-              </marker>
-              <marker
-                id="arrowhead-active"
-                markerWidth="8"
-                markerHeight="6"
-                refX="7"
-                refY="3"
-                orient="auto"
-              >
-                <polygon points="0 0, 8 3, 0 6" fill="#059669" />
-              </marker>
-            </defs>
-
-            {process.edges.map((edge) => {
-              const { path, labelX, labelY } = calculateEdgePath(edge)
-              if (!path) return null
-
-              const isEdgeHighlighted =
-                selectedNodeId &&
-                (edge.sourceId === selectedNodeId || edge.targetId === selectedNodeId)
-
+            {/* 2. Edges (below nodes) */}
+            {process.edges.map(edge => {
+              const src = process.nodes.find(n => n.id === edge.sourceId)
+              const tgt = process.nodes.find(n => n.id === edge.targetId)
+              if (!src || !tgt) return null
+              const { d, lx, ly } = edgePath(src, tgt, edge.points || [])
+              const hi = selectedNodeId && (edge.sourceId === selectedNodeId || edge.targetId === selectedNodeId)
               return (
                 <g key={edge.id}>
-                  <path
-                    d={path}
-                    fill="none"
-                    stroke={isEdgeHighlighted ? '#059669' : '#64748b'}
-                    strokeWidth={isEdgeHighlighted ? 2.5 : 1.5}
-                    markerEnd={isEdgeHighlighted ? 'url(#arrowhead-active)' : 'url(#arrowhead-norm)'}
-                    className="transition-all duration-200"
-                  />
+                  <path d={d} fill="none"
+                    stroke={hi ? '#2563eb' : '#64748b'}
+                    strokeWidth={hi ? 2.5 : 1.5}
+                    strokeLinejoin="round"
+                    markerEnd={hi ? 'url(#arr-hi)' : 'url(#arr)'} />
                   {edge.name && (
-                    <g transform={`translate(${labelX}, ${labelY})`}>
-                      <rect
-                        x="-40"
-                        y="-8"
-                        width="80"
-                        height="16"
-                        rx="4"
-                        fill="white"
-                        stroke="#cbd5e1"
-                        strokeWidth="1"
-                        className="dark:fill-slate-900 dark:stroke-slate-700"
-                      />
-                      <text
-                        x="0"
-                        y="3"
-                        textAnchor="middle"
-                        className="text-[9px] font-semibold fill-slate-700 dark:fill-slate-300 select-none"
-                      >
+                    <>
+                      <rect x={lx-38} y={ly-9} width={76} height={16} rx={3}
+                        fill="white" stroke="#cbd5e1" strokeWidth="0.8" />
+                      <text x={lx} y={ly+4} textAnchor="middle"
+                        fontSize="9" fill="#475569" fontWeight="600"
+                        style={{ userSelect: 'none' }}>
                         {edge.name}
                       </text>
-                    </g>
+                    </>
                   )}
                 </g>
               )
             })}
-          </svg>
 
-          {/* 3. Render BPMN Nodes */}
-          {process.nodes.map((node) => {
-            const isSelected = selectedNodeId === node.id
-            const isFaded = !filteredNodeIds.has(node.id)
-            const isRpa = node.category === 'rpa_bot'
-            const isBottleneck = (node.slaMinutes || 0) >= 120
-            const isEndReject =
-              node.id.toLowerCase().includes('reject') ||
-              node.name.toLowerCase().includes('отказ')
+            {/* 3. Nodes */}
+            {process.nodes.map(node => {
+              const faded = !visibleIds.has(node.id)
+              const sel   = selectedNodeId === node.id
+              const isRpa = node.category === 'rpa_bot'
+              const isBad = (node.slaMinutes || 0) >= 120
+              const isRej = node.id.toLowerCase().includes('reject') ||
+                            node.name.toLowerCase().includes('отказ') ||
+                            node.name.toLowerCase().includes('rad etildi')
+              const { x, y } = node.geometry
+              const w = node.geometry.width  || 160
+              const h = node.geometry.height || 70
 
-            // Start Event Node (Green Circle)
-            if (node.type === 'startEvent') {
+              if (node.type === 'startEvent') {
+                return (
+                  <g key={node.id} opacity={faded ? 0.2 : 1}
+                    onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
+                    {sel && <circle cx={x+24} cy={y+24} r={29} fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="5 3" />}
+                    <circle cx={x+24} cy={y+24} r={24} fill="#10b981" stroke={sel?'#2563eb':'#059669'} strokeWidth={sel?3:2} />
+                    <polygon points={`${x+18},${y+16} ${x+34},${y+24} ${x+18},${y+32}`} fill="white" />
+                    <text x={x+24} y={y+56} textAnchor="middle" fontSize="10" fontWeight="700"
+                      fill="#0f172a" style={{ userSelect: 'none' }}>
+                      {node.name.length > 22 ? node.name.slice(0,21)+'…' : node.name}
+                    </text>
+                  </g>
+                )
+              }
+
+              if (node.type === 'endEvent') {
+                const fc = isRej ? '#ef4444' : '#10b981'
+                const sc = isRej ? '#b91c1c' : '#047857'
+                return (
+                  <g key={node.id} opacity={faded ? 0.2 : 1}
+                    onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
+                    {sel && <circle cx={x+24} cy={y+24} r={29} fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="5 3" />}
+                    <circle cx={x+24} cy={y+24} r={24} fill={fc} stroke={sel?'#2563eb':sc} strokeWidth={sel?3:4} />
+                    <circle cx={x+24} cy={y+24} r={13} fill="none" stroke="white" strokeWidth="2.5" />
+                    <text x={x+24} y={y+56} textAnchor="middle" fontSize="10" fontWeight="700"
+                      fill={isRej?'#b91c1c':'#047857'} style={{ userSelect: 'none' }}>
+                      {node.name.length > 22 ? node.name.slice(0,21)+'…' : node.name}
+                    </text>
+                  </g>
+                )
+              }
+
+              if (node.type === 'exclusiveGateway' || node.type === 'parallelGateway' || node.type === 'inclusiveGateway') {
+                const cx = x + 23, cy = y + 23
+                return (
+                  <g key={node.id} opacity={faded ? 0.2 : 1}
+                    onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
+                    {sel && <polygon points={`${cx},${cy-29} ${cx+29},${cy} ${cx},${cy+29} ${cx-29},${cy}`}
+                      fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="5 3" />}
+                    <polygon points={`${cx},${cy-23} ${cx+23},${cy} ${cx},${cy+23} ${cx-23},${cy}`}
+                      fill="#fef3c7" stroke={sel?'#2563eb':'#f59e0b'} strokeWidth={sel?3:2} />
+                    <text x={cx} y={cy+6} textAnchor="middle" fontSize="18" fontWeight="900"
+                      fill="#92400e" style={{ userSelect: 'none' }}>
+                      {node.type === 'parallelGateway' ? '+' : '×'}
+                    </text>
+                    {node.name && node.name !== 'Условие' && (
+                      <text x={cx} y={y-8} textAnchor="middle" fontSize="9" fontWeight="700"
+                        fill="#92400e" style={{ userSelect: 'none' }}>
+                        {node.name.length > 28 ? node.name.slice(0,27)+'…' : node.name}
+                      </text>
+                    )}
+                  </g>
+                )
+              }
+
+              // Task card
+              const fc2 = isRpa ? '#f0fdf4' : isBad ? '#fffbeb' : '#ffffff'
+              const sc2 = sel ? '#2563eb' : isRpa ? '#16a34a' : isBad ? '#f59e0b' : '#94a3b8'
+              const sw2 = sel || isRpa ? 2 : 1.5
+              const lines = wrapText(node.name, Math.max(14, Math.floor((w - 18) / 6.5)))
+
               return (
-                <div
-                  key={node.id}
-                  onClick={() => onSelectNode(node)}
-                  style={{
-                    position: 'absolute',
-                    left: `${node.geometry.x}px`,
-                    top: `${node.geometry.y}px`,
-                    width: '48px',
-                    height: '48px',
-                  }}
-                  className={`group cursor-pointer ${isFaded ? 'opacity-30' : 'opacity-100'}`}
-                >
-                  <div
-                    className={`h-12 w-12 rounded-full bg-emerald-500 border-4 border-emerald-200 dark:border-emerald-800 shadow-md flex items-center justify-center text-white hover:scale-110 transition-transform ${
-                      isSelected ? 'ring-4 ring-emerald-500/60 ring-offset-2' : ''
-                    }`}
-                  >
-                    <Play className="w-4 h-4 fill-white ml-0.5" />
-                  </div>
-                  <div className="absolute top-13 left-1/2 -translate-x-1/2 text-center whitespace-nowrap">
-                    <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 bg-white/90 dark:bg-slate-900/90 px-1.5 py-0.5 rounded shadow-2xs border border-slate-200 dark:border-slate-800">
-                      {node.name || 'Поступление заявки'}
-                    </span>
-                  </div>
-                </div>
-              )
-            }
+                <g key={node.id} opacity={faded ? 0.2 : 1}
+                  onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
+                  <rect x={x} y={y} width={w} height={h} rx={7} ry={7}
+                    fill={fc2} stroke={sc2} strokeWidth={sw2} />
+                  {sel && <rect x={x-2} y={y-2} width={w+4} height={h+4} rx={9} ry={9}
+                    fill="none" stroke="#2563eb" strokeWidth="1.5" strokeDasharray="4 2" />}
 
-            // End Event Node (Red or Green Double-border Circle)
-            if (node.type === 'endEvent') {
-              const isSuccess = !isEndReject
-              return (
-                <div
-                  key={node.id}
-                  onClick={() => onSelectNode(node)}
-                  style={{
-                    position: 'absolute',
-                    left: `${node.geometry.x}px`,
-                    top: `${node.geometry.y}px`,
-                    width: '48px',
-                    height: '48px',
-                  }}
-                  className={`group cursor-pointer ${isFaded ? 'opacity-30' : 'opacity-100'}`}
-                >
-                  <div
-                    className={`h-12 w-12 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform ${
-                      isSuccess
-                        ? 'bg-emerald-600 border-4 border-emerald-300 dark:border-emerald-800 text-white'
-                        : 'bg-rose-600 border-4 border-rose-300 dark:border-rose-800 text-white'
-                    } ${isSelected ? 'ring-4 ring-rose-500/60 ring-offset-2' : ''}`}
-                  >
-                    <div className="h-4 w-4 rounded-full bg-white" />
-                  </div>
-                  <div className="absolute top-13 left-1/2 -translate-x-1/2 text-center whitespace-nowrap">
-                    <span
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-2xs border ${
-                        isSuccess
-                          ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950 border-emerald-200'
-                          : 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950 border-rose-200'
-                      }`}
-                    >
-                      {node.name || (isSuccess ? 'Кредит выдан' : 'Отказ')}
-                    </span>
-                  </div>
-                </div>
-              )
-            }
-
-            // Gateway Nodes (XOR / AND Diamond)
-            if (
-              node.type === 'exclusiveGateway' ||
-              node.type === 'parallelGateway' ||
-              node.type === 'inclusiveGateway'
-            ) {
-              const isParallel = node.type === 'parallelGateway'
-              return (
-                <div
-                  key={node.id}
-                  onClick={() => onSelectNode(node)}
-                  style={{
-                    position: 'absolute',
-                    left: `${node.geometry.x}px`,
-                    top: `${node.geometry.y}px`,
-                    width: '46px',
-                    height: '46px',
-                  }}
-                  className={`group cursor-pointer select-none ${isFaded ? 'opacity-30' : 'opacity-100'}`}
-                >
-                  {/* Diamond Shape */}
-                  <div
-                    className={`h-[46px] w-[46px] rotate-45 rounded-lg bg-amber-100 dark:bg-amber-950 border-2 border-amber-500 shadow-md flex items-center justify-center hover:scale-110 transition-transform ${
-                      isSelected ? 'ring-4 ring-amber-500/60 ring-offset-2' : ''
-                    }`}
-                  >
-                    <span className="-rotate-45 text-amber-900 dark:text-amber-200 font-extrabold text-base leading-none">
-                      {isParallel ? '+' : '×'}
-                    </span>
-                  </div>
-                  {/* Gateway condition label */}
-                  {node.name && node.name !== 'Условие' && (
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-center">
-                      <span className="text-[10px] font-bold text-amber-900 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/90 border border-amber-300 dark:border-amber-800 px-1.5 py-0.5 rounded shadow-2xs">
-                        {node.name}
-                      </span>
-                    </div>
+                  {/* Code badge */}
+                  {node.code && (
+                    <>
+                      <rect x={x+5} y={y+5} width={node.code.length*6+8} height={13} rx={3} fill="white" stroke="#cbd5e1" strokeWidth="0.8" />
+                      <text x={x+9} y={y+14} fontSize="8" fill="#475569" fontWeight="700"
+                        fontFamily="monospace" style={{ userSelect: 'none' }}>{node.code}</text>
+                    </>
                   )}
-                </div>
+
+                  {/* RPA badge */}
+                  {isRpa && (
+                    <>
+                      <rect x={x+w-50} y={y+5} width={45} height={13} rx={3} fill="#16a34a" />
+                      <text x={x+w-27} y={y+14} textAnchor="middle" fontSize="8" fill="white" fontWeight="700"
+                        style={{ userSelect: 'none' }}>PIX RPA</text>
+                    </>
+                  )}
+
+                  {/* Task name */}
+                  {lines.map((line, i) => (
+                    <text key={i} x={x+w/2} y={y + 26 + i * 13}
+                      textAnchor="middle" fontSize="11" fontWeight="600"
+                      fill="#0f172a" style={{ userSelect: 'none' }}>
+                      {line}
+                    </text>
+                  ))}
+
+                  {/* Divider + footer */}
+                  <line x1={x+4} y1={y+h-19} x2={x+w-4} y2={y+h-19} stroke="#e2e8f0" strokeWidth="1" />
+                  <text x={x+8} y={y+h-7} fontSize="9" fill="#64748b" style={{ userSelect: 'none' }}>
+                    {(node.system || 'АБС').slice(0,14)}
+                  </text>
+                  <text x={x+w-6} y={y+h-7} textAnchor="end" fontSize="9"
+                    fill={isBad ? '#d97706' : '#94a3b8'} fontWeight={isBad?'700':'400'}
+                    style={{ userSelect: 'none' }}>
+                    {node.slaMinutes||60}м
+                  </text>
+                </g>
               )
-            }
+            })}
+          </g>
+        </svg>
 
-            // Task Card (UserTask / ServiceTask / PIX RPA)
-            return (
-              <div
-                key={node.id}
-                onClick={() => onSelectNode(node)}
-                style={{
-                  position: 'absolute',
-                  left: `${node.geometry.x}px`,
-                  top: `${node.geometry.y}px`,
-                  width: `${node.geometry.width || 170}px`,
-                  minHeight: `${node.geometry.height || 70}px`,
-                }}
-                className={`p-2.5 rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md cursor-pointer transition-all flex flex-col justify-between group ${
-                  isSelected
-                    ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-emerald-500/20'
-                    : isRpa
-                    ? 'border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30'
-                    : isBottleneck
-                    ? 'border-amber-400 bg-amber-50/40 dark:bg-amber-950/30'
-                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
-                } ${isFaded ? 'opacity-30' : 'opacity-100'}`}
-              >
-                {/* Header with Code & Automation Tag */}
-                <div className="flex items-center justify-between gap-1 mb-1">
-                  <Badge variant="outline" className="text-[10px] px-1 py-0 font-mono font-bold">
-                    {node.code || 'STEP'}
-                  </Badge>
-                  {isRpa ? (
-                    <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0 flex items-center gap-0.5">
-                      <Cpu className="w-2.5 h-2.5" /> PIX RPA
-                    </Badge>
-                  ) : isBottleneck ? (
-                    <Badge className="bg-amber-600 text-white text-[9px] px-1.5 py-0 flex items-center gap-0.5">
-                      <Clock className="w-2.5 h-2.5" /> SLA {Math.round(node.slaMinutes! / 60)}ч
-                    </Badge>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 font-medium">
-                      <Clock className="w-2.5 h-2.5" /> {node.slaMinutes || 30}м
-                    </span>
-                  )}
-                </div>
-
-                {/* Task Title */}
-                <h4 className="text-xs font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-emerald-600 transition-colors">
-                  {node.name}
-                </h4>
-
-                {/* Footer with Role / System */}
-                <div className="mt-2 pt-1 border-t flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span className="truncate max-w-[90px] flex items-center gap-0.5">
-                    <Server className="w-2.5 h-2.5 shrink-0 text-slate-400" />
-                    {node.system || 'АБС'}
-                  </span>
-                  {node.automationPotential !== undefined && (
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                      {node.automationPotential}% RPA
-                    </span>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+        {/* Zoom readout */}
+        <div className="absolute bottom-3 right-3 pointer-events-none bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded px-2 py-0.5 text-[11px] font-mono text-slate-500 shadow-sm select-none">
+          {Math.round(zoom*100)}%
         </div>
       </div>
 
-      {/* Visualizer Legend Footer */}
-      <div className="p-2.5 bg-muted/40 border-t flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-full bg-emerald-500 inline-block" />
-            <span>Старт</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-md bg-emerald-100 border border-emerald-500 inline-block" />
-            <span className="text-emerald-700 dark:text-emerald-400 font-medium">PIX RPA Робот</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-md bg-white border border-slate-300 inline-block" />
-            <span>Ручная операция</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rotate-45 bg-amber-100 border border-amber-500 inline-block" />
-            <span>Шлюз условий (BPMN)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-full bg-emerald-600 inline-block" />
-            <span>Успех</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-full bg-rose-600 inline-block" />
-            <span>Отказ</span>
-          </div>
+      {/* Legend */}
+      <div className="px-3 py-1.5 bg-white dark:bg-slate-900 border-t flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted-foreground shrink-0">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-500 inline-block" />Старт</div>
+          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-600 border-2 border-emerald-300 inline-block" />Успех</div>
+          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-rose-500 inline-block" />Отказ</div>
+          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-emerald-50 border border-emerald-400 inline-block" />PIX RPA</div>
+          <div className="flex items-center gap-1"><span className="h-3 w-3 inline-block border border-amber-400 bg-yellow-100" style={{transform:'rotate(45deg)'}} />Шлюз</div>
+          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-amber-50 border border-amber-400 inline-block" />SLA&gt;2ч</div>
         </div>
-
-        <div className="flex items-center gap-1 text-[11px]">
-          <Info className="w-3.5 h-3.5 text-blue-500" />
-          <span>Кликните на любой шаг для редактирования регламента и SLA</span>
+        <div className="flex items-center gap-1">
+          <Info className="w-3 h-3 text-blue-500" />
+          Клик — детали · Колёсико — зум · Тащить — пан
         </div>
       </div>
     </div>

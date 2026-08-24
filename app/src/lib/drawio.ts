@@ -16,10 +16,12 @@ function cleanLabel(raw: string | null): string {
   if (!raw) return ''
   const div = document.createElement('div')
   div.innerHTML = raw
+    .replace(/&nbsp;/gi, ' ')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
     .replace(/<br\s*[\/]?>/gi, ' ')
     .replace(/<\/?[^>]+(>|$)/g, ' ')
   return (div.textContent ?? '')
@@ -162,6 +164,55 @@ function getStyle(cell: Element): string {
   return cell.getAttribute('style') ?? ''
 }
 
+// Lists of non-task strings in Uzbek/Russian banking drawio diagrams
+const SYSTEM_TAGS = new Set([
+  'iabs', 'iabs / crm', 'iabs / eha', 'eha', 'edo', 'zoom', 'crobs', 'excell rmr',
+  'dragle bi', 'nibbd', 'soliq', 'katm', 'didox', 'myorg.uz', 'ihamkor', 'orginfo',
+  'registr.stat.uz', 'jira', 'e-baholash.uz', 'garov.uz', 'davreestr.uz', 'korporativ pochta',
+  'tsoyat', 'intranet', 'emv service', 'sqb crm', 'internet saytlari', 'crobs, internet saytlari',
+  'internet saytlari, tsoyat, crobs', 'internet saytlari va iabs', 'internet saytlari tsoyat',
+  'iabs, regstr.uz', 'iabs, garov.uz, davreestr.uz', 'iabs, garov.uz, davrestr.uz', 'iabs, crobs'
+])
+
+const ARTIFACT_TAGS = new Set([
+  'dalolatnoma', 'chek-list', "yig'ma jild", 'yig‘majild', 'yig‘ma jild', 'asoslantiruvchi xat',
+  'fotosuratlar', 'fotosuratlar va hujjatlar', "hujjatlar ro'yxati", 'hujjatlar',
+  'xulosa', 'loyiha hujjatlari', "ko'chirma", 'kuzatuv kengash bayonnomasi',
+  'yirik bitimlar bayonnomasi', 'kredit/sug‘urta/kafillik', 'kredit/sug\'urta/kafillik',
+  'qo‘shimcha kelishuv', "qo'shimcha kelishuv", 'shartnoma', 'baholash dalolatnomasi',
+  'garov xulosasi', "yig'ilish bayonnomasi", 'yuriskonsult xulosasi', 'qaror loyihasi',
+  'asoslantirilgan xat', 'moliyaviy hisobotlar', 'skaner', 'kredit/garov/kafillik shartnomasi',
+  'kredit/kafillik/sug\'urta shartnomasi', 'hukumat qarori', 'tegishli qaror', "ma'lumotnoma",
+  'mijoz murojaati, ta`sischilar qarori', 'ta`sischilar qarori'
+])
+
+const CONDITION_TAGS = new Set([
+  "ha", "yo'q", "yo`q", "yo’q", "yo'q ", "ha ", "да", "нет", "yes", "no",
+  "to'liq", "to'liq emas", "to`liq", "to`liq emas",
+  "mos keldi", "mos kelmaydi", "mos kelmadi", "to'liq mos keladi",
+  "manba aniqlandi", "qabul qilindi", "rad etildi", "rad javob berildi",
+  "asoslantirilgan rad javob berildi", "mulkiy", "nomulkiy", "o'rganildi", "bajarildi",
+  "nazorat uchun", "ijobiy", "salbiy", "kamchilik mavjudmi", "kamchiliklar mavjudmi",
+  "kamchilik mavjudmi?", "kamchiliklar mavjudmi?", "to'g'ri rasmiylashtirilganmi?",
+  "tog'ri rasmiylashtirilganmi?", "barcha ma'lumotlar to'g'ri kiritilganmi?",
+  "barcha hujjatlar mavjudmi", "hujjatlar to'liqmi?", "hujjatlar to'plami to'liqmi?",
+  "resurs mablag'lari mavjudmi?", "muzokara ijobiymi?", "muqobil resurs aniqlandimi ?",
+  "vakolatli organ qarori ijobiymi?", "qo'mita qarori ijobiymi?", "qaror qabul qilish qo'mita vakolatidami?",
+  "kredit maqsadli ishlatilganmi?", "mijoz talabi kredit mahsuloti shartlariga muvofiqmi?",
+  "garov obyekti qiymati mustaqil baholovchining hisoboti bilan mosligini o'rganish"
+])
+
+function isNonTaskLabel(val: string): boolean {
+  const v = val.toLowerCase().trim()
+  if (v.length === 0) return true
+  if (CONDITION_TAGS.has(v)) return true
+  if (SYSTEM_TAGS.has(v)) return true
+  if (ARTIFACT_TAGS.has(v)) return true
+  if (v.startsWith('kutish vaqti') || v.startsWith("o'rtacha kutish vaqti")) return true
+  if (v.includes('(as is)') || v.includes('(to be)') || v.includes('(as-is)') || v.includes('(to-be)')) return true
+  return false
+}
+
 function classifyVertex(
   style: string,
   label: string,
@@ -191,11 +242,28 @@ function classifyVertex(
     i.includes('end') ||
     i.includes('reject')
   ) {
-    // Check if start
+    // Explicit Reject / Declined End Event (Red)
+    if (
+      l.includes('rad etildi') ||
+      l.includes('rad javob') ||
+      l.includes('otkaz') ||
+      l.includes('отказ') ||
+      l.includes('bekor') ||
+      i.includes('reject') ||
+      s.includes('fillcolor=#ef4444') ||
+      s.includes('fillcolor=#e11d48') ||
+      s.includes('fillcolor=#be123c')
+    ) {
+      return 'endEvent'
+    }
+
+    // Explicit Start Event (Green)
     if (
       i.includes('start') ||
       l.includes('старт') ||
       l.includes('поступлен') ||
+      l.includes('tashrif') ||
+      l.includes('boshlanish') ||
       s.includes('fillcolor=#10b981') ||
       s.includes('fillcolor=#22c55e') ||
       s.includes('fillcolor=#059669')
@@ -203,17 +271,15 @@ function classifyVertex(
       return 'startEvent'
     }
 
-    // Check if end
+    // Explicit Success End Event (Green double border)
     if (
       i.includes('end') ||
-      i.includes('reject') ||
       l.includes('заверш') ||
       l.includes('конец') ||
       l.includes('выдан') ||
-      l.includes('отказ') ||
-      s.includes('fillcolor=#ef4444') ||
-      s.includes('fillcolor=#e11d48') ||
-      s.includes('fillcolor=#be123c') ||
+      l.includes('ochildi') ||
+      l.includes('tugashi') ||
+      l.includes('bajarildi') ||
       s.includes('outline=double') ||
       s.includes('outline=end')
     ) {
@@ -233,7 +299,9 @@ function classifyVertex(
     s.includes('fillcolor=#d5e8d4') ||
     l.includes('rpa') ||
     l.includes('робот') ||
-    l.includes('авто-')
+    l.includes('авто-') ||
+    l.includes('avtomat') ||
+    l.includes('sms')
   ) {
     return 'serviceTask'
   }
@@ -244,32 +312,45 @@ function classifyVertex(
 function classifyCategory(type: NodeType, name: string, style: string): StepCategory {
   const lower = (name + ' ' + style).toLowerCase()
   if (type === 'startEvent' || type === 'endEvent') return 'notification'
-  if (type === 'serviceTask' || lower.includes('rpa') || lower.includes('робот') || lower.includes('авто-') || lower.includes('генерация'))
+  if (type === 'serviceTask' || lower.includes('rpa') || lower.includes('робот') || lower.includes('авто-') || lower.includes('avtomat') || lower.includes('генерация') || lower.includes('sms'))
     return 'rpa_bot'
-  if (lower.includes('согласован') || lower.includes('комитет') || lower.includes('утвержд') || lower.includes('подпис') || lower.includes('голос'))
+  if (lower.includes('согласован') || lower.includes('комитет') || lower.includes('утвержд') || lower.includes('подпис') || lower.includes('голос') || lower.includes('imzo') || lower.includes('vizo') || lower.includes('tasdiq') || lower.includes('himoya'))
     return 'approval'
-  if (lower.includes('проверк') || lower.includes('валидац') || lower.includes('скоринг') || lower.includes('скор') || lower.includes('андеррайт') || lower.includes('риск'))
+  if (lower.includes('проверк') || lower.includes('валидац') || lower.includes('скоринг') || lower.includes('скор') || lower.includes('андеррайт') || lower.includes('риск') || lower.includes('tekshirish') || lower.includes('solishtirish') || lower.includes('identifikatsiya') || lower.includes('o\'rganish'))
     return 'validation'
-  if (lower.includes('api') || lower.includes('абс') || lower.includes('сервис') || lower.includes('цфт') || lower.includes('didox'))
+  if (lower.includes('api') || lower.includes('абс') || lower.includes('сервис') || lower.includes('цфт') || lower.includes('didox') || lower.includes('iabs') || lower.includes('eha') || lower.includes('edo') || lower.includes('nibbd'))
     return 'api_service'
   return 'manual'
 }
 
 function detectSystem(name: string, laneName: string): string {
   const lower = (name + ' ' + laneName).toLowerCase()
-  if (lower.includes('rpa') || lower.includes('робот')) return 'PIX RPA'
-  if (lower.includes('абс') || lower.includes('счет') || lower.includes('проводк') || lower.includes('цфт') || lower.includes('транш'))
-    return 'АБС ЦФТ-Банк'
+  if (lower.includes('rpa') || lower.includes('робот') || lower.includes('avtomat sms')) return 'PIX RPA'
+  if (lower.includes('nibbd')) return 'NIBBD / ЦБ РУз'
+  if (lower.includes('eha') || lower.includes('еха')) return 'EHA Dasturi'
+  if (lower.includes('edo') || lower.includes('эдо') || lower.includes('didox') || lower.includes('эцп')) return 'EDO / Didox (ЭЦП)'
+  if (lower.includes('aml') || lower.includes('komplayens')) return 'AML/CFT Moduli'
+  if (lower.includes('iabs') || lower.includes('абс') || lower.includes('счет') || lower.includes('проводк') || lower.includes('цфт') || lower.includes('клиенты и счета') || lower.includes('комиссия') || lower.includes('транш'))
+    return 'iABS (ЦФТ-Банк)'
   if (lower.includes('гнк') || lower.includes('налог') || lower.includes('soliq')) return 'API Soliq (ГНК)'
   if (lower.includes('катм') || lower.includes('katm') || lower.includes('бюро')) return 'API KATM'
   if (lower.includes('епигу') || lower.includes('egrpo') || lower.includes('егрпо')) return 'ЕПИГУ / ЕГРПО'
-  if (lower.includes('didox') || lower.includes('эдо') || lower.includes('эцп')) return 'Didox (ЭДО)'
+  if (lower.includes('dragle')) return 'Dragle BI'
+  if (lower.includes('crobs')) return 'CROBS Risk Engine'
+  if (lower.includes('zoom')) return 'Zoom Video Conf'
   if (lower.includes('swift') || lower.includes('свифт')) return 'SWIFT Alliance'
   return 'SQB CRM / Core'
 }
 
-function estimateSla(category: StepCategory, type: NodeType): number {
+function extractSlaMinutes(rawText: string, category: StepCategory, type: NodeType): number {
   if (type === 'startEvent' || type === 'endEvent') return 5
+
+  const match = rawText.match(/(\d+(?:\.\d+)?)\s*(?:min|daq|минут|мин|m\b)/i)
+  if (match) {
+    const val = parseFloat(match[1])
+    return Math.max(1, Math.round(val))
+  }
+
   switch (category) {
     case 'rpa_bot':
       return 3
@@ -284,7 +365,6 @@ function estimateSla(category: StepCategory, type: NodeType): number {
   }
 }
 
-/** Parses BPMN 2.0 XML files */
 function parseBpmnXml(xmlText: string, fileName: string): BusinessProcess {
   const doc = new DOMParser().parseFromString(xmlText, 'text/xml')
   const processEl = doc.querySelector('process') || doc.querySelector('bpmn\\:process') || doc.querySelector('bpmn2\\:process')
@@ -346,6 +426,7 @@ function parseBpmnXml(xmlText: string, fileName: string): BusinessProcess {
       const category = classifyCategory(type, name, '')
       const isTask = type === 'userTask' || type === 'serviceTask'
       const code = type === 'startEvent' ? 'START' : type === 'endEvent' ? 'END' : isTask ? `STEP-${String(stepIndex++).padStart(2, '0')}` : undefined
+      const sla = extractSlaMinutes(name, category, type)
 
       nodes.push({
         id,
@@ -355,8 +436,8 @@ function parseBpmnXml(xmlText: string, fileName: string): BusinessProcess {
         code,
         geometry,
         style: '',
-        slaMinutes: estimateSla(category, type),
-        costPerExecution: category === 'rpa_bot' ? 800 : 25000,
+        slaMinutes: sla,
+        costPerExecution: category === 'rpa_bot' ? 800 : (sla * 1932),
         automationPotential: category === 'rpa_bot' ? 95 : 60,
         system: detectSystem(name, ''),
       })
@@ -462,37 +543,74 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     if (id) cellMap.set(id, c)
   })
 
-  // First pass: identify label overlay elements to attach their text to parent shapes
+  // 1. Collect all Edges
+  const rawEdges = cells.filter((c) => c.getAttribute('edge') === '1')
+  const edgeIdSet = new Set(rawEdges.map((e) => e.getAttribute('id')).filter(Boolean))
+
+  const incoming = new Set<string>()
+  const outgoing = new Set<string>()
+  for (const e of rawEdges) {
+    const t = e.getAttribute('target')
+    const s = e.getAttribute('source')
+    if (t) incoming.add(t)
+    if (s) outgoing.add(s)
+  }
+
+  // 2. Classify and filter cells
   const labelMap = new Map<string, string>()
-  const labelCellIds = new Set<string>()
+  const ignoreCellIds = new Set<string>()
 
   cells.forEach((c) => {
     const id = c.getAttribute('id') ?? ''
+    const parentId = c.getAttribute('parent') ?? ''
     const style = getStyle(c).toLowerCase()
     const rawVal = c.getAttribute('value')
     const cleaned = cleanLabel(rawVal)
+    const geo = c.querySelector('mxGeometry')
+    const isRelative = geo?.getAttribute('relative') === '1'
+    const isConnectable0 = c.getAttribute('connectable') === '0'
 
-    // Detect if this is an overlay text label cell
-    const isLabel =
-      id.endsWith('_label') ||
-      (style.includes('text;') && !style.includes('swimlane') && (style.includes('strokecolor=none') || style.includes('fillcolor=none') || !rawVal || cleaned.length < 35))
+    // Condition 1: Child of an edge
+    if (edgeIdSet.has(parentId)) {
+      ignoreCellIds.add(id)
+      if (cleaned) labelMap.set(parentId, cleaned)
+      return
+    }
 
-    if (isLabel && (id.endsWith('_label') || c.getAttribute('vertex') === '1')) {
-      labelCellIds.add(id)
+    // Condition 2: Explicit edgeLabel / connectable="0" / relative="1"
+    if (style.includes('edgelabel') || isConnectable0 || isRelative) {
+      ignoreCellIds.add(id)
+      if (cleaned && parentId) labelMap.set(parentId, cleaned)
+      return
+    }
+
+    // Condition 3: Text label overlay (e.g. node_start_label, gw_risk_label)
+    if (id.endsWith('_label') || (style.includes('text;') && !style.includes('swimlane') && (style.includes('strokecolor=none') || style.includes('fillcolor=none') || isNonTaskLabel(cleaned) || cleaned.length < 2))) {
+      ignoreCellIds.add(id)
       const baseId = id.replace(/_label$/, '')
-      if (baseId && cleaned) {
-        labelMap.set(baseId, cleaned)
-      }
+      if (baseId && cleaned) labelMap.set(baseId, cleaned)
+      return
+    }
+
+    // Condition 4: Diagram title banner (e.g. "Kredit shartnomasi muddatini o'zgartirish (AS IS)")
+    if (style.includes('text;') && isNonTaskLabel(cleaned)) {
+      ignoreCellIds.add(id)
+      return
+    }
+
+    // Condition 5: Non-task system tags, artifacts, conditions with no sequence connections
+    if (isNonTaskLabel(cleaned) && !incoming.has(id) && !outgoing.has(id)) {
+      ignoreCellIds.add(id)
+      return
     }
   })
 
-  // Detect which cells are actual swimlanes vs outer pool container
+  // 3. Detect Swimlanes vs Outer Pool Container
   const swimlaneCells = cells.filter((c) => {
     const style = getStyle(c).toLowerCase()
     return c.getAttribute('vertex') === '1' && (style.includes('swimlane') || style.includes('shape=pool'))
   })
 
-  // Outer pool is a swimlane that contains other swimlanes as children
   const poolIds = new Set<string>()
   swimlaneCells.forEach((sw) => {
     const swId = sw.getAttribute('id') ?? ''
@@ -506,22 +624,10 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     const id = c.getAttribute('id') ?? ''
     const isVertex = c.getAttribute('vertex') === '1'
     if (!isVertex) return false
-    if (labelCellIds.has(id)) return false
-    if (poolIds.has(id)) return false // Pool is handled as overarching container
+    if (ignoreCellIds.has(id)) return false
+    if (poolIds.has(id)) return false
     return true
   })
-
-  const rawEdges = cells.filter((c) => c.getAttribute('edge') === '1')
-
-  // Connections for event classification
-  const incoming = new Set<string>()
-  const outgoing = new Set<string>()
-  for (const e of rawEdges) {
-    const t = e.getAttribute('target')
-    const s = e.getAttribute('source')
-    if (t) incoming.add(t)
-    if (s) outgoing.add(s)
-  }
 
   const nodes: ProcessNode[] = []
   let stepIndex = 1
@@ -532,7 +638,6 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     const rawValue = cell.getAttribute('value')
     let rawCleaned = cleanLabel(rawValue)
 
-    // Fallback to labelMap if cell value is empty or generic
     if (!rawCleaned && labelMap.has(id)) {
       rawCleaned = labelMap.get(id)!
     }
@@ -562,11 +667,15 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     const category = classifyCategory(type, rawCleaned, style)
     const isTask = type === 'task' || type === 'userTask' || type === 'serviceTask'
 
-    // Extract explicit code if present in label (e.g. STEP-01)
+    // Extract explicit code or number (e.g. '1. Mijozni kutib olish' -> 'STEP-01', 'STEP-02')
     let code: string | undefined = undefined
     const codeMatch = (rawValue || rawCleaned).match(/\b(STEP[-_ ]?\d+|START|END|GW[-_ ]?\w+)\b/i)
+    const numPrefix = rawCleaned.match(/^(\d+)[.)]\s*/)
+
     if (codeMatch) {
       code = codeMatch[1].toUpperCase().replace(/_/g, '-')
+    } else if (numPrefix && isTask) {
+      code = `STEP-${String(numPrefix[1]).padStart(2, '0')}`
     } else if (type === 'startEvent') {
       code = 'START'
     } else if (type === 'endEvent') {
@@ -575,11 +684,14 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       code = `STEP-${String(stepIndex++).padStart(2, '0')}`
     }
 
-    // Clean human-friendly name (strip [PIX RPA], STEP-01:, etc.)
+    const slaMin = extractSlaMinutes(`${rawValue || ''} ${rawCleaned}`, category, type)
+
+    // Clean human-friendly name (strip [PIX RPA], numbers, minutes)
     let cleanName = rawCleaned
       .replace(/^\[.*?\]\s*/gi, '')
       .replace(/^STEP[-_ ]?\d+[:\s-]*/gi, '')
       .replace(/^[0-9]+[.)]\s*/gi, '')
+      .replace(/\b\d+(?:\.\d+)?\s*(?:min|daq|минут|мин)\b.*$/gi, '')
       .trim()
 
     if (!cleanName) {
@@ -593,7 +705,6 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
           : `Операция ${code || id}`
     }
 
-    // Standardize BPMN dimensions for uniform rendering
     if (type === 'startEvent' || type === 'endEvent') {
       width = 48
       height = 48
@@ -607,6 +718,8 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       width = Math.max(width, 160)
       height = Math.max(height, 70)
     }
+
+    const fotCost = category !== 'rpa_bot' ? slaMin * 1932 : 800
 
     nodes.push({
       id,
@@ -622,13 +735,13 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       },
       style,
       laneId: parentId,
-      slaMinutes: estimateSla(category, type),
-      costPerExecution: category === 'rpa_bot' ? 800 : 25000,
-      automationPotential: category === 'rpa_bot' ? 95 : category === 'manual' ? 60 : 35,
+      slaMinutes: slaMin,
+      costPerExecution: fotCost,
+      automationPotential: category === 'rpa_bot' ? 95 : category === 'manual' ? 65 : 40,
     })
   }
 
-  // Identify lanes / swimlanes (excluding outer pool)
+  // Identify lanes / swimlanes
   const lanes = nodes.filter((n) => n.type === 'lane')
   const laneIds = new Set(lanes.map((l) => l.id))
   const flowNodes = nodes.filter((n) => n.type !== 'lane')
@@ -639,23 +752,21 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
 
   // Geometry-based lane assignment fallback
   for (const n of flowNodes) {
-    if (n.laneId) continue
-    const hit = lanes.find(
-      (l) =>
-        n.geometry.x >= l.geometry.x - 50 &&
-        n.geometry.x <= l.geometry.x + l.geometry.width + 50 &&
-        n.geometry.y >= l.geometry.y &&
-        n.geometry.y < l.geometry.y + l.geometry.height,
-    )
-    if (hit) {
-      n.laneId = hit.id
-      n.laneName = hit.name
-      n.role = hit.name
+    if (!n.laneId) {
+      const hit = lanes.find(
+        (l) =>
+          n.geometry.x >= l.geometry.x - 50 &&
+          n.geometry.x <= l.geometry.x + l.geometry.width + 50 &&
+          n.geometry.y >= l.geometry.y &&
+          n.geometry.y < l.geometry.y + l.geometry.height,
+      )
+      if (hit) {
+        n.laneId = hit.id
+        n.laneName = hit.name
+        n.role = hit.name
+      }
     }
-  }
 
-  // Populate laneName and IT system
-  for (const n of flowNodes) {
     if (n.laneId) {
       const parentLane = lanes.find((l) => l.id === n.laneId)
       if (parentLane) {
@@ -666,19 +777,97 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     n.system = detectSystem(n.name, n.laneName || '')
   }
 
-  const edges: ProcessEdge[] = rawEdges.map((cell) => {
-    const points: ProcessEdgePoint[] = []
-    cell.querySelectorAll('mxPoint').forEach((p) => {
-      points.push({ x: Number(p.getAttribute('x') ?? 0), y: Number(p.getAttribute('y') ?? 0) })
-    })
-    return {
-      id: cell.getAttribute('id') ?? `edge_${crypto.randomUUID()}`,
-      name: cleanLabel(cell.getAttribute('value')),
-      sourceId: cell.getAttribute('source') ?? undefined,
-      targetId: cell.getAttribute('target') ?? undefined,
-      points,
-    }
+  // Draw.io Grid Snap & Layout Spacing (10px grid unit)
+  const GRID_SIZE = 10
+  const SNAP = (v: number) => Math.round(v / GRID_SIZE) * GRID_SIZE
+
+  // 1. Snap and format lanes
+  lanes.forEach((lane) => {
+    lane.geometry.x = SNAP(lane.geometry.x)
+    lane.geometry.y = SNAP(lane.geometry.y)
+    lane.geometry.width = Math.max(SNAP(lane.geometry.width), 1600)
+    lane.geometry.height = Math.max(SNAP(lane.geometry.height), 180)
   })
+
+  // 2. Snap and resolve node collisions within each lane
+  lanes.forEach((lane) => {
+    const laneNodes = flowNodes.filter((n) => n.laneId === lane.id)
+    if (laneNodes.length === 0) return
+
+    const laneCenterY = lane.geometry.y + SNAP((lane.geometry.height - 70) / 2)
+    laneNodes.sort((a, b) => a.geometry.x - b.geometry.x)
+
+    laneNodes.forEach((node, idx) => {
+      node.geometry.width = SNAP(node.geometry.width)
+      node.geometry.height = SNAP(node.geometry.height)
+
+      const isRejectBranch =
+        node.id.toLowerCase().includes('reject') ||
+        node.name.toLowerCase().includes('отказ') ||
+        node.name.toLowerCase().includes('rad etildi')
+
+      if (isRejectBranch) {
+        const prevGateway = laneNodes.find(
+          (other) => other.type.includes('Gateway') && Math.abs(other.geometry.x - node.geometry.x) < 120,
+        )
+        if (prevGateway) {
+          node.geometry.x = prevGateway.geometry.x
+          node.geometry.y = prevGateway.geometry.y + prevGateway.geometry.height + 30
+          return
+        }
+      }
+
+      if (idx > 0) {
+        const prev = laneNodes[idx - 1]
+        const minX = prev.geometry.x + prev.geometry.width + 40 // 40px minimum gap between shapes
+        if (node.geometry.x < minX) {
+          node.geometry.x = SNAP(minX)
+        } else {
+          node.geometry.x = SNAP(node.geometry.x)
+        }
+      } else {
+        node.geometry.x = SNAP(Math.max(lane.geometry.x + 40, node.geometry.x))
+      }
+
+      if (node.type === 'startEvent' || node.type === 'endEvent') {
+        node.geometry.y = lane.geometry.y + SNAP((lane.geometry.height - 48) / 2)
+      } else if (node.type.includes('Gateway')) {
+        node.geometry.y = lane.geometry.y + SNAP((lane.geometry.height - 46) / 2)
+      } else {
+        node.geometry.y = laneCenterY
+      }
+    })
+  })
+
+  const validNodeIdSet = new Set(flowNodes.map((n) => n.id))
+
+  const edges: ProcessEdge[] = rawEdges
+    .filter((cell) => {
+      const s = cell.getAttribute('source')
+      const t = cell.getAttribute('target')
+      return s && t && (validNodeIdSet.has(s) || validNodeIdSet.has(t))
+    })
+    .map((cell) => {
+      const edgeId = cell.getAttribute('id') ?? `edge_${crypto.randomUUID()}`
+      const rawVal = cell.getAttribute('value')
+      let edgeName = cleanLabel(rawVal)
+      if (!edgeName && labelMap.has(edgeId)) {
+        edgeName = labelMap.get(edgeId)!
+      }
+
+      const points: ProcessEdgePoint[] = []
+      cell.querySelectorAll('mxPoint').forEach((p) => {
+        points.push({ x: Number(p.getAttribute('x') ?? 0), y: Number(p.getAttribute('y') ?? 0) })
+      })
+
+      return {
+        id: edgeId,
+        name: edgeName,
+        sourceId: cell.getAttribute('source') ?? undefined,
+        targetId: cell.getAttribute('target') ?? undefined,
+        points,
+      }
+    })
 
   const validation = validate(flowNodes, edges)
 
@@ -694,6 +883,7 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
   }
 
   const cleanTitle = diagramName || fileName.replace(/\.(drawio|xml)$/i, '')
+  const totalHours = roundHours(flowNodes.reduce((acc, n) => acc + (n.slaMinutes || 0), 0) / 60) || 8
 
   const passport: ProcessPassport = {
     code: `PRC-SQB-${Math.floor(100 + Math.random() * 900)}`,
@@ -702,9 +892,9 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     status: 'draft',
     owner: 'Департамент бизнес-процессов АКБ «Узпромстройбанк»',
     department: lanes[0]?.name || 'Операционный блок',
-    category: 'Банковские процессы',
-    targetSlaHours: Math.round(flowNodes.reduce((acc, n) => acc + (n.slaMinutes || 0), 0) / 60) || 8,
-    description: `Импортирован из файла drawio: ${fileName}. Создан автоматический паспорт и реестр PIX.`,
+    category: 'Банковские процессы (Методика SQB)',
+    targetSlaHours: totalHours,
+    description: `Импортирован из файла draw.io: ${fileName}. Сформирован регламент по Методологии АКБ «Узпромстройбанк» (1-ILOVA / 4-ILOVA).`,
     createdDate: new Date().toISOString().split('T')[0],
     updatedDate: new Date().toISOString().split('T')[0],
   }
@@ -713,11 +903,11 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     id: `reg-${crypto.randomUUID()}`,
     code: `REG_${passport.code.replace(/[^a-zA-Z0-9_]/g, '_')}`,
     name: `Реестр: ${cleanTitle}`,
-    description: `Операционный реестр заявок по процессу ${cleanTitle}`,
+    description: `Операционный реестр заявок по процессу ${cleanTitle} (PIX BPM)`,
     fields: [
       { id: 'f1', code: 'case_number', name: 'Номер заявки', type: 'string', required: true },
       { id: 'f2', code: 'client_inn', name: 'ИНН Клиента', type: 'string', required: true },
-      { id: 'f3', code: 'client_title', name: 'Наименование клиента', type: 'string', required: true },
+      { id: 'f3', code: 'client_title', name: 'Наименование компании', type: 'string', required: true },
       { id: 'f4', code: 'status', name: 'Статус', type: 'select', required: true, options: ['В работе', 'Одобрено', 'Отклонено'] },
     ],
     records: [
@@ -764,6 +954,10 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
 
   initialProcess.miningMetrics = analyzeProcessConformance(initialProcess)
   return initialProcess
+}
+
+function roundHours(val: number): number {
+  return Math.round(val * 10) / 10
 }
 
 function validate(nodes: ProcessNode[], edges: ProcessEdge[]): ProcessValidation[] {
