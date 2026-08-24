@@ -176,6 +176,54 @@ function getStyle(cell: Element): string {
   return cell.getAttribute('style') ?? ''
 }
 
+function parseStyleMap(style: string): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const part of (style || '').split(';')) {
+    if (!part) continue
+    const eq = part.indexOf('=')
+    if (eq < 0) {
+      out[part.trim().toLowerCase()] = '1'
+      continue
+    }
+    out[part.slice(0, eq).trim().toLowerCase()] = part.slice(eq + 1).trim()
+  }
+  return out
+}
+
+function styleFloat(map: Record<string, string>, key: string): number | undefined {
+  const raw = map[key]
+  if (raw == null || raw === '') return undefined
+  const n = Number(raw)
+  return Number.isFinite(n) ? n : undefined
+}
+
+/** Absolute origin of a cell (own x/y plus every non-relative ancestor). */
+function parentOrigin(
+  cellId: string | null | undefined,
+  cellMap: Map<string, Element>,
+  cache: Map<string, { x: number; y: number }>,
+): { x: number; y: number } {
+  if (!cellId || cellId === '0' || cellId === '1') return { x: 0, y: 0 }
+  const hit = cache.get(cellId)
+  if (hit) return hit
+  const cell = cellMap.get(cellId)
+  if (!cell) {
+    cache.set(cellId, { x: 0, y: 0 })
+    return { x: 0, y: 0 }
+  }
+  const parent = parentOrigin(cell.getAttribute('parent'), cellMap, cache)
+  const geo = cell.querySelector('mxGeometry')
+  let x = parent.x
+  let y = parent.y
+  if (geo && geo.getAttribute('relative') !== '1') {
+    x += Number(geo.getAttribute('x') ?? 0)
+    y += Number(geo.getAttribute('y') ?? 0)
+  }
+  const origin = { x, y }
+  cache.set(cellId, origin)
+  return origin
+}
+
 // Lists of non-task strings in Uzbek/Russian banking drawio diagrams
 const SYSTEM_TAGS = new Set([
   'iabs', 'iabs / crm', 'iabs / eha', 'eha', 'edo', 'zoom', 'crobs', 'excell rmr',
@@ -613,7 +661,23 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
 
   // 2. Classify and filter cells
   const labelMap = new Map<string, string>()
+  const edgeLabelGeo = new Map<string, { x?: number; y?: number }>()
   const ignoreCellIds = new Set<string>()
+  const originCache = new Map<string, { x: number; y: number }>()
+
+  const rememberLabelGeo = (edgeId: string, geo: Element | null) => {
+    if (!geo || edgeLabelGeo.has(edgeId)) return
+    const rawX = geo.getAttribute('x')
+    const rawY = geo.getAttribute('y')
+    let x = rawX != null && rawX !== '' ? Number(rawX) : undefined
+    let y = rawY != null && rawY !== '' ? Number(rawY) : undefined
+    const offset = Array.from(geo.querySelectorAll('mxPoint')).find((p) => p.getAttribute('as') === 'offset')
+    if (offset) {
+      const oy = Number(offset.getAttribute('y') ?? 0)
+      y = y == null ? oy : y + oy
+    }
+    if (x != null || y != null) edgeLabelGeo.set(edgeId, { x, y })
+  }
 
   cells.forEach((c) => {
     const id = c.getAttribute('id') ?? ''
@@ -625,10 +689,11 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     const isRelative = geo?.getAttribute('relative') === '1'
     const isConnectable0 = c.getAttribute('connectable') === '0'
 
-    // Condition 1: Child of an edge
+    // Condition 1: Child of an edge (relative label)
     if (edgeIdSet.has(parentId)) {
       ignoreCellIds.add(id)
       if (cleaned) labelMap.set(parentId, cleaned)
+      rememberLabelGeo(parentId, geo)
       return
     }
 
@@ -720,24 +785,15 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
 
     const parentId = cell.getAttribute('parent') ?? undefined
 
-    // Resolve absolute coordinates relative to parent pools/lanes
+    // AbsoluteX = LocalX + ParentX + GrandparentX + ...
     const geo = cell.querySelector('mxGeometry')
-    let x = Number(geo?.getAttribute('x') ?? 100)
-    let y = Number(geo?.getAttribute('y') ?? 100)
+    const localX = Number(geo?.getAttribute('x') ?? 100)
+    const localY = Number(geo?.getAttribute('y') ?? 100)
     let width = Number(geo?.getAttribute('width') ?? 120)
     let height = Number(geo?.getAttribute('height') ?? 60)
-
-    let curParent = parentId
-    while (curParent && curParent !== '0' && curParent !== '1') {
-      const parentEl = cellMap.get(curParent)
-      if (!parentEl) break
-      const parentGeo = parentEl.querySelector('mxGeometry')
-      if (parentGeo) {
-        x += Number(parentGeo.getAttribute('x') ?? 0)
-        y += Number(parentGeo.getAttribute('y') ?? 0)
-      }
-      curParent = parentEl.getAttribute('parent') ?? undefined
-    }
+    const origin = parentOrigin(parentId, cellMap, originCache)
+    const x = localX + origin.x
+    const y = localY + origin.y
 
     const type = classifyVertex(style, rawCleaned, incoming.has(id), outgoing.has(id), id)
     const category = classifyCategory(type, rawCleaned, style)
@@ -781,19 +837,8 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
           : `Операция ${code || id}`
     }
 
-    if (type === 'startEvent' || type === 'endEvent') {
-      width = Math.max(width || 32, 28)
-      height = Math.max(height || 32, 28)
-    } else if (type.includes('Gateway')) {
-      width = Math.max(width || 36, 28)
-      height = Math.max(height || 36, 28)
-    } else if (type === 'lane') {
-      width = Math.max(width, 80)
-      height = Math.max(height, 40)
-    } else {
-      width = Math.max(width, 40)
-      height = Math.max(height, 24)
-    }
+    width = Math.max(Math.round(width || 1), 8)
+    height = Math.max(Math.round(height || 1), 8)
 
     const fotCost = category !== 'rpa_bot' ? slaMin * 1932 : 800
 
@@ -806,8 +851,8 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       geometry: {
         x: Math.round(x),
         y: Math.round(y),
-        width: Math.round(width),
-        height: Math.round(height),
+        width,
+        height,
       },
       style,
       laneId: parentId,
@@ -853,25 +898,6 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     n.system = detectSystem(n.name, n.laneName || '')
   }
 
-  // Draw.io Grid Snap & Layout Spacing (10px grid unit)
-  const GRID_SIZE = 10
-  const SNAP = (v: number) => Math.round(v / GRID_SIZE) * GRID_SIZE
-
-  // Keep original draw.io coordinates — do not shove shapes sideways.
-  lanes.forEach((lane) => {
-    lane.geometry.x = SNAP(lane.geometry.x)
-    lane.geometry.y = SNAP(lane.geometry.y)
-    lane.geometry.width = Math.max(SNAP(lane.geometry.width), 80)
-    lane.geometry.height = Math.max(SNAP(lane.geometry.height), 40)
-  })
-
-  flowNodes.forEach((node) => {
-    node.geometry.x = SNAP(node.geometry.x)
-    node.geometry.y = SNAP(node.geometry.y)
-    node.geometry.width = Math.max(SNAP(node.geometry.width), 24)
-    node.geometry.height = Math.max(SNAP(node.geometry.height), 24)
-  })
-
   const validNodeIdSet = new Set(flowNodes.map((n) => n.id))
 
   const edges: ProcessEdge[] = rawEdges
@@ -888,10 +914,22 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
         edgeName = labelMap.get(edgeId)!
       }
 
+      const smap = parseStyleMap(getStyle(cell))
+      const origin = parentOrigin(cell.getAttribute('parent'), cellMap, originCache)
       const points: ProcessEdgePoint[] = []
       cell.querySelectorAll('Array[as="points"] > mxPoint').forEach((p) => {
-        points.push({ x: Number(p.getAttribute('x') ?? 0), y: Number(p.getAttribute('y') ?? 0) })
+        points.push({
+          x: Math.round(Number(p.getAttribute('x') ?? 0) + origin.x),
+          y: Math.round(Number(p.getAttribute('y') ?? 0) + origin.y),
+        })
       })
+
+      const stored = edgeLabelGeo.get(edgeId)
+      const edgeGeo = cell.querySelector('mxGeometry')
+      const rawLX = edgeGeo?.getAttribute('x')
+      const rawLY = edgeGeo?.getAttribute('y')
+      const labelX = stored?.x ?? (rawLX != null && rawLX !== '' ? Number(rawLX) : undefined)
+      const labelY = stored?.y ?? (rawLY != null && rawLY !== '' ? Number(rawLY) : undefined)
 
       return {
         id: edgeId,
@@ -899,6 +937,12 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
         sourceId: cell.getAttribute('source') ?? undefined,
         targetId: cell.getAttribute('target') ?? undefined,
         points,
+        exitX: styleFloat(smap, 'exitx'),
+        exitY: styleFloat(smap, 'exity'),
+        entryX: styleFloat(smap, 'entryx'),
+        entryY: styleFloat(smap, 'entryy'),
+        labelX,
+        labelY,
       }
     })
 

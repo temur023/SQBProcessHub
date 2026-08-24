@@ -174,6 +174,49 @@ def _id_has_token(node_id: str, token: str) -> bool:
     return token in re.split(r'[-_]', i)
 
 
+def _style_map(style: str) -> Dict[str, str]:
+    out: Dict[str, str] = {}
+    for part in (style or '').split(';'):
+        if not part:
+            continue
+        if '=' in part:
+            key, val = part.split('=', 1)
+            out[key.strip().lower()] = val.strip()
+        else:
+            out[part.strip().lower()] = '1'
+    return out
+
+
+def _style_float(style_map: Dict[str, str], key: str) -> Optional[float]:
+    raw = style_map.get(key)
+    if raw is None or raw == '':
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def _parent_origin(cell_id: Optional[str], cell_map: Dict[str, ET.Element], cache: Dict[str, Tuple[float, float]]) -> Tuple[float, float]:
+    """Absolute top-left of a cell's parent chain (mxGraph: Absolute = Local + Parent)."""
+    if not cell_id or cell_id in ('0', '1'):
+        return 0.0, 0.0
+    if cell_id in cache:
+        return cache[cell_id]
+    cell = cell_map.get(cell_id)
+    if cell is None:
+        cache[cell_id] = (0.0, 0.0)
+        return 0.0, 0.0
+    px, py = _parent_origin(cell.get('parent'), cell_map, cache)
+    geo = cell.find('mxGeometry')
+    # Relative geometries (edge labels, edge frames) do not shift the coordinate space.
+    if geo is not None and geo.get('relative') != '1':
+        px += float(geo.get('x', '0') or 0)
+        py += float(geo.get('y', '0') or 0)
+    cache[cell_id] = (px, py)
+    return px, py
+
+
 def _local_tag(tag: str) -> str:
     if '}' in tag:
         return tag.rsplit('}', 1)[-1]
@@ -571,7 +614,31 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
     outgoing: Set[str] = {e.get('source', '') for e in raw_edges if e.get('source')}
 
     label_map: Dict[str, str] = {}
+    edge_label_geo: Dict[str, Tuple[Optional[float], Optional[float]]] = {}
     ignore_cell_ids: Set[str] = set()
+    origin_cache: Dict[str, Tuple[float, float]] = {}
+
+    def _remember_label_geo(edge_id: str, geo_el: Optional[ET.Element]) -> None:
+        if geo_el is None or edge_id in edge_label_geo:
+            return
+        lx = geo_el.get('x')
+        ly = geo_el.get('y')
+        off = None
+        for p in geo_el.findall('mxPoint'):
+            if (p.get('as') or '') == 'offset':
+                off = p
+                break
+        x_val = float(lx) if lx not in (None, '') else None
+        y_val = float(ly) if ly not in (None, '') else None
+        if off is not None:
+            # mxGraph offset is extra pixels; fold Y into the perpendicular slot when geometry y is unused
+            oy = float(off.get('y', '0') or 0)
+            if y_val is None:
+                y_val = oy
+            else:
+                y_val += oy
+        if x_val is not None or y_val is not None:
+            edge_label_geo[edge_id] = (x_val, y_val)
 
     for c in cells:
         c_id = c.get('id', '')
@@ -583,11 +650,12 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         is_relative = geo.get('relative') == '1' if geo is not None else False
         is_connectable0 = c.get('connectable') == '0'
 
-        # 1. Child of an edge
+        # 1. Child of an edge (relative label)
         if parent_id in edge_id_set:
             ignore_cell_ids.add(c_id)
             if cleaned:
                 label_map[parent_id] = cleaned
+            _remember_label_geo(parent_id, geo)
             continue
 
         # 2. Explicit edgeLabel or relative=1
@@ -665,22 +733,14 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         parent_id = cell.get('parent')
 
         geo = cell.find('mxGeometry')
-        x = float(geo.get('x', '100')) if geo is not None else 100.0
-        y = float(geo.get('y', '100')) if geo is not None else 100.0
+        local_x = float(geo.get('x', '100')) if geo is not None else 100.0
+        local_y = float(geo.get('y', '100')) if geo is not None else 100.0
         width = float(geo.get('width', '120')) if geo is not None else 120.0
         height = float(geo.get('height', '60')) if geo is not None else 60.0
 
-        # Parent offset calculation
-        cur_p = parent_id
-        while cur_p and cur_p not in ('0', '1'):
-            p_cell = cell_map.get(cur_p)
-            if not p_cell:
-                break
-            p_geo = p_cell.find('mxGeometry')
-            if p_geo is not None:
-                x += float(p_geo.get('x', '0'))
-                y += float(p_geo.get('y', '0'))
-            cur_p = p_cell.get('parent')
+        ox, oy = _parent_origin(parent_id, cell_map, origin_cache)
+        x = local_x + ox
+        y = local_y + oy
 
         node_type = classify_vertex(style, raw_cleaned, node_id in incoming, node_id in outgoing, node_id)
         category = classify_category(node_type, raw_cleaned, style)
@@ -720,16 +780,13 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             else:
                 clean_name = f"Операция {code or node_id}"
 
-        if node_type in ('startEvent', 'endEvent'):
-            width, height = max(int(width or 32), 28), max(int(height or 32), 28)
-        elif 'Gateway' in node_type:
-            width, height = max(int(width or 36), 28), max(int(height or 36), 28)
-        elif node_type == 'lane':
-            width = max(int(width), 80)
-            height = max(int(height), 40)
+        # Keep original mxGeometry size; only guard against zero/negative boxes.
+        if node_type == 'lane':
+            width = max(int(round(width)), 8)
+            height = max(int(round(height)), 8)
         else:
-            width = max(int(width), 40)
-            height = max(int(height), 24)
+            width = max(int(round(width or 1)), 8)
+            height = max(int(round(height or 1)), 8)
 
         fot_cost = (sla_min * 1932) if category != 'rpa_bot' else 800
 
@@ -739,7 +796,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             type=node_type,
             category=category,
             code=code,
-            geometry=Geometry(x=int(x), y=int(y), width=int(width), height=int(height)),
+            geometry=Geometry(x=int(round(x)), y=int(round(y)), width=int(width), height=int(height)),
             style=style,
             laneId=parent_id,
             slaMinutes=sla_min,
@@ -776,24 +833,6 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
                 n.role = n.role or p_lane.name
         n.system = detect_system(n.name, n.laneName or '')
 
-    # Draw.io Grid Snap & Layout Spacing (10px grid unit)
-    GRID_SIZE = 10
-    def snap(v: float) -> int:
-        return int(round(v / GRID_SIZE) * GRID_SIZE)
-
-    # Keep original draw.io coordinates — do not shove shapes sideways.
-    for lane in lanes:
-        lane.geometry.x = snap(lane.geometry.x)
-        lane.geometry.y = snap(lane.geometry.y)
-        lane.geometry.width = max(snap(lane.geometry.width), 80)
-        lane.geometry.height = max(snap(lane.geometry.height), 40)
-
-    for node in flow_nodes:
-        node.geometry.x = snap(node.geometry.x)
-        node.geometry.y = snap(node.geometry.y)
-        node.geometry.width = max(snap(node.geometry.width), 24)
-        node.geometry.height = max(snap(node.geometry.height), 24)
-
     valid_node_ids = {n.id for n in flow_nodes}
 
     edges: List[ProcessEdge] = []
@@ -806,22 +845,44 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         edge_id = cell.get('id') or f"edge_{uuid.uuid4().hex[:8]}"
         raw_val = cell.get('value')
         edge_name = clean_label(raw_val) or label_map.get(edge_id, '')
+        smap = _style_map(cell.get('style') or '')
 
+        eox, eoy = _parent_origin(cell.get('parent'), cell_map, origin_cache)
         pts: List[ProcessEdgePoint] = []
         for arr in cell.findall('.//Array'):
             if (arr.get('as') or '') != 'points':
                 continue
             for p in arr.findall('mxPoint'):
                 pts.append(ProcessEdgePoint(
-                    x=int(float(p.get('x', '0'))),
-                    y=int(float(p.get('y', '0')))
+                    x=int(round(float(p.get('x', '0') or 0) + eox)),
+                    y=int(round(float(p.get('y', '0') or 0) + eoy)),
                 ))
+
+        lx, ly = edge_label_geo.get(edge_id, (None, None))
+        geo = cell.find('mxGeometry')
+        if lx is None and geo is not None and geo.get('x') not in (None, ''):
+            try:
+                lx = float(geo.get('x'))
+            except ValueError:
+                pass
+        if ly is None and geo is not None and geo.get('y') not in (None, ''):
+            try:
+                ly = float(geo.get('y'))
+            except ValueError:
+                pass
+
         edges.append(ProcessEdge(
             id=edge_id,
             name=edge_name,
             sourceId=s_id,
             targetId=t_id,
-            points=pts
+            points=pts,
+            exitX=_style_float(smap, 'exitx'),
+            exitY=_style_float(smap, 'exity'),
+            entryX=_style_float(smap, 'entryx'),
+            entryY=_style_float(smap, 'entryy'),
+            labelX=lx,
+            labelY=ly,
         ))
 
     title = filename.replace('.drawio', '').replace('.xml', '')

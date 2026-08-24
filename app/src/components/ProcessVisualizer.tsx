@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import type { BusinessProcess, ProcessNode } from '@/types/process'
+import type { BusinessProcess, ProcessEdge, ProcessNode } from '@/types/process'
 
 interface ProcessVisualizerProps {
   process: BusinessProcess
@@ -43,13 +43,12 @@ const C = {
   endNo: '#ff6b6b',
 }
 
-function snap(v: number) { return Math.round(v / GRID_MINOR) * GRID_MINOR }
-
 type Box = { x: number; y: number; w: number; h: number; cx: number; cy: number }
+type Pt = { x: number; y: number }
 
 function rawBox(n: ProcessNode): Box {
-  const w = Math.max(n.geometry.width || 40, 24)
-  const h = Math.max(n.geometry.height || 40, 24)
+  const w = Math.max(n.geometry.width || 8, 8)
+  const h = Math.max(n.geometry.height || 8, 8)
   return {
     x: n.geometry.x,
     y: n.geometry.y,
@@ -60,89 +59,110 @@ function rawBox(n: ProcessNode): Box {
   }
 }
 
-function laneOf(node: ProcessNode, lanes: ProcessNode[]): ProcessNode | undefined {
-  if (node.laneId) {
-    const hit = lanes.find((l) => l.id === node.laneId)
-    if (hit) return hit
-  }
-  const cx = node.geometry.x + (node.geometry.width || 0) / 2
-  const cy = node.geometry.y + (node.geometry.height || 0) / 2
-  return lanes.find((l) =>
-    cx >= l.geometry.x &&
-    cx <= l.geometry.x + l.geometry.width &&
-    cy >= l.geometry.y &&
-    cy <= l.geometry.y + l.geometry.height,
-  )
-}
-
 function isEventNode(n: ProcessNode): boolean {
   return n.type === 'startEvent' || n.type === 'endEvent'
 }
 
-/** Keep event circles inside the lane body so they never sit on the title column. */
-function displayBox(n: ProcessNode, lanes: ProcessNode[]): Box {
-  const b = rawBox(n)
-  if (!isEventNode(n)) return b
-  const lane = laneOf(n, lanes)
-  if (!lane) return b
-  const pad = 8
-  const minX = lane.geometry.x + LANE_HEAD + pad
-  const maxX = lane.geometry.x + lane.geometry.width - b.w - pad
-  const minY = lane.geometry.y + pad
-  const maxY = lane.geometry.y + lane.geometry.height - b.h - pad
-  let { x, y } = b
-  if (x < minX) x = minX
-  if (maxX >= minX && x > maxX) x = maxX
-  if (y < minY) y = minY
-  if (maxY >= minY && y > maxY) y = maxY
-  return { x, y, w: b.w, h: b.h, cx: x + b.w / 2, cy: y + b.h / 2 }
+function parseStyleMap(style: string): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const part of (style || '').split(';')) {
+    if (!part) continue
+    const eq = part.indexOf('=')
+    if (eq < 0) {
+      out[part.trim().toLowerCase()] = '1'
+      continue
+    }
+    out[part.slice(0, eq).trim().toLowerCase()] = part.slice(eq + 1).trim()
+  }
+  return out
+}
+
+function styleNum(map: Record<string, string>, key: string, fallback = 0): number {
+  const n = Number(map[key])
+  return Number.isFinite(n) ? n : fallback
+}
+
+/** Perimeter point from mxGraph exitX/exitY (0..1 of the box). */
+function constraintPoint(box: Box, fx?: number, fy?: number): Pt | null {
+  if (fx == null || fy == null || Number.isNaN(fx) || Number.isNaN(fy)) return null
+  return { x: box.x + fx * box.w, y: box.y + fy * box.h }
+}
+
+/** Intersection of the ray from the box centre toward `toward` with the shape border. */
+function intersectBorder(box: Box, toward: Pt, circular: boolean): Pt {
+  const dx = toward.x - box.cx
+  const dy = toward.y - box.cy
+  if (dx === 0 && dy === 0) return { x: box.x + box.w, y: box.cy }
+  if (circular) {
+    const r = Math.max(4, Math.min(box.w, box.h) / 2)
+    const len = Math.hypot(dx, dy) || 1
+    return { x: box.cx + (dx / len) * r, y: box.cy + (dy / len) * r }
+  }
+  const hw = box.w / 2
+  const hh = box.h / 2
+  const sx = dx === 0 ? Infinity : hw / Math.abs(dx)
+  const sy = dy === 0 ? Infinity : hh / Math.abs(dy)
+  const t = Math.min(sx, sy)
+  return { x: box.cx + dx * t, y: box.cy + dy * t }
+}
+
+function labelT(x?: number): number {
+  if (x == null || Number.isNaN(x)) return 0.5
+  // mxGraph uses -1..1 (0 = midpoint); the spec also allows 0..1 along the path.
+  if (x < 0 || x > 1) return Math.max(0, Math.min(1, (x + 1) / 2))
+  return x
+}
+
+function pointAlong(pts: Pt[], t: number, perp = 0): Pt {
+  if (pts.length === 0) return { x: 0, y: 0 }
+  if (pts.length === 1) return { ...pts[0] }
+  const segs: { a: Pt; b: Pt; len: number }[] = []
+  let total = 0
+  for (let i = 0; i < pts.length - 1; i++) {
+    const len = Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y)
+    segs.push({ a: pts[i], b: pts[i + 1], len })
+    total += len
+  }
+  if (total <= 0) return { ...pts[0] }
+  let walk = Math.max(0, Math.min(1, t)) * total
+  for (let i = 0; i < segs.length; i++) {
+    const s = segs[i]
+    if (walk > s.len && i < segs.length - 1) {
+      walk -= s.len
+      continue
+    }
+    const r = s.len === 0 ? 0 : walk / s.len
+    const x = s.a.x + (s.b.x - s.a.x) * r
+    const y = s.a.y + (s.b.y - s.a.y) * r
+    if (!perp) return { x, y }
+    const nx = -(s.b.y - s.a.y)
+    const ny = s.b.x - s.a.x
+    const nl = Math.hypot(nx, ny) || 1
+    return { x: x + (nx / nl) * perp, y: y + (ny / nl) * perp }
+  }
+  return { ...pts[pts.length - 1] }
 }
 
 function edgePath(
-  a: Box,
-  b: Box,
-  pts: { x: number; y: number }[],
+  src: ProcessNode,
+  tgt: ProcessNode,
+  srcBox: Box,
+  tgtBox: Box,
+  edge: ProcessEdge,
 ): { d: string; lx: number; ly: number } {
-  if (pts && pts.length >= 2) {
-    const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
-    const mid = pts[Math.floor(pts.length / 2)]
-    return { d, lx: mid.x, ly: mid.y - 8 }
-  }
-
-  const dx = b.cx - a.cx
-  const dy = b.cy - a.cy
-  const horiz = Math.abs(dx) >= Math.abs(dy) * 0.55
-
-  let x1: number, y1: number, x2: number, y2: number
-  if (horiz) {
-    if (dx >= 0) { x1 = a.x + a.w; y1 = a.cy; x2 = b.x; y2 = b.cy }
-    else { x1 = a.x; y1 = a.cy; x2 = b.x + b.w; y2 = b.cy }
-  } else {
-    if (dy >= 0) { x1 = a.cx; y1 = a.y + a.h; x2 = b.cx; y2 = b.y }
-    else { x1 = a.cx; y1 = a.y; x2 = b.cx; y2 = b.y + b.h }
-  }
-
-  if (Math.abs(y1 - y2) < 2) {
-    return { d: `M${x1},${y1} L${x2},${y2}`, lx: (x1 + x2) / 2, ly: y1 - 9 }
-  }
-  if (Math.abs(x1 - x2) < 2) {
-    return { d: `M${x1},${y1} L${x2},${y2}`, lx: x1 + 9, ly: (y1 + y2) / 2 }
-  }
-
-  if (horiz) {
-    const midX = snap((x1 + x2) / 2)
-    return {
-      d: `M${x1},${y1} L${midX},${y1} L${midX},${y2} L${x2},${y2}`,
-      lx: midX,
-      ly: (y1 + y2) / 2 - 9,
-    }
-  }
-  const midY = snap((y1 + y2) / 2)
-  return {
-    d: `M${x1},${y1} L${x1},${midY} L${x2},${midY} L${x2},${y2}`,
-    lx: (x1 + x2) / 2,
-    ly: midY - 9,
-  }
+  const wp = edge.points || []
+  const startToward = wp[0] || { x: tgtBox.cx, y: tgtBox.cy }
+  const endToward = wp.length ? wp[wp.length - 1] : { x: srcBox.cx, y: srcBox.cy }
+  const start =
+    constraintPoint(srcBox, edge.exitX, edge.exitY) ||
+    intersectBorder(srcBox, startToward, isEventNode(src))
+  const end =
+    constraintPoint(tgtBox, edge.entryX, edge.entryY) ||
+    intersectBorder(tgtBox, endToward, isEventNode(tgt))
+  const pts = [start, ...wp, end]
+  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
+  const label = pointAlong(pts, labelT(edge.labelX), edge.labelY ?? -10)
+  return { d, lx: label.x, ly: label.y }
 }
 
 function wrapText(text: string, maxChars: number): string[] {
@@ -163,8 +183,8 @@ function wrapText(text: string, maxChars: number): string[] {
 }
 
 function fitBoxText(text: string, width: number, height: number, maxLines = 3): { lines: string[]; fontSize: number } {
-  const innerW = Math.max(20, width - 14)
-  const innerH = Math.max(14, height - 12)
+  const innerW = Math.max(20, width)
+  const innerH = Math.max(14, height)
   for (let fs = 12; fs >= 8; fs--) {
     const maxChars = Math.max(6, Math.floor(innerW / (fs * 0.56)))
     const lines = wrapText(text, maxChars).slice(0, maxLines)
@@ -252,14 +272,9 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
 
   const nodeBoxes = useMemo(() => {
     const map = new Map<string, Box>()
-    for (const n of process.nodes) map.set(n.id, displayBox(n, process.lanes))
+    for (const n of process.nodes) map.set(n.id, rawBox(n))
     return map
-  }, [process.nodes, process.lanes])
-
-  const paintOrder = useMemo(
-    () => [...process.nodes].sort((a, b) => Number(isEventNode(b)) - Number(isEventNode(a))),
-    [process.nodes],
-  )
+  }, [process.nodes])
 
   const visibleIds = useMemo(() => {
     let list = process.nodes
@@ -440,13 +455,18 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
             </marker>
             {process.nodes.map((node) => {
               const b = nodeBoxes.get(node.id) || rawBox(node)
+              const st = parseStyleMap(node.style)
+              const padL = 6 + styleNum(st, 'spacing') + styleNum(st, 'spacingleft')
+              const padT = 5 + styleNum(st, 'spacing') + styleNum(st, 'spacingtop')
+              const padR = 6 + styleNum(st, 'spacing') + styleNum(st, 'spacingright')
+              const padB = 5 + styleNum(st, 'spacing') + styleNum(st, 'spacingbottom')
               return (
                 <clipPath key={`clip-${node.id}`} id={`clip-${node.id}`}>
                   <rect
-                    x={b.x + 6}
-                    y={b.y + 5}
-                    width={Math.max(8, b.w - 12)}
-                    height={Math.max(8, b.h - 10)}
+                    x={b.x + padL}
+                    y={b.y + padT}
+                    width={Math.max(8, b.w - padL - padR)}
+                    height={Math.max(8, b.h - padT - padB)}
                     rx={6}
                   />
                 </clipPath>
@@ -473,7 +493,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               if (!src || !tgt) return null
               const sb = nodeBoxes.get(src.id) || rawBox(src)
               const tb = nodeBoxes.get(tgt.id) || rawBox(tgt)
-              const { d, lx, ly } = edgePath(sb, tb, edge.points || [])
+              const { d, lx, ly } = edgePath(src, tgt, sb, tb, edge)
               const hi = Boolean(selectedNodeId && (edge.sourceId === selectedNodeId || edge.targetId === selectedNodeId))
               const raw = (edge.name || '').trim()
               const cap = raw ? fitCaption(raw, 90, 1) : null
@@ -510,12 +530,14 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                             node.name.toLowerCase().includes('rad etildi')
               const b = nodeBoxes.get(node.id) || rawBox(node)
               const { x, y, w, h, cx, cy } = b
-              const home = laneOf(node, process.lanes)
+              const st = parseStyleMap(node.style)
+              const align = (st.align || 'center').toLowerCase()
+              const valign = (st.verticalalign || 'middle').toLowerCase()
 
               if (node.type === 'startEvent') {
-                const r = Math.max(10, Math.min(w, h) / 2 - 1)
+                const r = Math.max(8, Math.min(w, h) / 2 - 1)
                 const cap = fitCaption(node.name, 90, 2)
-                const labelRight = Boolean(home && x <= home.geometry.x + LANE_HEAD + 16)
+                const vpos = (st.verticallabelposition || 'bottom').toLowerCase()
                 return (
                   <g key={node.id} opacity={faded ? 0.18 : 1}
                     onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
@@ -523,9 +545,9 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                     <circle cx={cx} cy={cy} r={r} fill={C.canvas} stroke={sel ? C.edgeHi : C.start} strokeWidth={1.8} />
                     {cap.lines.map((line, i) => (
                       <text key={i}
-                        x={labelRight ? x + w + 6 : cx}
-                        y={labelRight ? cy - ((cap.lines.length - 1) * (cap.fontSize + 2)) / 2 + i * (cap.fontSize + 2) + 3 : y + h + 11 + i * (cap.fontSize + 2)}
-                        textAnchor={labelRight ? 'start' : 'middle'}
+                        x={cx}
+                        y={vpos === 'top' ? y - 6 - (cap.lines.length - 1 - i) * (cap.fontSize + 2) : y + h + 11 + i * (cap.fontSize + 2)}
+                        textAnchor="middle"
                         fontSize={cap.fontSize} fill="#d8d8d8"
                         style={{ userSelect: 'none', fontFamily: FONT }}>
                         {line}
@@ -536,10 +558,10 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               }
 
               if (node.type === 'endEvent') {
-                const r = Math.max(10, Math.min(w, h) / 2 - 1)
+                const r = Math.max(8, Math.min(w, h) / 2 - 1)
                 const sc = isRej ? C.endNo : C.endOk
                 const cap = fitCaption(node.name, 90, 2)
-                const labelLeft = Boolean(home && x + w >= home.geometry.x + home.geometry.width - 20)
+                const vpos = (st.verticallabelposition || 'bottom').toLowerCase()
                 return (
                   <g key={node.id} opacity={faded ? 0.18 : 1}
                     onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
@@ -548,9 +570,9 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                     <circle cx={cx} cy={cy} r={Math.max(4, r - 6)} fill="none" stroke={sel ? C.edgeHi : sc} strokeWidth="1.4" />
                     {cap.lines.map((line, i) => (
                       <text key={i}
-                        x={labelLeft ? x - 6 : cx}
-                        y={labelLeft ? cy - ((cap.lines.length - 1) * (cap.fontSize + 2)) / 2 + i * (cap.fontSize + 2) + 3 : y + h + 11 + i * (cap.fontSize + 2)}
-                        textAnchor={labelLeft ? 'end' : 'middle'}
+                        x={cx}
+                        y={vpos === 'top' ? y - 6 - (cap.lines.length - 1 - i) * (cap.fontSize + 2) : y + h + 11 + i * (cap.fontSize + 2)}
+                        textAnchor="middle"
                         fontSize={cap.fontSize} fill={isRej ? C.endNo : C.endOk}
                         style={{ userSelect: 'none', fontFamily: FONT }}>
                         {line}
@@ -561,7 +583,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               }
 
               if (node.type === 'exclusiveGateway' || node.type === 'parallelGateway' || node.type === 'inclusiveGateway') {
-                const s = Math.max(16, Math.min(w, h) / 2)
+                const s = Math.max(12, Math.min(w, h) / 2)
                 const cap = node.name && node.name !== 'Условие' ? fitCaption(node.name, 92, 2) : null
                 return (
                   <g key={node.id} opacity={faded ? 0.18 : 1}
@@ -587,8 +609,22 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
 
               const fill = isRpa ? C.rpaFill : isBad ? C.badFill : C.taskFill
               const stroke = sel ? C.edgeHi : isRpa ? C.rpaStroke : isBad ? C.badStroke : C.taskStroke
-              const fitted = fitBoxText(node.name, w, h, 3)
+              const padL = 6 + styleNum(st, 'spacing') + styleNum(st, 'spacingleft')
+              const padT = 5 + styleNum(st, 'spacing') + styleNum(st, 'spacingtop')
+              const padR = 6 + styleNum(st, 'spacing') + styleNum(st, 'spacingright')
+              const padB = 5 + styleNum(st, 'spacing') + styleNum(st, 'spacingbottom')
+              const innerW = Math.max(12, w - padL - padR)
+              const innerH = Math.max(12, h - padT - padB)
+              const fitted = fitBoxText(node.name, innerW, innerH, 3)
               const sla = slaLabel(node.slaMinutes)
+              const textAnchor = align === 'left' ? 'start' : align === 'right' ? 'end' : 'middle'
+              const tx = align === 'left' ? x + padL : align === 'right' ? x + w - padR : cx
+              const lineH = fitted.fontSize + 3
+              const blockH = fitted.lines.length * lineH
+              let ty0: number
+              if (valign === 'top') ty0 = y + padT + fitted.fontSize / 2
+              else if (valign === 'bottom') ty0 = y + h - padB - blockH + fitted.fontSize / 2
+              else ty0 = cy - (fitted.lines.length - 1) * lineH / 2
 
               return (
                 <g key={node.id} opacity={faded ? 0.18 : 1}
@@ -598,9 +634,9 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                   <g clipPath={`url(#clip-${node.id})`}>
                     {fitted.lines.map((line, i) => (
                       <text key={i}
-                        x={cx}
-                        y={cy - ((fitted.lines.length - 1) * (fitted.fontSize + 2)) / 2 + i * (fitted.fontSize + 3)}
-                        textAnchor="middle" dominantBaseline="central"
+                        x={tx}
+                        y={ty0 + i * lineH}
+                        textAnchor={textAnchor} dominantBaseline="central"
                         fontSize={fitted.fontSize} fill={C.taskText}
                         style={{ userSelect: 'none', fontFamily: FONT }}>
                         {line}
@@ -619,8 +655,8 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
 
             {process.lanes.map((lane) => {
               const label = laneLabels.get(lane.id) || { lines: [lane.name], fontSize: 11 }
-              const cx = lane.geometry.x + LANE_HEAD / 2
-              const cy = lane.geometry.y + lane.geometry.height / 2
+              const hx = lane.geometry.x + LANE_HEAD / 2
+              const hy = lane.geometry.y + lane.geometry.height / 2
               const lineH = label.fontSize + 3
               return (
                 <g key={`head-${lane.id}`}>
@@ -629,12 +665,12 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                     width={LANE_HEAD} height={lane.geometry.height}
                     fill={C.laneHead} stroke={C.laneLine} strokeWidth="1"
                   />
-                  <g transform={`rotate(-90, ${cx}, ${cy})`}>
+                  <g transform={`rotate(-90, ${hx}, ${hy})`}>
                     {label.lines.map((line, i) => (
                       <text
                         key={i}
-                        x={cx}
-                        y={cy - ((label.lines.length - 1) * lineH) / 2 + i * lineH}
+                        x={hx}
+                        y={hy - ((label.lines.length - 1) * lineH) / 2 + i * lineH}
                         textAnchor="middle"
                         dominantBaseline="middle"
                         fontSize={label.fontSize} fontWeight="600" fill={C.laneText}

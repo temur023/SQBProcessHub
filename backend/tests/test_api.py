@@ -152,6 +152,70 @@ class TestSQBProcessHubApi(unittest.TestCase):
         self.assertIn("RM", lane_names)
         self.assertIn("I servis", lane_names)
 
+    def test_mxgraph_absolute_coords_and_edge_anchors(self):
+        drawio_xml = """<mxfile host="app.diagrams.net">
+          <diagram id="geo-1" name="Geo">
+            <mxGraphModel>
+              <root>
+                <mxCell id="0" />
+                <mxCell id="1" parent="0" />
+                <mxCell id="pool" value="Pool" style="swimlane;html=1;childLayout=stackLayout;horizontal=0;startSize=20;" vertex="1" parent="1">
+                  <mxGeometry x="10" y="20" width="600" height="200" as="geometry" />
+                </mxCell>
+                <mxCell id="lane_a" value="Lane A" style="swimlane;html=1;horizontal=0;startSize=26;" vertex="1" parent="pool">
+                  <mxGeometry x="0" y="20" width="600" height="180" as="geometry" />
+                </mxCell>
+                <mxCell id="task_a" value="Task A" style="rounded=1;align=left;verticalAlign=top;spacing=4;" vertex="1" parent="lane_a">
+                  <mxGeometry x="40" y="40" width="120" height="60" as="geometry" />
+                </mxCell>
+                <mxCell id="task_b" value="Task B" style="rounded=1;" vertex="1" parent="lane_a">
+                  <mxGeometry x="260" y="40" width="120" height="60" as="geometry" />
+                </mxCell>
+                <mxCell id="e_ab" value="" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="lane_a" source="task_a" target="task_b">
+                  <mxGeometry relative="1" as="geometry">
+                    <Array as="points">
+                      <mxPoint x="200" y="70" />
+                    </Array>
+                  </mxGeometry>
+                </mxCell>
+                <mxCell id="e_ab_label" value="Ha" style="edgeLabel;html=1;" vertex="1" connectable="0" parent="e_ab">
+                  <mxGeometry x="0.5" y="-12" relative="1" as="geometry">
+                    <mxPoint x="0" y="0" as="offset" />
+                  </mxGeometry>
+                </mxCell>
+              </root>
+            </mxGraphModel>
+          </diagram>
+        </mxfile>"""
+
+        import_res = self.client.post("/api/v1/import/xml", json={
+            "xml": drawio_xml,
+            "fileName": "geo.drawio",
+        })
+        self.assertEqual(import_res.status_code, 200, import_res.text)
+        proc = import_res.json()
+        by_id = {n["id"]: n for n in proc["nodes"]}
+        self.assertIn("task_a", by_id)
+        # Absolute = local + lane (0,20) + pool (10,20) => (50, 80)
+        self.assertEqual(by_id["task_a"]["geometry"]["x"], 50)
+        self.assertEqual(by_id["task_a"]["geometry"]["y"], 80)
+        self.assertEqual(by_id["task_a"]["geometry"]["width"], 120)
+        self.assertEqual(by_id["task_b"]["geometry"]["x"], 270)
+        edges = {e["id"]: e for e in proc["edges"]}
+        self.assertIn("e_ab", edges)
+        edge = edges["e_ab"]
+        self.assertEqual(edge["exitX"], 1)
+        self.assertEqual(edge["exitY"], 0.5)
+        self.assertEqual(edge["entryX"], 0)
+        self.assertEqual(edge["entryY"], 0.5)
+        self.assertEqual(edge["name"], "Ha")
+        self.assertEqual(edge["labelX"], 0.5)
+        self.assertEqual(edge["labelY"], -12)
+        # Waypoint 200,70 is in lane space: + pool(10,20) + lane(0,20) = 210, 110
+        self.assertEqual(len(edge["points"]), 1)
+        self.assertEqual(edge["points"][0]["x"], 210)
+        self.assertEqual(edge["points"][0]["y"], 110)
+
     def test_green_end_event_and_question_task_not_gateway(self):
         from app.services.drawio_parser import classify_vertex
         self.assertEqual(

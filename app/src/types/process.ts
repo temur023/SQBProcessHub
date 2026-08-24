@@ -69,6 +69,14 @@ export interface ProcessEdge {
   condition?: string
   probability?: number // 0-100% for branch execution
   points: ProcessEdgePoint[]
+  /** mxGraph perimeter constraints, 0..1 of the source/target box */
+  exitX?: number
+  exitY?: number
+  entryX?: number
+  entryY?: number
+  /** Relative edge-label: x along the polyline (0..1), y perpendicular in px */
+  labelX?: number
+  labelY?: number
 }
 
 export interface ProcessValidation {

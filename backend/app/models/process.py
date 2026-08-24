@@ -70,6 +70,12 @@ class ProcessEdge(BaseModel):
     condition: Optional[str] = None
     probability: Optional[int] = 100
     points: List[ProcessEdgePoint] = Field(default_factory=list)
+    exitX: Optional[float] = None
+    exitY: Optional[float] = None
+    entryX: Optional[float] = None
+    entryY: Optional[float] = None
+    labelX: Optional[float] = None
+    labelY: Optional[float] = None
 
 class ProcessValidation(BaseModel):
     level: Literal['error', 'warning', 'info']
