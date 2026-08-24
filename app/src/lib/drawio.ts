@@ -748,17 +748,17 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     }
 
     if (type === 'startEvent' || type === 'endEvent') {
-      width = Math.max(width || 44, 40)
-      height = Math.max(height || 44, 40)
+      width = Math.max(width || 32, 28)
+      height = Math.max(height || 32, 28)
     } else if (type.includes('Gateway')) {
-      width = Math.max(width || 46, 40)
-      height = Math.max(height || 46, 40)
+      width = Math.max(width || 36, 28)
+      height = Math.max(height || 36, 28)
     } else if (type === 'lane') {
-      width = Math.max(width, 200)
-      height = Math.max(height, 80)
+      width = Math.max(width, 80)
+      height = Math.max(height, 40)
     } else {
-      width = Math.max(width, 100)
-      height = Math.max(height, 48)
+      width = Math.max(width, 40)
+      height = Math.max(height, 24)
     }
 
     const fotCost = category !== 'rpa_bot' ? slaMin * 1932 : 800
@@ -823,53 +823,19 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
   const GRID_SIZE = 10
   const SNAP = (v: number) => Math.round(v / GRID_SIZE) * GRID_SIZE
 
-  // Keep draw.io coordinates. Only snap to the 10px grid and nudge real overlaps.
+  // Keep original draw.io coordinates — do not shove shapes sideways.
   lanes.forEach((lane) => {
     lane.geometry.x = SNAP(lane.geometry.x)
     lane.geometry.y = SNAP(lane.geometry.y)
-    lane.geometry.width = Math.max(SNAP(lane.geometry.width), 200)
-    lane.geometry.height = Math.max(SNAP(lane.geometry.height), 80)
+    lane.geometry.width = Math.max(SNAP(lane.geometry.width), 80)
+    lane.geometry.height = Math.max(SNAP(lane.geometry.height), 40)
   })
 
   flowNodes.forEach((node) => {
     node.geometry.x = SNAP(node.geometry.x)
     node.geometry.y = SNAP(node.geometry.y)
-    node.geometry.width = SNAP(node.geometry.width)
-    node.geometry.height = SNAP(node.geometry.height)
-  })
-
-  const GAP = 24
-  lanes.forEach((lane) => {
-    const laneNodes = flowNodes
-      .filter((n) => n.laneId === lane.id)
-      .sort((a, b) => a.geometry.x - b.geometry.x || a.geometry.y - b.geometry.y)
-
-    for (let i = 1; i < laneNodes.length; i++) {
-      const prev = laneNodes[i - 1]
-      const node = laneNodes[i]
-      const overlapX = prev.geometry.x + prev.geometry.width + GAP > node.geometry.x
-      const overlapY = !(
-        node.geometry.y + node.geometry.height <= prev.geometry.y ||
-        node.geometry.y >= prev.geometry.y + prev.geometry.height
-      )
-      if (overlapX && overlapY) {
-        node.geometry.x = SNAP(prev.geometry.x + prev.geometry.width + GAP)
-      }
-    }
-
-    if (laneNodes.length === 0) return
-    const maxX = Math.max(...laneNodes.map((n) => n.geometry.x + n.geometry.width))
-    const maxY = Math.max(...laneNodes.map((n) => n.geometry.y + n.geometry.height))
-    const minY = Math.min(...laneNodes.map((n) => n.geometry.y))
-    lane.geometry.width = Math.max(lane.geometry.width, maxX - lane.geometry.x + 40)
-    if (minY < lane.geometry.y) {
-      const extra = lane.geometry.y - minY + 16
-      lane.geometry.y -= extra
-      lane.geometry.height += extra
-    }
-    if (maxY > lane.geometry.y + lane.geometry.height) {
-      lane.geometry.height = maxY - lane.geometry.y + 24
-    }
+    node.geometry.width = Math.max(SNAP(node.geometry.width), 24)
+    node.geometry.height = Math.max(SNAP(node.geometry.height), 24)
   })
 
   const validNodeIdSet = new Set(flowNodes.map((n) => n.id))

@@ -687,15 +687,15 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
                 clean_name = f"Операция {code or node_id}"
 
         if node_type in ('startEvent', 'endEvent'):
-            width, height = max(int(width or 44), 40), max(int(height or 44), 40)
+            width, height = max(int(width or 32), 28), max(int(height or 32), 28)
         elif 'Gateway' in node_type:
-            width, height = max(int(width or 46), 40), max(int(height or 46), 40)
+            width, height = max(int(width or 36), 28), max(int(height or 36), 28)
         elif node_type == 'lane':
-            width = max(int(width), 200)
-            height = max(int(height), 80)
+            width = max(int(width), 80)
+            height = max(int(height), 40)
         else:
-            width = max(int(width), 100)
-            height = max(int(height), 48)
+            width = max(int(width), 40)
+            height = max(int(height), 24)
 
         fot_cost = (sla_min * 1932) if category != 'rpa_bot' else 800
 
@@ -747,46 +747,18 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
     def snap(v: float) -> int:
         return int(round(v / GRID_SIZE) * GRID_SIZE)
 
-    # Keep draw.io coordinates. Only snap to the 10px grid and nudge real overlaps.
+    # Keep original draw.io coordinates — do not shove shapes sideways.
     for lane in lanes:
         lane.geometry.x = snap(lane.geometry.x)
         lane.geometry.y = snap(lane.geometry.y)
-        lane.geometry.width = max(snap(lane.geometry.width), 200)
-        lane.geometry.height = max(snap(lane.geometry.height), 80)
+        lane.geometry.width = max(snap(lane.geometry.width), 80)
+        lane.geometry.height = max(snap(lane.geometry.height), 40)
 
     for node in flow_nodes:
         node.geometry.x = snap(node.geometry.x)
         node.geometry.y = snap(node.geometry.y)
-        node.geometry.width = snap(node.geometry.width)
-        node.geometry.height = snap(node.geometry.height)
-
-    GAP = 24
-    for lane in lanes:
-        lane_nodes = [n for n in flow_nodes if n.laneId == lane.id]
-        lane_nodes.sort(key=lambda n: (n.geometry.x, n.geometry.y))
-        for idx in range(1, len(lane_nodes)):
-            prev = lane_nodes[idx - 1]
-            node = lane_nodes[idx]
-            overlap_x = prev.geometry.x + prev.geometry.width + GAP > node.geometry.x
-            overlap_y = not (
-                node.geometry.y + node.geometry.height <= prev.geometry.y
-                or node.geometry.y >= prev.geometry.y + prev.geometry.height
-            )
-            if overlap_x and overlap_y:
-                node.geometry.x = snap(prev.geometry.x + prev.geometry.width + GAP)
-
-        if not lane_nodes:
-            continue
-        max_x = max(n.geometry.x + n.geometry.width for n in lane_nodes)
-        max_y = max(n.geometry.y + n.geometry.height for n in lane_nodes)
-        min_y = min(n.geometry.y for n in lane_nodes)
-        lane.geometry.width = max(lane.geometry.width, max_x - lane.geometry.x + 40)
-        if min_y < lane.geometry.y:
-            extra = lane.geometry.y - min_y + 16
-            lane.geometry.y -= extra
-            lane.geometry.height += extra
-        if max_y > lane.geometry.y + lane.geometry.height:
-            lane.geometry.height = max_y - lane.geometry.y + 24
+        node.geometry.width = max(snap(node.geometry.width), 24)
+        node.geometry.height = max(snap(node.geometry.height), 24)
 
     valid_node_ids = {n.id for n in flow_nodes}
 
