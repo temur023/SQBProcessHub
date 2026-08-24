@@ -97,16 +97,25 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   const wrapRef  = useRef<HTMLDivElement>(null)
 
   const bounds = useMemo(() => {
-    let mx = 1600, my = 900
-    for (const l of process.lanes) {
-      mx = Math.max(mx, l.geometry.x + l.geometry.width  + 80)
-      my = Math.max(my, l.geometry.y + l.geometry.height + 80)
+    let minX = Infinity
+    let minY = Infinity
+    let maxX = 0
+    let maxY = 0
+    const bump = (x: number, y: number, w: number, h: number) => {
+      minX = Math.min(minX, x)
+      minY = Math.min(minY, y)
+      maxX = Math.max(maxX, x + w)
+      maxY = Math.max(maxY, y + h)
     }
-    for (const n of process.nodes) {
-      mx = Math.max(mx, n.geometry.x + (n.geometry.width  || 160) + 80)
-      my = Math.max(my, n.geometry.y + (n.geometry.height || 70)  + 80)
+    for (const l of process.lanes) bump(l.geometry.x, l.geometry.y, l.geometry.width, l.geometry.height)
+    for (const n of process.nodes) bump(n.geometry.x, n.geometry.y, n.geometry.width || 160, n.geometry.height || 70)
+    if (!Number.isFinite(minX)) {
+      minX = 0
+      minY = 0
+      maxX = 800
+      maxY = 500
     }
-    return { w: mx, h: my }
+    return { minX, minY, w: Math.max(maxX - minX, 200), h: Math.max(maxY - minY, 160) }
   }, [process])
 
   const visibleIds = useMemo(() => {
@@ -128,13 +137,15 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   const fitToScreen = useCallback(() => {
     if (!wrapRef.current) return
     const { width, height } = wrapRef.current.getBoundingClientRect()
-    const s = Math.min(
-      Math.max((width  - 48) / bounds.w, MIN_ZOOM),
-      Math.max((height - 48) / bounds.h, MIN_ZOOM),
-      1.0,
-    )
-    setZoom(+s.toFixed(2))
-    setPanPos({ x: 24, y: 24 })
+    if (width < 40 || height < 40) return
+    const pad = 28
+    const s = Math.min((width - pad * 2) / bounds.w, (height - pad * 2) / bounds.h, 1)
+    const z = +Math.max(s, MIN_ZOOM).toFixed(2)
+    setZoom(z)
+    setPanPos({
+      x: (width  - bounds.w * z) / 2 - bounds.minX * z,
+      y: (height - bounds.h * z) / 2 - bounds.minY * z,
+    })
   }, [bounds])
 
   const onMouseDown = (e: React.MouseEvent) => {
@@ -159,6 +170,25 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   }, [])
 
   useEffect(() => {
+    let fitted = false
+    const tryFit = () => {
+      if (fitted || !wrapRef.current) return
+      const { width, height } = wrapRef.current.getBoundingClientRect()
+      if (width < 40 || height < 40) return
+      fitToScreen()
+      fitted = true
+    }
+    const raf = requestAnimationFrame(tryFit)
+    const el = wrapRef.current
+    const ro = el ? new ResizeObserver(tryFit) : null
+    if (el && ro) ro.observe(el)
+    return () => {
+      cancelAnimationFrame(raf)
+      ro?.disconnect()
+    }
+  }, [fitToScreen, process.id, isFullscreen])
+
+  useEffect(() => {
     const el = wrapRef.current
     if (!el) return
     const handler = (e: WheelEvent) => {
@@ -176,8 +206,8 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   }
 
   return (
-    <div className={`flex flex-col bg-white dark:bg-[#1e1e1e] rounded-xl border shadow-sm overflow-hidden transition-all duration-200 ${
-      isFullscreen ? 'fixed inset-0 z-50 rounded-none border-none' : 'h-full min-h-[620px]'
+    <div className={`flex flex-col bg-slate-50 dark:bg-[#1e1e1e] rounded-xl border shadow-sm overflow-hidden transition-all duration-200 ${
+      isFullscreen ? 'fixed inset-0 z-50 rounded-none border-none' : 'flex-1 min-h-0 h-full'
     }`}>
       {/* Toolbar */}
       <div className="px-3 py-2 border-b bg-white dark:bg-slate-900 flex flex-wrap items-center justify-between gap-2 shrink-0">
@@ -237,13 +267,18 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
       {/* SVG Canvas */}
       <div
         ref={wrapRef}
-        className={`relative flex-1 overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+        className={`relative flex-1 min-h-0 overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
       >
-        <svg width="100%" height="100%" style={{ display: 'block' }}>
+        <svg
+          width="100%"
+          height="100%"
+          className="absolute inset-0 block"
+          preserveAspectRatio="xMidYMid meet"
+        >
           <defs>
             {/* Draw.io style grid: minor 10px lines + major 100px lines */}
             <pattern id="g-minor" width={GRID_MINOR * zoom} height={GRID_MINOR * zoom} patternUnits="userSpaceOnUse"
@@ -265,8 +300,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
             </marker>
           </defs>
 
-          {/* White canvas (no tinted background) */}
-          <rect width="100%" height="100%" fill="white" />
+          <rect width="100%" height="100%" fill="#f8fafc" />
 
           {/* Grid overlay */}
           {showGrid && <rect width="100%" height="100%" fill="url(#g-major)" />}
@@ -279,7 +313,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               <g key={lane.id}>
                 <rect x={lane.geometry.x} y={lane.geometry.y}
                   width={lane.geometry.width} height={lane.geometry.height}
-                  fill={idx % 2 === 0 ? '#ffffff' : '#f8fafc'}
+                  fill={idx % 2 === 0 ? '#eef2f7' : '#e2e8f0'}
                   stroke="#94a3b8" strokeWidth="1" />
                 <rect x={lane.geometry.x} y={lane.geometry.y}
                   width={40} height={lane.geometry.height}

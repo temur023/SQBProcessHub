@@ -61,7 +61,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="h-screen overflow-hidden bg-background text-foreground flex flex-col">
       <Toaster position="top-right" richColors />
 
       {/* Main Bank Header */}
@@ -75,7 +75,9 @@ export default function Home() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 container mx-auto px-4 py-5 max-w-7xl">
+      <main className={`flex-1 min-h-0 container mx-auto px-4 py-4 max-w-7xl flex flex-col ${
+        activeTab === 'visualizer' ? 'overflow-hidden' : 'overflow-auto'
+      }`}>
         {activeTab === 'visualizer' && (
           <ProcessVisualizer
             process={currentProcess}
