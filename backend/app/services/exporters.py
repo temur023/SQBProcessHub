@@ -1,7 +1,8 @@
 import csv
 import io
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.models.process import BusinessProcess
+
 
 def generate_event_log_csv(process: BusinessProcess) -> str:
     """Generates XES-compatible Event Log CSV for Infomaximum Processet."""
@@ -12,36 +13,33 @@ def generate_event_log_csv(process: BusinessProcess) -> str:
                      'Start_Timestamp', 'End_Timestamp', 'Duration_Min', 'Cost_UZS',
                      'System', 'Is_Conformant', 'Status', 'Lane'])
 
-    base_time = datetime(2026, 8, 1, 9, 0, 0)
-    offset_min = 0
-
     flow_nodes = [n for n in process.nodes if n.type not in ('lane',)]
-    for record in process.registry.records:
-        elapsed = offset_min
+    records = list(process.registry.records)
+
+    for rec_idx, record in enumerate(records):
+        cursor = datetime(2026, 8, 1, 9, 0, 0) + timedelta(hours=rec_idx * 4)
         for node in flow_nodes:
             if node.type in ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway'):
                 continue
             sla = node.slaMinutes or 30
-            start = base_time.replace(hour=9) if elapsed < 0 else datetime(2026, 8, 1, 9, 0)
-            start_str = datetime.now().replace(microsecond=0).isoformat()
-            end_str = datetime.now().replace(microsecond=0).isoformat()
-            conformant = 'TRUE'
+            start = cursor
+            end = cursor + timedelta(minutes=sla)
             writer.writerow([
                 record.caseId,
                 node.name,
                 node.code or '',
                 node.role or '',
                 node.role or 'Сотрудник',
-                start_str,
-                end_str,
+                start.isoformat(timespec='seconds'),
+                end.isoformat(timespec='seconds'),
                 sla,
                 node.costPerExecution or 0,
                 node.system or '',
-                conformant,
+                'TRUE',
                 record.status,
                 node.laneName or ''
             ])
-        offset_min += 1
+            cursor = end + timedelta(minutes=15)
 
     return output.getvalue()
 
@@ -49,7 +47,6 @@ def generate_event_log_csv(process: BusinessProcess) -> str:
 def generate_regulation_csv(process: BusinessProcess) -> str:
     """Generates process regulation matrix as CSV (Excel-compatible with UTF-8 BOM)."""
     output = io.StringIO()
-    # UTF-8 BOM for Excel compatibility
     output.write('\ufeff')
     writer = csv.writer(output, quoting=csv.QUOTE_ALL)
 
@@ -65,7 +62,7 @@ def generate_regulation_csv(process: BusinessProcess) -> str:
             continue
         writer.writerow([
             idx,
-            node.code or '-',
+            node.code or f'STEP-{idx:02d}',
             node.name,
             node.type,
             node.role or '-',

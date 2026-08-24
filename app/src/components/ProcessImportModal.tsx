@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { importDrawioFileApi, importDrawioXmlApi } from '@/lib/api'
-import { SAMPLE_PROCESSES, sqbCreditProcess } from '@/lib/sample-processes'
+import { SAMPLE_PROCESSES } from '@/lib/sample-processes'
 import type { BusinessProcess } from '@/types/process'
 
 interface ProcessImportModalProps {
@@ -42,6 +42,10 @@ export const ProcessImportModal: React.FC<ProcessImportModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileUpload = async (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMsg('Файл больше 10 МБ')
+      return
+    }
     setIsProcessing(true)
     setErrorMsg(null)
     try {
@@ -51,6 +55,25 @@ export const ProcessImportModal: React.FC<ProcessImportModalProps> = ({
     } catch (err: any) {
       console.error('Import error:', err)
       setErrorMsg(err.message || 'Ошибка парсинга файла draw.io')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleOpenBundledDrawio = async () => {
+    setIsProcessing(true)
+    setErrorMsg(null)
+    try {
+      const base = import.meta.env.BASE_URL || './'
+      const res = await fetch(`${base}sqb_credit_process.drawio`)
+      if (!res.ok) throw new Error('Не удалось загрузить process.drawio из public/')
+      const xml = await res.text()
+      const { process } = await importDrawioXmlApi(xml, 'process.drawio')
+      onProcessLoaded(process)
+      onOpenChange(false)
+    } catch (err: any) {
+      console.error('Bundled drawio import error:', err)
+      setErrorMsg(err.message || 'Не удалось открыть process.drawio')
     } finally {
       setIsProcessing(false)
     }
@@ -85,7 +108,7 @@ export const ProcessImportModal: React.FC<ProcessImportModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600">
@@ -182,6 +205,7 @@ export const ProcessImportModal: React.FC<ProcessImportModalProps> = ({
               onChange={(e) => {
                 const file = e.target.files?.[0]
                 if (file) handleFileUpload(file)
+                e.target.value = ''
               }}
             />
             <div
@@ -218,7 +242,8 @@ export const ProcessImportModal: React.FC<ProcessImportModalProps> = ({
                 size="sm"
                 variant="outline"
                 className="text-xs h-7 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
-                onClick={() => handleSelectTemplate(sqbCreditProcess)}
+                onClick={() => handleOpenBundledDrawio()}
+                disabled={isProcessing}
               >
                 Открыть process.drawio
               </Button>

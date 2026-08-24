@@ -11,22 +11,34 @@ import type {
 } from '@/types/process'
 import { analyzeProcessConformance } from './conformance'
 
-/** Decodes HTML entities and tags in draw.io labels */
+/** Decodes HTML entities and tags in draw.io labels without executing markup */
 function cleanLabel(raw: string | null): string {
   if (!raw) return ''
-  const div = document.createElement('div')
-  div.innerHTML = raw
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+  const stripped = raw
     .replace(/<br\s*[\/]?>/gi, ' ')
-    .replace(/<\/?[^>]+(>|$)/g, ' ')
-  return (div.textContent ?? '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+  const textarea = document.createElement('textarea')
+  textarea.innerHTML = stripped
+  return (textarea.value || '')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+function idHasToken(id: string, token: string): boolean {
+  const i = id.toLowerCase()
+  const t = token.toLowerCase()
+  if (i === t || i.startsWith(t + '_') || i.startsWith(t + '-') || i.endsWith('_' + t) || i.endsWith('-' + t)) {
+    return true
+  }
+  return i.split(/[-_]/).includes(t)
+}
+
+function elementsByLocalName(root: ParentNode, names: string[]): Element[] {
+  const want = new Set(names.map((n) => n.toLowerCase()))
+  const scope = root as Document | Element
+  if (!('getElementsByTagName' in scope)) return []
+  return Array.from(scope.getElementsByTagName('*')).filter((el) => want.has(el.localName.toLowerCase()))
 }
 
 /** Robust decompressor for draw.io deflate-raw base64 format without crashing */
@@ -224,13 +236,22 @@ function classifyVertex(
   const l = label.toLowerCase()
   const i = id.toLowerCase()
 
-  if (s.includes('swimlane') || s.includes('pool;') || s.includes('shape=pool') || s.includes('horizontal=0'))
+  if (s.includes('swimlane') || s.includes('pool;') || s.includes('shape=pool'))
     return 'lane'
 
-  if (s.includes('rhombus') || s.includes('gateway') || s.includes('shape=rhombus') || i.includes('gw') || l.includes('?')) {
-    if (s.includes('outline=plus') || s.includes('parallel') || s.includes('plus') || l.includes('+'))
+  const isGatewayShape =
+    s.includes('rhombus') ||
+    s.includes('shape=rhombus') ||
+    s.includes('gateway') ||
+    i.startsWith('gw') ||
+    i.startsWith('gateway') ||
+    i.includes('-gw-') ||
+    i.includes('_gw_')
+
+  if (isGatewayShape) {
+    if (s.includes('outline=plus') || s.includes('parallel') || l.trim() === '+' || l.trim() === 'and' || l.trim() === 'и')
       return 'parallelGateway'
-    if (s.includes('inclusive') || s.includes('circle')) return 'inclusiveGateway'
+    if (s.includes('inclusive') || s.includes('outline=circle')) return 'inclusiveGateway'
     return 'exclusiveGateway'
   }
 
@@ -249,42 +270,40 @@ function classifyVertex(
       l.includes('otkaz') ||
       l.includes('отказ') ||
       l.includes('bekor') ||
+      l.includes('отклон') ||
       i.includes('reject') ||
       s.includes('fillcolor=#ef4444') ||
       s.includes('fillcolor=#e11d48') ||
-      s.includes('fillcolor=#be123c')
+      s.includes('fillcolor=#be123c') ||
+      s.includes('fillcolor=#dc2626') ||
+      s.includes('fillcolor=#b91c1c')
     ) {
       return 'endEvent'
     }
 
-    // Explicit Start Event (Green)
-    if (
-      i.includes('start') ||
-      l.includes('старт') ||
-      l.includes('поступлен') ||
-      l.includes('tashrif') ||
-      l.includes('boshlanish') ||
-      s.includes('fillcolor=#10b981') ||
-      s.includes('fillcolor=#22c55e') ||
-      s.includes('fillcolor=#059669')
-    ) {
-      return 'startEvent'
-    }
-
-    // Explicit Success End Event (Green double border)
-    if (
-      i.includes('end') ||
+    const isEnd =
+      idHasToken(id, 'end') ||
+      idHasToken(id, 'finish') ||
       l.includes('заверш') ||
       l.includes('конец') ||
       l.includes('выдан') ||
       l.includes('ochildi') ||
       l.includes('tugashi') ||
       l.includes('bajarildi') ||
+      l.includes('активирован') ||
       s.includes('outline=double') ||
       s.includes('outline=end')
-    ) {
-      return 'endEvent'
-    }
+
+    const isStart =
+      idHasToken(id, 'start') ||
+      idHasToken(id, 'begin') ||
+      l.includes('старт') ||
+      l.includes('поступлен') ||
+      l.includes('tashrif') ||
+      l.includes('boshlanish')
+
+    if (isEnd) return 'endEvent'
+    if (isStart) return 'startEvent'
 
     if (!hasIncoming && hasOutgoing) return 'startEvent'
     if (hasIncoming && !hasOutgoing) return 'endEvent'
@@ -367,33 +386,23 @@ function extractSlaMinutes(rawText: string, category: StepCategory, type: NodeTy
 
 function parseBpmnXml(xmlText: string, fileName: string): BusinessProcess {
   const doc = new DOMParser().parseFromString(xmlText, 'text/xml')
-  const processEl = doc.querySelector('process') || doc.querySelector('bpmn\\:process') || doc.querySelector('bpmn2\\:process')
+  const parserError = doc.querySelector('parsererror')
+  if (parserError) {
+    throw new Error(`Ошибка BPMN XML: ${parserError.textContent?.slice(0, 80)}`)
+  }
+
+  const processEl = elementsByLocalName(doc, ['process'])[0]
   const processName = processEl?.getAttribute('name') || fileName.replace(/\.(bpmn|xml)$/i, '')
-  const processId = processEl?.getAttribute('id') || `PRC-SQB-${Math.floor(100 + Math.random() * 900)}`
+  const processId = processEl?.getAttribute('id') || `PRC-SQB-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
 
   const nodes: ProcessNode[] = []
   const edges: ProcessEdge[] = []
   const lanes: ProcessNode[] = []
 
-  const laneEls = Array.from(doc.querySelectorAll('lane, bpmn\\:lane, bpmn2\\:lane'))
-  laneEls.forEach((l, idx) => {
-    const id = l.getAttribute('id') ?? `lane_${idx}`
-    const name = l.getAttribute('name') ?? `Подразделение ${idx + 1}`
-    lanes.push({
-      id,
-      name,
-      type: 'lane',
-      role: name,
-      geometry: { x: 50, y: 50 + idx * 180, width: 1400, height: 180 },
-      style: 'swimlane;',
-    })
-  })
-
   const boundsMap = new Map<string, { x: number; y: number; width: number; height: number }>()
-  const shapeEls = Array.from(doc.querySelectorAll('BPMNShape, bpmndi\\:BPMNShape'))
-  shapeEls.forEach((s) => {
+  elementsByLocalName(doc, ['BPMNShape']).forEach((s) => {
     const bpmnElement = s.getAttribute('bpmnElement')
-    const bounds = s.querySelector('Bounds, dc\\:Bounds')
+    const bounds = elementsByLocalName(s, ['Bounds'])[0]
     if (bpmnElement && bounds) {
       boundsMap.set(bpmnElement, {
         x: Number(bounds.getAttribute('x') ?? 100),
@@ -404,7 +413,7 @@ function parseBpmnXml(xmlText: string, fileName: string): BusinessProcess {
     }
   })
 
-  const allElements = Array.from(doc.querySelectorAll('*'))
+  const allElements = Array.from(doc.getElementsByTagName('*'))
   let stepIndex = 1
 
   allElements.forEach((el) => {
@@ -444,24 +453,57 @@ function parseBpmnXml(xmlText: string, fileName: string): BusinessProcess {
     }
   })
 
-  const flowEls = Array.from(doc.querySelectorAll('sequenceFlow, bpmn\\:sequenceFlow, bpmn2\\:sequenceFlow'))
-  flowEls.forEach((f) => {
+  if (nodes.length === 0) {
+    throw new Error('В BPMN-файле не найдено ни одного элемента процесса')
+  }
+
+  elementsByLocalName(doc, ['lane']).forEach((l, idx) => {
+    const id = l.getAttribute('id') ?? `lane_${idx}`
+    const name = l.getAttribute('name') ?? `Подразделение ${idx + 1}`
+    const geometry = boundsMap.get(id) || { x: 50, y: 50 + idx * 180, width: 1400, height: 180 }
+    lanes.push({
+      id,
+      name,
+      type: 'lane',
+      role: name,
+      geometry,
+      style: 'swimlane;',
+    })
+    elementsByLocalName(l, ['flowNodeRef']).forEach((ref) => {
+      const nodeId = (ref.textContent || '').trim()
+      const node = nodes.find((n) => n.id === nodeId)
+      if (node) {
+        node.laneId = id
+        node.laneName = name
+        node.role = node.role || name
+        node.system = detectSystem(node.name, name)
+      }
+    })
+  })
+
+  const nodeIdSet = new Set(nodes.map((n) => n.id))
+  elementsByLocalName(doc, ['sequenceFlow']).forEach((f) => {
+    const sourceId = f.getAttribute('sourceRef') ?? undefined
+    const targetId = f.getAttribute('targetRef') ?? undefined
+    if (!sourceId || !targetId || !nodeIdSet.has(sourceId) || !nodeIdSet.has(targetId)) return
     edges.push({
       id: f.getAttribute('id') ?? `edge_${crypto.randomUUID()}`,
       name: f.getAttribute('name') ?? '',
-      sourceId: f.getAttribute('sourceRef') ?? undefined,
-      targetId: f.getAttribute('targetRef') ?? undefined,
+      sourceId,
+      targetId,
       points: [],
     })
   })
 
+  const firstTask = nodes.find((n) => n.type === 'userTask' || n.type === 'serviceTask' || n.type === 'task') || nodes[0]
+
   const passport: ProcessPassport = {
-    code: processId.startsWith('PRC-') ? processId : `PRC-SQB-${Math.floor(100 + Math.random() * 900)}`,
+    code: processId.startsWith('PRC-') ? processId : `PRC-SQB-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
     name: processName,
     version: '1.0',
     status: 'draft',
     owner: 'Департамент бизнес-процессов АКБ «Узпромстройбанк»',
-    department: 'Операционный блок',
+    department: lanes[0]?.name || 'Операционный блок',
     category: 'Банковские процессы',
     targetSlaHours: Math.round(nodes.reduce((acc, n) => acc + (n.slaMinutes || 0), 0) / 60) || 8,
     description: `Импортирован из файла BPMN: ${fileName}.`,
@@ -486,9 +528,9 @@ function parseBpmnXml(xmlText: string, fileName: string): BusinessProcess {
         caseId: 'SQB-2026-BPM01',
         createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
         status: 'in_progress',
-        currentStepId: nodes[1]?.id || nodes[0]?.id || 'step-1',
-        currentStepName: nodes[1]?.name || 'Первичный шаг',
-        assignedTo: nodes[1]?.role || 'Сотрудник банка',
+        currentStepId: firstTask?.id || 'step-1',
+        currentStepName: firstTask?.name || 'Первичный шаг',
+        assignedTo: firstTask?.role || 'Сотрудник банка',
         elapsedMinutes: 15,
         data: {
           case_number: 'SQB-2026-BPM01',
@@ -845,7 +887,7 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     .filter((cell) => {
       const s = cell.getAttribute('source')
       const t = cell.getAttribute('target')
-      return s && t && (validNodeIdSet.has(s) || validNodeIdSet.has(t))
+      return Boolean(s && t && validNodeIdSet.has(s) && validNodeIdSet.has(t))
     })
     .map((cell) => {
       const edgeId = cell.getAttribute('id') ?? `edge_${crypto.randomUUID()}`
@@ -856,7 +898,7 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       }
 
       const points: ProcessEdgePoint[] = []
-      cell.querySelectorAll('mxPoint').forEach((p) => {
+      cell.querySelectorAll('Array[as="points"] > mxPoint').forEach((p) => {
         points.push({ x: Number(p.getAttribute('x') ?? 0), y: Number(p.getAttribute('y') ?? 0) })
       })
 
@@ -886,7 +928,7 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
   const totalHours = roundHours(flowNodes.reduce((acc, n) => acc + (n.slaMinutes || 0), 0) / 60) || 8
 
   const passport: ProcessPassport = {
-    code: `PRC-SQB-${Math.floor(100 + Math.random() * 900)}`,
+    code: `PRC-SQB-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
     name: cleanTitle,
     version: '1.0',
     status: 'draft',

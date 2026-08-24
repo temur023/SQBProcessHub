@@ -152,16 +152,22 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   }
   const onMouseUp = () => setIsPanning(false)
 
-  const onWheel = (e: React.WheelEvent) => {
-    e.preventDefault()
-    const delta = e.deltaY > 0 ? -0.1 : 0.1
-    setZoom(z => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, +(z + delta).toFixed(2))))
-  }
-
   useEffect(() => {
     const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsFullscreen(false) }
     window.addEventListener('keydown', fn)
     return () => window.removeEventListener('keydown', fn)
+  }, [])
+
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el) return
+    const handler = (e: WheelEvent) => {
+      e.preventDefault()
+      const delta = e.deltaY > 0 ? -0.1 : 0.1
+      setZoom((z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, +(z + delta).toFixed(2))))
+    }
+    el.addEventListener('wheel', handler, { passive: false })
+    return () => el.removeEventListener('wheel', handler)
   }, [])
 
   const patternOffset = {
@@ -236,7 +242,6 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
-        onWheel={onWheel}
       >
         <svg width="100%" height="100%" style={{ display: 'block' }}>
           <defs>

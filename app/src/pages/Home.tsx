@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { sqbCreditProcess } from '@/lib/sample-processes'
 import type { BusinessProcess, ProcessNode } from '@/types/process'
 import { Header } from '@/components/Header'
@@ -10,6 +10,7 @@ import { ProcessImportModal } from '@/components/ProcessImportModal'
 import { NodeDetailDrawer } from '@/components/NodeDetailDrawer'
 import { ExportDrawer } from '@/components/ExportDrawer'
 import { generateProcessRegulationCsv, downloadFile } from '@/lib/processet-export'
+import { saveProcessToBackend } from '@/lib/api'
 import { Toaster, toast } from 'sonner'
 
 export default function Home() {
@@ -19,9 +20,17 @@ export default function Home() {
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [selectedNode, setSelectedNode] = useState<ProcessNode | null>(null)
 
+  useEffect(() => {
+    void saveProcessToBackend(currentProcess)
+    // Persist the default template once so backend export endpoints resolve.
+    // Subsequent edits save explicitly from handlers below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handleProcessLoaded = (newProcess: BusinessProcess) => {
     setCurrentProcess(newProcess)
     setSelectedNode(null)
+    void saveProcessToBackend(newProcess)
     toast.success(`Бизнес-процесс «${newProcess.name}» успешно загружен!`, {
       description: `Создан регламент на ${newProcess.nodes.length} шагов и реестр PIX.`,
     })
@@ -31,10 +40,12 @@ export default function Home() {
     const updatedNodes = currentProcess.nodes.map((n) =>
       n.id === updatedNode.id ? updatedNode : n,
     )
-    setCurrentProcess({
+    const updated = {
       ...currentProcess,
       nodes: updatedNodes,
-    })
+    }
+    setCurrentProcess(updated)
+    void saveProcessToBackend(updated)
     setSelectedNode(null)
     toast.success(`Шаг «${updatedNode.name}» успешно обновлен`)
   }
@@ -85,6 +96,7 @@ export default function Home() {
             process={currentProcess}
             onUpdateProcess={(updated) => {
               setCurrentProcess(updated)
+              void saveProcessToBackend(updated)
               toast.success('Реестр PIX обновлен')
             }}
           />

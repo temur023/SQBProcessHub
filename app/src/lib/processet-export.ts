@@ -205,10 +205,11 @@ export function generateProcessRegulationCsv(process: BusinessProcess): string {
   process.nodes
     .filter((n) => n.type !== 'lane')
     .forEach((node) => {
+      const num = stepNum++
       rows.push(
         [
-          stepNum++,
-          node.code || `STEP-${stepNum}`,
+          num,
+          node.code || `STEP-${String(num).padStart(2, '0')}`,
           `"${escapeCsv(node.name)}"`,
           `"${escapeCsv(node.category || node.type)}"`,
           `"${escapeCsv(node.laneName || 'Основное подразделение')}"`,

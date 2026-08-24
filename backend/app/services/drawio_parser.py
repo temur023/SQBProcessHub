@@ -147,33 +147,87 @@ def is_non_task_label(val: str) -> bool:
         return True
     return False
 
+def _id_has_token(node_id: str, token: str) -> bool:
+    i = (node_id or '').lower()
+    token = token.lower()
+    if (
+        i == token
+        or i.startswith(token + '_')
+        or i.startswith(token + '-')
+        or i.endswith('_' + token)
+        or i.endswith('-' + token)
+    ):
+        return True
+    return token in re.split(r'[-_]', i)
+
+
+def _local_tag(tag: str) -> str:
+    if '}' in tag:
+        return tag.rsplit('}', 1)[-1]
+    if ':' in tag:
+        return tag.split(':')[-1]
+    return tag
+
+
 def classify_vertex(style: str, label: str, has_incoming: bool, has_outgoing: bool, node_id: str) -> NodeType:
     s = style.lower()
     l = label.lower()
     i = node_id.lower()
 
-    if 'swimlane' in s or 'pool;' in s or 'shape=pool' in s or 'horizontal=0' in s:
+    if 'swimlane' in s or 'pool;' in s or 'shape=pool' in s:
         return 'lane'
 
-    if 'rhombus' in s or 'gateway' in s or 'shape=rhombus' in s or i.startswith('gw') or '?' in l:
-        if 'outline=plus' in s or 'parallel' in s or '+' in l:
+    is_gateway_shape = (
+        'rhombus' in s
+        or 'shape=rhombus' in s
+        or 'gateway' in s
+        or i.startswith('gw')
+        or i.startswith('gateway')
+        or '-gw-' in i
+        or '_gw_' in i
+    )
+    if is_gateway_shape:
+        if 'outline=plus' in s or 'parallel' in s or l.strip() in ('+', 'and', 'и'):
             return 'parallelGateway'
-        if 'inclusive' in s or 'circle' in s:
+        if 'inclusive' in s or 'outline=circle' in s:
             return 'inclusiveGateway'
         return 'exclusiveGateway'
 
-    if 'ellipse' in s or 'bpmn.shape' in s or 'shape=ellipse' in s or any(k in i for k in ('start', 'end', 'reject')):
-        # Explicit Reject / Declined End Event (Red)
-        if any(k in l for k in ('rad etildi', 'rad javob', 'otkaz', 'отказ', 'bekor')) or 'reject' in i or any(c in s for c in ('#ef4444', '#e11d48', '#be123c')):
+    is_event_shape = (
+        'ellipse' in s
+        or 'bpmn.shape' in s
+        or 'shape=ellipse' in s
+        or _id_has_token(node_id, 'start')
+        or _id_has_token(node_id, 'end')
+        or _id_has_token(node_id, 'reject')
+        or 'reject' in i
+    )
+    if is_event_shape:
+        if (
+            any(k in l for k in ('rad etildi', 'rad javob', 'otkaz', 'отказ', 'bekor', 'отклон'))
+            or 'reject' in i
+            or any(c in s for c in ('#ef4444', '#e11d48', '#be123c', '#dc2626', '#b91c1c'))
+        ):
             return 'endEvent'
 
-        # Explicit Start Event (Green)
-        if any(k in i for k in ('start', 'begin')) or any(k in l for k in ('старт', 'поступлен', 'tashrif', 'boshlanish')) or any(c in s for c in ('#10b981', '#22c55e', '#059669')):
+        is_end = (
+            _id_has_token(node_id, 'end')
+            or _id_has_token(node_id, 'finish')
+            or any(k in l for k in ('заверш', 'конец', 'выдан', 'ochildi', 'tugashi', 'bajarildi', 'активирован'))
+            or 'outline=double' in s
+            or 'outline=end' in s
+        )
+        is_start = (
+            _id_has_token(node_id, 'start')
+            or _id_has_token(node_id, 'begin')
+            or any(k in l for k in ('старт', 'поступлен', 'tashrif', 'boshlanish'))
+        )
+
+        # End markers win over a generic green fill (success end events are often green)
+        if is_end:
+            return 'endEvent'
+        if is_start:
             return 'startEvent'
-
-        # Explicit Success End Event (Green double border)
-        if any(k in i for k in ('end', 'finish')) or any(k in l for k in ('заверш', 'конец', 'выдан', 'ochildi', 'tugashi', 'bajarildi')) or 'outline=double' in s or 'outline=end' in s:
-            return 'endEvent'
 
         if not has_incoming and has_outgoing:
             return 'startEvent'
@@ -249,8 +303,249 @@ def extract_sla_minutes(raw_text: str, category: StepCategory, node_type: NodeTy
         return 180
     return 60
 
+def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
+    """Parse OMG BPMN 2.0 XML (any namespace prefix) into a BusinessProcess."""
+    root = ET.fromstring(xml_str)
+
+    process_el = None
+    for el in root.iter():
+        if _local_tag(el.tag).lower() == 'process':
+            process_el = el
+            break
+
+    process_name = (
+        (process_el.get('name') if process_el is not None else None)
+        or filename.rsplit('.', 1)[0]
+    )
+    process_id_attr = process_el.get('id') if process_el is not None else None
+
+    bounds_map: Dict[str, Geometry] = {}
+    for el in root.iter():
+        if _local_tag(el.tag).lower() != 'bpmnshape':
+            continue
+        bpmn_element = el.get('bpmnElement')
+        if not bpmn_element:
+            continue
+        for child in el:
+            if _local_tag(child.tag).lower() == 'bounds':
+                bounds_map[bpmn_element] = Geometry(
+                    x=int(float(child.get('x', '100'))),
+                    y=int(float(child.get('y', '100'))),
+                    width=int(float(child.get('width', '120'))),
+                    height=int(float(child.get('height', '60'))),
+                )
+                break
+
+    type_map = {
+        'startevent': 'startEvent',
+        'endevent': 'endEvent',
+        'usertask': 'userTask',
+        'task': 'userTask',
+        'servicetask': 'serviceTask',
+        'exclusivegateway': 'exclusiveGateway',
+        'parallelgateway': 'parallelGateway',
+        'inclusivegateway': 'inclusiveGateway',
+    }
+
+    nodes: List[ProcessNode] = []
+    step_index = 1
+    for el in root.iter():
+        node_type = type_map.get(_local_tag(el.tag).lower())
+        if not node_type:
+            continue
+        node_id = el.get('id') or f"node_{uuid.uuid4().hex[:8]}"
+        raw_name = el.get('name') or ''
+        category = classify_category(node_type, raw_name, '')
+        is_task = node_type in ('task', 'userTask', 'serviceTask')
+        if node_type == 'startEvent':
+            code = 'START'
+        elif node_type == 'endEvent':
+            code = 'END'
+        elif is_task:
+            code = f"STEP-{step_index:02d}"
+            step_index += 1
+        else:
+            code = None
+        sla = extract_sla_minutes(raw_name, category, node_type)
+        geo = bounds_map.get(node_id) or Geometry(
+            x=100 + (step_index * 150), y=100, width=140, height=70
+        )
+        name = raw_name or (
+            'Старт' if node_type == 'startEvent'
+            else 'Завершение' if node_type == 'endEvent'
+            else f'Шаг {code or node_id}'
+        )
+        nodes.append(ProcessNode(
+            id=node_id,
+            name=name,
+            type=node_type,
+            category=category,
+            code=code,
+            geometry=geo,
+            style='',
+            slaMinutes=sla,
+            costPerExecution=800 if category == 'rpa_bot' else sla * 1932,
+            automationPotential=95 if category == 'rpa_bot' else 60,
+            system=detect_system(name, ''),
+        ))
+
+    if not nodes:
+        raise ValueError('В BPMN-файле не найдено ни одного элемента процесса')
+
+    node_ids = {n.id for n in nodes}
+    lane_refs: Dict[str, List[str]] = {}
+    lanes: List[ProcessNode] = []
+    lane_idx = 0
+    for el in root.iter():
+        if _local_tag(el.tag).lower() != 'lane':
+            continue
+        lane_id = el.get('id') or f"lane_{lane_idx}"
+        lane_name = el.get('name') or f"Подразделение {lane_idx + 1}"
+        refs = []
+        for child in el.iter():
+            if _local_tag(child.tag).lower() == 'flownoderef' and (child.text or '').strip():
+                refs.append(child.text.strip())
+        lane_refs[lane_id] = refs
+        bounds = bounds_map.get(lane_id)
+        lanes.append(ProcessNode(
+            id=lane_id,
+            name=lane_name,
+            type='lane',
+            role=lane_name,
+            geometry=bounds or Geometry(x=50, y=50 + lane_idx * 180, width=1400, height=180),
+            style='swimlane;',
+        ))
+        lane_idx += 1
+
+    for lane in lanes:
+        for ref in lane_refs.get(lane.id, []):
+            node = next((n for n in nodes if n.id == ref), None)
+            if node:
+                node.laneId = lane.id
+                node.laneName = lane.name
+                node.role = node.role or lane.name
+                node.system = detect_system(node.name, lane.name)
+
+    edges: List[ProcessEdge] = []
+    for el in root.iter():
+        if _local_tag(el.tag).lower() != 'sequenceflow':
+            continue
+        source_id = el.get('sourceRef')
+        target_id = el.get('targetRef')
+        if not source_id or not target_id:
+            continue
+        if source_id not in node_ids or target_id not in node_ids:
+            continue
+        edges.append(ProcessEdge(
+            id=el.get('id') or f"edge_{uuid.uuid4().hex[:8]}",
+            name=el.get('name') or '',
+            sourceId=source_id,
+            targetId=target_id,
+            points=[],
+        ))
+
+    title = process_name
+    total_hours = round(sum(n.slaMinutes or 0 for n in nodes) / 60, 1) or 8.0
+    passport_code = (
+        process_id_attr if process_id_attr and process_id_attr.startswith('PRC-')
+        else f"PRC-SQB-{uuid.uuid4().hex[:6].upper()}"
+    )
+    passport = ProcessPassport(
+        code=passport_code,
+        name=title,
+        version='1.0',
+        status='draft',
+        owner='Департамент бизнес-процессов АКБ «Узпромстройбанк»',
+        department=lanes[0].name if lanes else 'Операционный блок',
+        category='Банковские процессы',
+        targetSlaHours=total_hours,
+        description=f"Импортирован из файла BPMN: {filename}.",
+        createdDate=datetime.now().strftime('%Y-%m-%d'),
+        updatedDate=datetime.now().strftime('%Y-%m-%d')
+    )
+
+    first_task = next((n for n in nodes if n.type in ('userTask', 'serviceTask', 'task')), None)
+    seed = first_task or (nodes[0] if nodes else None)
+    registry = PixRegistrySchema(
+        id=f"reg-{uuid.uuid4().hex[:8]}",
+        name=f"Реестр: {title}",
+        code=f"REG_{passport.code.replace('-', '_')}",
+        description=f"Реестр заявок по процессу {title}",
+        fields=[
+            ProcessField(id='f1', code='case_number', name='Номер заявки', type='string', required=True),
+            ProcessField(id='f2', code='client_inn', name='ИНН Клиента', type='string', required=True),
+            ProcessField(id='f3', code='client_title', name='Компания', type='string', required=True),
+            ProcessField(id='f4', code='status', name='Статус', type='select', required=True, options=['В работе', 'Одобрено', 'Отклонено'])
+        ],
+        records=[
+            PixRegistryRecord(
+                id='rec-1',
+                caseId='SQB-2026-BPM01',
+                createdAt=datetime.now().strftime('%Y-%m-%d %H:%M'),
+                status='in_progress',
+                currentStepId=seed.id if seed else 'step-1',
+                currentStepName=seed.name if seed else 'Первичный шаг',
+                assignedTo=(seed.role if seed and seed.role else 'Сотрудник банка'),
+                elapsedMinutes=15,
+                data={
+                    'case_number': 'SQB-2026-BPM01',
+                    'client_inn': '309819284',
+                    'client_title': 'OOO "GLOBAL AGRO"',
+                    'status': 'В работе'
+                }
+            )
+        ]
+    )
+
+    validations = _collect_validations(nodes, edges)
+    metrics = analyze_process_conformance(nodes, passport, len(registry.records))
+
+    return BusinessProcess(
+        id=f"proc_{uuid.uuid4().hex[:8]}",
+        name=title,
+        fileName=filename,
+        passport=passport,
+        nodes=nodes,
+        edges=edges,
+        lanes=lanes,
+        validation=validations,
+        registry=registry,
+        miningMetrics=metrics
+    )
+
+
+def _collect_validations(flow_nodes: List[ProcessNode], edges: List[ProcessEdge]) -> List[ProcessValidation]:
+    validations: List[ProcessValidation] = []
+    starts = [n for n in flow_nodes if n.type == 'startEvent']
+    ends = [n for n in flow_nodes if n.type == 'endEvent']
+    if not starts:
+        validations.append(ProcessValidation(level='error', message='Отсутствует стартовое событие процесса'))
+    if len(starts) > 1:
+        validations.append(ProcessValidation(level='warning', message=f'Найдено {len(starts)} стартовых событий'))
+    if not ends:
+        validations.append(ProcessValidation(level='warning', message='Отсутствует событие успешного завершения'))
+    for n in flow_nodes:
+        in_e = [e for e in edges if e.targetId == n.id]
+        out_e = [e for e in edges if e.sourceId == n.id]
+        if n.type not in ('startEvent', 'lane') and not in_e:
+            validations.append(ProcessValidation(
+                level='error',
+                message=f'Шаг «{n.name or n.id}» не имеет входящих переходов (тупик)',
+                nodeId=n.id,
+            ))
+        if n.type not in ('endEvent', 'lane') and not out_e:
+            validations.append(ProcessValidation(
+                level='warning',
+                message=f'Шаг «{n.name or n.id}» не имеет исходящих переходов',
+                nodeId=n.id,
+            ))
+    return validations
+
+
 def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
     xml_str, is_bpmn = extract_graph_xml(content)
+    if is_bpmn:
+        return parse_bpmn_xml(xml_str, filename)
 
     root = ET.fromstring(xml_str)
     cells = root.findall('.//mxCell')
@@ -511,7 +806,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
     for cell in raw_edges:
         s_id = cell.get('source')
         t_id = cell.get('target')
-        if not s_id or not t_id or (s_id not in valid_node_ids and t_id not in valid_node_ids):
+        if not s_id or not t_id or s_id not in valid_node_ids or t_id not in valid_node_ids:
             continue
 
         edge_id = cell.get('id') or f"edge_{uuid.uuid4().hex[:8]}"
@@ -519,11 +814,14 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         edge_name = clean_label(raw_val) or label_map.get(edge_id, '')
 
         pts: List[ProcessEdgePoint] = []
-        for p in cell.findall('.//mxPoint'):
-            pts.append(ProcessEdgePoint(
-                x=int(float(p.get('x', '0'))),
-                y=int(float(p.get('y', '0')))
-            ))
+        for arr in cell.findall('.//Array'):
+            if (arr.get('as') or '') != 'points':
+                continue
+            for p in arr.findall('mxPoint'):
+                pts.append(ProcessEdgePoint(
+                    x=int(float(p.get('x', '0'))),
+                    y=int(float(p.get('y', '0')))
+                ))
         edges.append(ProcessEdge(
             id=edge_id,
             name=edge_name,
@@ -536,7 +834,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
     total_hours = round(sum(n.slaMinutes or 0 for n in flow_nodes) / 60, 1) or 8.0
 
     passport = ProcessPassport(
-        code=f"PRC-SQB-{uuid.uuid4().int % 900 + 100}",
+        code=f"PRC-SQB-{uuid.uuid4().hex[:6].upper()}",
         name=title,
         version='1.0',
         status='draft',
@@ -568,7 +866,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
                 status='in_progress',
                 currentStepId=flow_nodes[1].id if len(flow_nodes) > 1 else (flow_nodes[0].id if flow_nodes else 'step-1'),
                 currentStepName=flow_nodes[1].name if len(flow_nodes) > 1 else 'Первичный шаг',
-                assignedTo=flow_nodes[1].role or 'Сотрудник банка' if len(flow_nodes) > 1 else 'Сотрудник банка',
+                assignedTo=(flow_nodes[1].role or 'Сотрудник банка') if len(flow_nodes) > 1 else 'Сотрудник банка',
                 elapsedMinutes=25,
                 data={
                     'case_number': 'SQB-2026-IMP01',

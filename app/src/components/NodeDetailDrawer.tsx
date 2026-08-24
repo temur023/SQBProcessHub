@@ -93,13 +93,30 @@ export const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
             <Label className="text-xs font-semibold">Категория</Label>
             <select
               value={formData.category || 'manual'}
-              onChange={(e) =>
+              onChange={(e) => {
+                const nextCategory = e.target.value as StepCategory
+                const lockedTypes = new Set([
+                  'startEvent',
+                  'endEvent',
+                  'exclusiveGateway',
+                  'parallelGateway',
+                  'inclusiveGateway',
+                  'lane',
+                ])
+                let nextType = formData.type
+                if (!lockedTypes.has(formData.type)) {
+                  if (nextCategory === 'rpa_bot' || nextCategory === 'api_service') {
+                    nextType = 'serviceTask'
+                  } else if (formData.type === 'serviceTask') {
+                    nextType = 'userTask'
+                  }
+                }
                 setFormData({
                   ...formData,
-                  category: e.target.value as StepCategory,
-                  type: e.target.value === 'rpa_bot' ? 'serviceTask' : formData.type,
+                  category: nextCategory,
+                  type: nextType,
                 })
-              }
+              }}
               className="w-full h-9 px-2 text-xs rounded-md border bg-background"
             >
               <option value="manual">Ручная задача</option>

@@ -32,15 +32,18 @@ export async function importDrawioFileApi(file: File): Promise<{ process: Busine
 
     if (res.ok) {
       const process: BusinessProcess = await res.json()
-      return { process, source: 'fastapi' }
+      if ((process.nodes?.length ?? 0) > 0) {
+        return { process, source: 'fastapi' }
+      }
     }
   } catch (err) {
     console.warn('FastAPI import endpoint unreachable, using client parser fallback:', err)
   }
 
-  // Local fallback
+  // Local fallback (also used when backend returned an empty graph)
   const text = await file.text()
   const process = await parseDrawio(text, file.name)
+  await saveProcessToBackend(process)
   return { process, source: 'local' }
 }
 
@@ -55,14 +58,17 @@ export async function importDrawioXmlApi(xml: string, fileName: string = 'Pasted
 
     if (res.ok) {
       const process: BusinessProcess = await res.json()
-      return { process, source: 'fastapi' }
+      if ((process.nodes?.length ?? 0) > 0) {
+        return { process, source: 'fastapi' }
+      }
     }
   } catch (err) {
     console.warn('FastAPI XML import endpoint unreachable, using client parser fallback:', err)
   }
 
-  // Local fallback
+  // Local fallback (also used when backend returned an empty graph)
   const process = await parseDrawio(xml, fileName)
+  await saveProcessToBackend(process)
   return { process, source: 'local' }
 }
 

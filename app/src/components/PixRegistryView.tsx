@@ -35,8 +35,13 @@ export const PixRegistryView: React.FC<PixRegistryViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('')
   const [isAddRecordOpen, setIsAddRecordOpen] = useState(false)
   const [formData, setFormData] = useState<Record<string, any>>({})
+  const [formError, setFormError] = useState<string | null>(null)
 
   const registry = process.registry
+
+  const extraFields = registry.fields.filter(
+    (f) => f.code !== 'case_number' && f.code !== 'caseId',
+  ).slice(0, 4)
 
   const filteredRecords = registry.records.filter((rec) => {
     const search = searchQuery.toLowerCase()
@@ -50,8 +55,27 @@ export const PixRegistryView: React.FC<PixRegistryViewProps> = ({
   })
 
   const handleAddRecord = () => {
+    const missing = registry.fields.filter((f) => {
+      if (!f.required) return false
+      const value = formData[f.code]
+      return value === undefined || value === null || String(value).trim() === ''
+    })
+    if (missing.length > 0) {
+      setFormError(`Заполните обязательные поля: ${missing.map((f) => f.name).join(', ')}`)
+      return
+    }
+    if (process.nodes.length === 0) {
+      setFormError('В процессе нет шагов — сначала импортируйте диаграмму')
+      return
+    }
+
     const newCaseNum = `SQB-2026-${String(registry.records.length + 45).padStart(4, '0')}`
     const firstTask = process.nodes.find((n) => n.type === 'userTask' || n.type === 'serviceTask') || process.nodes[0]
+    if (!firstTask) {
+      setFormError('Не удалось определить первый шаг процесса')
+      return
+    }
+    setFormError(null)
 
     const newRecord: PixRegistryRecord = {
       id: `rec-${crypto.randomUUID()}`,
@@ -147,7 +171,10 @@ export const PixRegistryView: React.FC<PixRegistryViewProps> = ({
           </Button>
           <Button
             size="sm"
-            onClick={() => setIsAddRecordOpen(true)}
+            onClick={() => {
+              setFormError(null)
+              setIsAddRecordOpen(true)
+            }}
             className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -216,7 +243,7 @@ export const PixRegistryView: React.FC<PixRegistryViewProps> = ({
                 <th className="px-3.5 py-3 font-semibold">Статус</th>
                 <th className="px-3.5 py-3 font-semibold">Текущий шаг процесса</th>
                 <th className="px-3.5 py-3 font-semibold">Ответственный</th>
-                {registry.fields.slice(0, 4).map((f) => (
+                {extraFields.map((f) => (
                   <th key={f.id} className="px-3.5 py-3 font-semibold">
                     {f.name}
                   </th>
@@ -227,7 +254,7 @@ export const PixRegistryView: React.FC<PixRegistryViewProps> = ({
               {filteredRecords.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5 + registry.fields.slice(0, 4).length}
+                    colSpan={5 + extraFields.length}
                     className="text-center py-8 text-muted-foreground"
                   >
                     Записей в реестре пока нет. Создайте первую заявку кнопкой выше.
@@ -245,7 +272,7 @@ export const PixRegistryView: React.FC<PixRegistryViewProps> = ({
                       {rec.currentStepName}
                     </td>
                     <td className="px-3.5 py-3 text-muted-foreground">{rec.assignedTo}</td>
-                    {registry.fields.slice(0, 4).map((f) => (
+                    {extraFields.map((f) => (
                       <td key={f.id} className="px-3.5 py-3 font-medium">
                         {typeof rec.data[f.code] === 'number'
                           ? rec.data[f.code].toLocaleString('ru-RU')
@@ -262,11 +289,16 @@ export const PixRegistryView: React.FC<PixRegistryViewProps> = ({
 
       {/* Add Record Modal */}
       <Dialog open={isAddRecordOpen} onOpenChange={setIsAddRecordOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-base font-bold">Новая заявка в реестре PIX</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
+            {formError && (
+              <p className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-md px-2.5 py-1.5">
+                {formError}
+              </p>
+            )}
             {registry.fields.map((field) => (
               <div key={field.id} className="space-y-1">
                 <Label className="text-xs font-medium">

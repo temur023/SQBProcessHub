@@ -1,4 +1,7 @@
 import io
+import re
+from urllib.parse import quote
+
 from fastapi import APIRouter, File, UploadFile, HTTPException, Body
 from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel
@@ -10,6 +13,15 @@ from app.models.process import BusinessProcess
 from app.routers.processes import get_store
 
 router = APIRouter(prefix="/import", tags=["import & export"])
+
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
+
+def attachment_headers(filename: str) -> dict:
+    ascii_name = re.sub(r'[^A-Za-z0-9._-]+', '_', filename).strip('._') or 'export'
+    return {
+        'Content-Disposition': f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(filename)}"
+    }
 
 
 class XmlImportBody(BaseModel):
@@ -31,6 +43,9 @@ async def import_file(file: UploadFile = File(...)):
         raise HTTPException(400, f"Unsupported file type '{ext}'. Allowed: {', '.join(allowed)}")
 
     content = await file.read()
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "Файл слишком большой (макс. 10 МБ)")
+
     text = content.decode('utf-8', errors='ignore')
 
     if not text.strip():
@@ -54,6 +69,8 @@ async def import_file(file: UploadFile = File(...)):
 def import_xml(body: XmlImportBody):
     if not body.xml.strip():
         raise HTTPException(400, "XML body is empty")
+    if len(body.xml.encode('utf-8')) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "XML слишком большой (макс. 10 МБ)")
     try:
         process = parse_drawio_xml(body.xml, body.fileName)
     except Exception as e:
@@ -79,7 +96,7 @@ def export_bpmn(process_id: str):
     return Response(
         content=xml.encode('utf-8'),
         media_type='application/xml',
-        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+        headers=attachment_headers(filename)
     )
 
 
@@ -97,7 +114,7 @@ def export_event_log(process_id: str):
     return StreamingResponse(
         io.BytesIO(csv_data.encode('utf-8-sig')),
         media_type='text/csv',
-        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+        headers=attachment_headers(filename)
     )
 
 
@@ -115,7 +132,7 @@ def export_regulation(process_id: str):
     return StreamingResponse(
         io.BytesIO(csv_data.encode('utf-8-sig')),
         media_type='text/csv',
-        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+        headers=attachment_headers(filename)
     )
 
 
@@ -136,5 +153,5 @@ def export_pix_json(process_id: str):
     return Response(
         content=json.dumps(registry_data, ensure_ascii=False, indent=2).encode('utf-8'),
         media_type='application/json',
-        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+        headers=attachment_headers(filename)
     )

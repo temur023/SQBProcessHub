@@ -311,6 +311,13 @@ export const sqbCreditProcess: BusinessProcess = {
       points: [],
     },
     {
+      id: 'edge-comm-no',
+      name: 'Отказ',
+      sourceId: 'node-gw-comm',
+      targetId: 'node-reject',
+      points: [],
+    },
+    {
       id: 'edge-8',
       name: 'Счет в АБС открыт',
       sourceId: 'node-step-5',
