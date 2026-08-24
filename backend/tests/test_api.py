@@ -98,6 +98,60 @@ class TestSQBProcessHubApi(unittest.TestCase):
         self.assertEqual(rpa_res.status_code, 200)
         self.assertTrue(len(rpa_res.json()) >= 1)
 
+    def test_nested_timer_icons_are_not_start_events(self):
+        drawio_xml = """<mxfile host="app.diagrams.net">
+          <diagram id="uz-1" name="Korporativ">
+            <mxGraphModel>
+              <root>
+                <mxCell id="0" />
+                <mxCell id="1" parent="0" />
+                <mxCell id="lane_rm" value="RM" style="swimlane;html=1;horizontal=0;startSize=26;" vertex="1" parent="1">
+                  <mxGeometry x="40" y="40" width="900" height="160" as="geometry" />
+                </mxCell>
+                <mxCell id="lane_is" value="I servis" style="swimlane;html=1;horizontal=0;startSize=26;" vertex="1" parent="1">
+                  <mxGeometry x="40" y="200" width="900" height="160" as="geometry" />
+                </mxCell>
+                <mxCell id="start_1" value="Boshlanish" style="ellipse;fillColor=#10b981;" vertex="1" parent="lane_rm">
+                  <mxGeometry x="40" y="50" width="48" height="48" as="geometry" />
+                </mxCell>
+                <mxCell id="step_1" value="Murojaatni qabul qilish" style="rounded=1;" vertex="1" parent="lane_rm">
+                  <mxGeometry x="140" y="40" width="180" height="70" as="geometry" />
+                </mxCell>
+                <mxCell id="timer_child" value="" style="ellipse;html=1;aspect=fixed;shape=mxgraph.bpmn.timer;symbol=timer;" vertex="1" parent="step_1">
+                  <mxGeometry x="-8" y="-8" width="20" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="clock_sib" value="" style="ellipse;html=1;aspect=fixed;" vertex="1" parent="lane_rm">
+                  <mxGeometry x="300" y="30" width="20" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="end_1" value="Tugashi" style="ellipse;fillColor=#059669;" vertex="1" parent="lane_is">
+                  <mxGeometry x="500" y="50" width="48" height="48" as="geometry" />
+                </mxCell>
+                <mxCell id="e1" edge="1" source="start_1" target="step_1" parent="1" />
+                <mxCell id="e2" edge="1" source="step_1" target="end_1" parent="1" />
+              </root>
+            </mxGraphModel>
+          </diagram>
+        </mxfile>"""
+
+        import_res = self.client.post("/api/v1/import/xml", json={
+            "xml": drawio_xml,
+            "fileName": "korporativ.drawio",
+        })
+        self.assertEqual(import_res.status_code, 200, import_res.text)
+        proc = import_res.json()
+        ids = {n["id"] for n in proc["nodes"]}
+        self.assertIn("start_1", ids)
+        self.assertIn("step_1", ids)
+        self.assertIn("end_1", ids)
+        self.assertNotIn("timer_child", ids)
+        self.assertNotIn("clock_sib", ids)
+        starts = [n for n in proc["nodes"] if n["type"] == "startEvent"]
+        self.assertEqual(len(starts), 1)
+        self.assertEqual(starts[0]["id"], "start_1")
+        lane_names = {l["name"] for l in proc["lanes"]}
+        self.assertIn("RM", lane_names)
+        self.assertIn("I servis", lane_names)
+
     def test_green_end_event_and_question_task_not_gateway(self):
         from app.services.drawio_parser import classify_vertex
         self.assertEqual(

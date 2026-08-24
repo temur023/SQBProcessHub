@@ -214,6 +214,19 @@ const CONDITION_TAGS = new Set([
   "garov obyekti qiymati mustaqil baholovchining hisoboti bilan mosligini o'rganish"
 ])
 
+function isDecorationStyle(style: string): boolean {
+  const s = style.toLowerCase()
+  return (
+    s.includes('timer') ||
+    s.includes('clock') ||
+    s.includes('mxgraph.bpmn.icon') ||
+    s.includes('shape=mxgraph.bpmn.timer') ||
+    s.includes('eventicon') ||
+    s.includes('symbol=timer') ||
+    s.includes('symbol=clock')
+  )
+}
+
 function isNonTaskLabel(val: string): boolean {
   const v = val.toLowerCase().trim()
   if (v.length === 0) return true
@@ -662,12 +675,33 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     }
   })
 
+  const swimlaneIds = new Set(swimlaneCells.map((c) => c.getAttribute('id') || '').filter(Boolean))
+  const containerIds = new Set<string>([...poolIds, ...swimlaneIds, '0', '1'])
+
   const rawVertices = cells.filter((c) => {
     const id = c.getAttribute('id') ?? ''
     const isVertex = c.getAttribute('vertex') === '1'
     if (!isVertex) return false
     if (ignoreCellIds.has(id)) return false
     if (poolIds.has(id)) return false
+    const style = getStyle(c).toLowerCase()
+    const parentId = c.getAttribute('parent') ?? ''
+    const parentEl = cellMap.get(parentId)
+    if (parentEl && parentEl.getAttribute('vertex') === '1' && !containerIds.has(parentId)) {
+      // Clock / icon nested inside a task — not a flow node
+      return false
+    }
+    const geo = c.querySelector('mxGeometry')
+    const w = Number(geo?.getAttribute('width') ?? 0)
+    const h = Number(geo?.getAttribute('height') ?? 0)
+    const unlabeled = !cleanLabel(c.getAttribute('value')) && !labelMap.has(id)
+    const tiny = w > 0 && h > 0 && w <= 32 && h <= 32
+    if (isDecorationStyle(style) && (unlabeled || tiny) && !incoming.has(id) && !outgoing.has(id)) {
+      return false
+    }
+    if (unlabeled && !incoming.has(id) && !outgoing.has(id) && tiny) {
+      return false
+    }
     return true
   })
 

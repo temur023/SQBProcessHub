@@ -135,6 +135,19 @@ CONDITION_TAGS = {
     "garov obyekti qiymati mustaqil baholovchining hisoboti bilan mosligini o'rganish"
 }
 
+def is_decoration_style(style: str) -> bool:
+    s = (style or '').lower()
+    return (
+        'timer' in s
+        or 'clock' in s
+        or 'mxgraph.bpmn.icon' in s
+        or 'shape=mxgraph.bpmn.timer' in s
+        or 'eventicon' in s
+        or 'symbol=timer' in s
+        or 'symbol=clock' in s
+    )
+
+
 def is_non_task_label(val: str) -> bool:
     v = val.lower().strip()
     if not v:
@@ -614,10 +627,31 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         if has_children or 'stacklayout' in (sw.get('style') or '').lower():
             pool_ids.add(sw_id)
 
-    raw_vertices = [
-        c for c in cells
-        if c.get('vertex') == '1' and c.get('id') not in ignore_cell_ids and c.get('id') not in pool_ids
-    ]
+    swimlane_ids = {c.get('id', '') for c in swimlane_cells if c.get('id')}
+    container_ids = set(pool_ids) | swimlane_ids | {'0', '1'}
+
+    raw_vertices = []
+    for c in cells:
+        if c.get('vertex') != '1':
+            continue
+        c_id = c.get('id', '')
+        if not c_id or c_id in ignore_cell_ids or c_id in pool_ids:
+            continue
+        style = (c.get('style') or '').lower()
+        parent_id = c.get('parent') or ''
+        parent_el = cell_map.get(parent_id)
+        if parent_el is not None and parent_el.get('vertex') == '1' and parent_id not in container_ids:
+            continue
+        geo = c.find('mxGeometry')
+        w = float(geo.get('width', '0')) if geo is not None else 0.0
+        h = float(geo.get('height', '0')) if geo is not None else 0.0
+        unlabeled = not clean_label(c.get('value')) and c_id not in label_map
+        tiny = 0 < w <= 32 and 0 < h <= 32
+        if is_decoration_style(style) and (unlabeled or tiny) and c_id not in incoming and c_id not in outgoing:
+            continue
+        if unlabeled and c_id not in incoming and c_id not in outgoing and tiny:
+            continue
+        raw_vertices.append(c)
 
     nodes: List[ProcessNode] = []
     step_index = 1

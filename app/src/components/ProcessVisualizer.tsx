@@ -150,21 +150,14 @@ function fitCaption(text: string, maxWidth: number, maxLines = 2): { lines: stri
 
 function fitLaneLabel(name: string, laneHeight: number): { lines: string[]; fontSize: number } {
   const full = name.replace(/\s+/g, ' ').trim()
-  const avail = Math.max(36, laneHeight - 16)
-  for (let fs = 12; fs >= 8; fs--) {
-    if (full.length * fs * 0.58 <= avail) return { lines: [full], fontSize: fs }
-  }
-  for (const maxLines of [2, 3]) {
-    const perLine = Math.max(8, Math.ceil(full.length / maxLines) + 1)
-    const lines = wrapText(full, perLine).slice(0, maxLines)
-    const longest = Math.max(...lines.map((l) => l.length), 1)
-    for (let fs = 11; fs >= 7; fs--) {
-      if (longest * fs * 0.58 <= avail) return { lines, fontSize: fs }
-    }
+  const avail = Math.max(48, laneHeight - 20)
+  for (let fs = 13; fs >= 7; fs--) {
+    if (full.length * fs * 0.56 <= avail) return { lines: [full], fontSize: fs }
   }
   const fs = 7
-  const maxChars = Math.max(6, Math.floor(avail / (fs * 0.58)))
-  return { lines: wrapText(full, maxChars).slice(0, 3), fontSize: fs }
+  const maxChars = Math.max(8, Math.floor(avail / (fs * 0.56)))
+  const lines = wrapText(full, maxChars).slice(0, 2)
+  return { lines, fontSize: fs }
 }
 
 function slaLabel(mins?: number): string {
@@ -200,8 +193,8 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
       maxX = Math.max(maxX, x + w)
       maxY = Math.max(maxY, y + h)
     }
-    for (const l of process.lanes) bump(l.geometry.x, l.geometry.y, l.geometry.width, l.geometry.height)
-    for (const n of process.nodes) bump(n.geometry.x, n.geometry.y, n.geometry.width || 160, (n.geometry.height || 70) + 16)
+    for (const l of process.lanes) bump(l.geometry.x - 6, l.geometry.y - 10, l.geometry.width + 12, l.geometry.height + 20)
+    for (const n of process.nodes) bump(n.geometry.x - 8, n.geometry.y - 22, (n.geometry.width || 160) + 16, (n.geometry.height || 70) + 40)
     if (!Number.isFinite(minX)) {
       minX = 0
       minY = 0
@@ -430,16 +423,14 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                     width={LANE_HEAD} height={lane.geometry.height}
                     fill={C.laneHead} stroke={C.laneLine} strokeWidth="1"
                   />
-                  <clipPath id={`lane-clip-${lane.id}`}>
-                    <rect x={lane.geometry.x + 2} y={lane.geometry.y + 4} width={LANE_HEAD - 4} height={lane.geometry.height - 8} />
-                  </clipPath>
-                  <g clipPath={`url(#lane-clip-${lane.id})`} transform={`rotate(-90,${cx},${cy})`}>
+                  <g>
                     {label.lines.map((line, i) => (
                       <text
                         key={i}
-                        x={cx}
-                        y={cy - ((label.lines.length - 1) * lineH) / 2 + i * lineH}
+                        x={cx - ((label.lines.length - 1) * lineH) / 2 + i * lineH}
+                        y={cy}
                         textAnchor="middle" dominantBaseline="central"
+                        transform={`rotate(-90, ${cx - ((label.lines.length - 1) * lineH) / 2 + i * lineH}, ${cy})`}
                         fontSize={label.fontSize} fontWeight="600" fill={C.laneText}
                         style={{ userSelect: 'none', fontFamily: FONT }}>
                         {line}
