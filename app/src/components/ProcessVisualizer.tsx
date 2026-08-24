@@ -17,7 +17,8 @@ const GRID_MINOR = 10
 const GRID_MAJOR = 100
 const MIN_ZOOM = 0.12
 const MAX_ZOOM = 3.0
-const LANE_HEAD = 56
+const LANE_HEAD_MIN = 48
+const LANE_HEAD_MAX = 92
 
 const C = {
   canvas: '#1c1c1c',
@@ -132,10 +133,39 @@ function slaLabel(mins?: number): string {
   return `${mins} min`
 }
 
-function shortLane(name: string): string {
-  const inner = name.match(/\(([^)]+)\)/)
-  if (inner && inner[1].length <= 22) return inner[1]
-  return name.length > 28 ? name.slice(0, 27) + '…' : name
+function textWidth(text: string, fontSize: number): number {
+  return text.length * fontSize * 0.62
+}
+
+function fitLaneLabel(name: string, laneHeight: number): { lines: string[]; fontSize: number; headWidth: number } {
+  const full = name.replace(/\s+/g, ' ').trim()
+  const avail = Math.max(40, laneHeight - 18)
+
+  for (let fs = 12; fs >= 8; fs--) {
+    if (textWidth(full, fs) <= avail) {
+      return { lines: [full], fontSize: fs, headWidth: Math.max(LANE_HEAD_MIN, fs + 32) }
+    }
+  }
+
+  for (const maxLines of [2, 3]) {
+    const perLine = Math.max(8, Math.ceil(full.length / maxLines) + 2)
+    const lines = wrapText(full, perLine).slice(0, maxLines)
+    const longest = Math.max(...lines.map((l) => l.length), 1)
+    for (let fs = 11; fs >= 8; fs--) {
+      if (textWidth('x'.repeat(longest), fs) <= avail) {
+        return {
+          lines,
+          fontSize: fs,
+          headWidth: Math.min(LANE_HEAD_MAX, Math.max(LANE_HEAD_MIN, lines.length * (fs + 6) + 18)),
+        }
+      }
+    }
+  }
+
+  const fs = 8
+  const maxChars = Math.max(6, Math.floor(avail / (fs * 0.62)))
+  const lines = wrapText(full, maxChars).slice(0, 3)
+  return { lines, fontSize: fs, headWidth: LANE_HEAD_MAX }
 }
 
 export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
@@ -174,6 +204,17 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
     }
     return { minX, minY, w: Math.max(maxX - minX, 200), h: Math.max(maxY - minY, 160) }
   }, [process])
+
+  const laneHead = useMemo(() => {
+    const labels = new Map<string, { lines: string[]; fontSize: number }>()
+    let width = LANE_HEAD_MIN
+    for (const lane of process.lanes) {
+      const fitted = fitLaneLabel(lane.name, lane.geometry.height)
+      labels.set(lane.id, { lines: fitted.lines, fontSize: fitted.fontSize })
+      width = Math.max(width, fitted.headWidth)
+    }
+    return { width, labels }
+  }, [process.lanes])
 
   const visibleIds = useMemo(() => {
     let list = process.nodes
@@ -358,29 +399,39 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
           {showGrid && <rect width="100%" height="100%" fill="url(#g-major)" />}
 
           <g transform={`translate(${panPos.x},${panPos.y}) scale(${zoom})`}>
-            {process.lanes.map((lane) => (
-              <g key={lane.id}>
-                <rect
-                  x={lane.geometry.x} y={lane.geometry.y}
-                  width={lane.geometry.width} height={lane.geometry.height}
-                  fill="none" stroke={C.laneLine} strokeWidth="1.2"
-                />
-                <rect
-                  x={lane.geometry.x} y={lane.geometry.y}
-                  width={LANE_HEAD} height={lane.geometry.height}
-                  fill={C.laneHead} stroke={C.laneLine} strokeWidth="1.2"
-                />
-                <text
-                  x={lane.geometry.x + LANE_HEAD / 2}
-                  y={lane.geometry.y + lane.geometry.height / 2}
-                  textAnchor="middle" dominantBaseline="central"
-                  transform={`rotate(-90,${lane.geometry.x + LANE_HEAD / 2},${lane.geometry.y + lane.geometry.height / 2})`}
-                  fontSize="12" fontWeight="600" fill={C.laneText}
-                  style={{ userSelect: 'none' }}>
-                  {shortLane(lane.name)}
-                </text>
-              </g>
-            ))}
+            {process.lanes.map((lane) => {
+              const label = laneHead.labels.get(lane.id) || { lines: [lane.name], fontSize: 11 }
+              const cx = lane.geometry.x + laneHead.width / 2
+              const cy = lane.geometry.y + lane.geometry.height / 2
+              const lineH = label.fontSize + 3
+              return (
+                <g key={lane.id}>
+                  <rect
+                    x={lane.geometry.x} y={lane.geometry.y}
+                    width={lane.geometry.width} height={lane.geometry.height}
+                    fill="none" stroke={C.laneLine} strokeWidth="1.2"
+                  />
+                  <rect
+                    x={lane.geometry.x} y={lane.geometry.y}
+                    width={laneHead.width} height={lane.geometry.height}
+                    fill={C.laneHead} stroke={C.laneLine} strokeWidth="1.2"
+                  />
+                  <g transform={`rotate(-90,${cx},${cy})`}>
+                    {label.lines.map((line, i) => (
+                      <text
+                        key={i}
+                        x={cx}
+                        y={cy - ((label.lines.length - 1) * lineH) / 2 + i * lineH}
+                        textAnchor="middle" dominantBaseline="central"
+                        fontSize={label.fontSize} fontWeight="600" fill={C.laneText}
+                        style={{ userSelect: 'none' }}>
+                        {line}
+                      </text>
+                    ))}
+                  </g>
+                </g>
+              )
+            })}
 
             {process.edges.map(edge => {
               const src = process.nodes.find(n => n.id === edge.sourceId)
@@ -430,10 +481,12 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                     onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
                     {sel && <circle cx={x + 22} cy={y + 22} r={28} fill="none" stroke={C.edgeHi} strokeWidth="1.5" strokeDasharray="4 3" />}
                     <circle cx={x + 22} cy={y + 22} r={21} fill={C.canvas} stroke={sel ? C.edgeHi : C.start} strokeWidth={2} />
-                    <text x={x + 22} y={y + 54} textAnchor="middle" fontSize="10" fontWeight="500"
-                      fill="#d4d4d8" style={{ userSelect: 'none' }}>
-                      {node.name.length > 24 ? node.name.slice(0, 23) + '…' : node.name}
-                    </text>
+                    {wrapText(node.name, 16).map((line, i) => (
+                      <text key={i} x={x + 22} y={y + 54 + i * 11} textAnchor="middle" fontSize="9" fontWeight="500"
+                        fill="#d4d4d8" style={{ userSelect: 'none' }}>
+                        {line}
+                      </text>
+                    ))}
                   </g>
                 )
               }
@@ -446,10 +499,12 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                     {sel && <circle cx={x + 22} cy={y + 22} r={28} fill="none" stroke={C.edgeHi} strokeWidth="1.5" strokeDasharray="4 3" />}
                     <circle cx={x + 22} cy={y + 22} r={21} fill={C.canvas} stroke={sel ? C.edgeHi : sc} strokeWidth={4} />
                     <circle cx={x + 22} cy={y + 22} r={13} fill="none" stroke={sel ? C.edgeHi : sc} strokeWidth="1.6" />
-                    <text x={x + 22} y={y + 54} textAnchor="middle" fontSize="10" fontWeight="500"
-                      fill={isRej ? C.endNo : C.endOk} style={{ userSelect: 'none' }}>
-                      {node.name.length > 24 ? node.name.slice(0, 23) + '…' : node.name}
-                    </text>
+                    {wrapText(node.name, 16).map((line, i) => (
+                      <text key={i} x={x + 22} y={y + 54 + i * 11} textAnchor="middle" fontSize="9" fontWeight="500"
+                        fill={isRej ? C.endNo : C.endOk} style={{ userSelect: 'none' }}>
+                        {line}
+                      </text>
+                    ))}
                   </g>
                 )
               }
