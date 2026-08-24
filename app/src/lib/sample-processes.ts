@@ -28,7 +28,7 @@ export const sqbCreditProcess: BusinessProcess = {
       name: 'Фронт-офис (Кредитный эксперт)',
       type: 'lane',
       role: 'Кредитный эксперт филиала',
-      geometry: { x: 70, y: 40, width: 1530, height: 180 },
+      geometry: { x: 40, y: 40, width: 1680, height: 170 },
       style: 'swimlane;horizontal=0;',
     },
     {
@@ -36,7 +36,7 @@ export const sqbCreditProcess: BusinessProcess = {
       name: 'PIX RPA & Автоматические сервисы',
       type: 'lane',
       role: 'Робот PIX RPA / Интеграция АБС',
-      geometry: { x: 70, y: 220, width: 1530, height: 180 },
+      geometry: { x: 40, y: 210, width: 1680, height: 170 },
       style: 'swimlane;horizontal=0;',
     },
     {
@@ -44,7 +44,7 @@ export const sqbCreditProcess: BusinessProcess = {
       name: 'Служба рисков и безопасности (СБ)',
       type: 'lane',
       role: 'Андеррайтер / Риск-офицер',
-      geometry: { x: 70, y: 400, width: 1530, height: 180 },
+      geometry: { x: 40, y: 380, width: 1680, height: 200 },
       style: 'swimlane;horizontal=0;',
     },
     {
@@ -52,7 +52,7 @@ export const sqbCreditProcess: BusinessProcess = {
       name: 'Кредитный комитет',
       type: 'lane',
       role: 'Члены кредитного комитета',
-      geometry: { x: 70, y: 580, width: 1530, height: 180 },
+      geometry: { x: 40, y: 580, width: 1680, height: 170 },
       style: 'swimlane;horizontal=0;',
     },
     {
@@ -60,7 +60,7 @@ export const sqbCreditProcess: BusinessProcess = {
       name: 'Бэк-офис и учет (АБС)',
       type: 'lane',
       role: 'Бухгалтер-контролер / АБС',
-      geometry: { x: 70, y: 760, width: 1530, height: 180 },
+      geometry: { x: 40, y: 750, width: 1680, height: 170 },
       style: 'swimlane;horizontal=0;',
     },
   ],
@@ -80,7 +80,7 @@ export const sqbCreditProcess: BusinessProcess = {
       costPerExecution: 5000,
       automationPotential: 80,
       description: 'Заявка поступает через портал банка или при личном визите клиента в филиал.',
-      geometry: { x: 110, y: 105, width: 48, height: 48 },
+      geometry: { x: 130, y: 98, width: 44, height: 44 },
       style: 'ellipse;',
     },
     {
@@ -99,7 +99,7 @@ export const sqbCreditProcess: BusinessProcess = {
       description: 'Проверка учредительных документов, баланса, формы 1 и 2 за последние 4 квартала.',
       inputArtifacts: ['Заявление на кредит', 'Финотчетность', 'Устав ЮЛ'],
       outputArtifacts: ['Кредитное досье (электронное)'],
-      geometry: { x: 220, y: 95, width: 170, height: 70 },
+      geometry: { x: 250, y: 85, width: 190, height: 80 },
       style: 'rounded=1;',
     },
     // Lane 2: RPA
@@ -120,7 +120,7 @@ export const sqbCreditProcess: BusinessProcess = {
         'Робот PIX автоматически запрашивает кредитную историю в КАТМ, налоговую задолженность в ГНК и реестр залогов.',
       inputArtifacts: ['ИНН компании', 'Паспортные данные учредителей'],
       outputArtifacts: ['Скоринговый отчет KATM', 'Справка ГНК об отсутствии долгов'],
-      geometry: { x: 430, y: 275, width: 190, height: 70 },
+      geometry: { x: 500, y: 255, width: 200, height: 80 },
       style: 'rounded=1;fillColor=#dcfce7;',
     },
     // Lane 3: Risk
@@ -140,7 +140,7 @@ export const sqbCreditProcess: BusinessProcess = {
       description: 'Глубокий финансовый анализ денежных потоков, оценка ликвидности залогового имущества.',
       inputArtifacts: ['Скоринговый отчет', 'Оценка залога'],
       outputArtifacts: ['Заключение риск-департамента'],
-      geometry: { x: 670, y: 455, width: 180, height: 70 },
+      geometry: { x: 760, y: 415, width: 200, height: 80 },
       style: 'rounded=1;',
     },
     {
@@ -151,7 +151,7 @@ export const sqbCreditProcess: BusinessProcess = {
       laneId: 'lane-risk',
       laneName: 'Служба рисков и безопасности (СБ)',
       role: 'Андеррайтер / Риск-офицер',
-      geometry: { x: 900, y: 467, width: 46, height: 46 },
+      geometry: { x: 1020, y: 431, width: 48, height: 48 },
       style: 'rhombus;',
     },
     // Lane 4: Committee
@@ -171,7 +171,7 @@ export const sqbCreditProcess: BusinessProcess = {
       description: 'Электронное голосование членов комитета с цифровой подписью ЭЦП.',
       inputArtifacts: ['Заключение рисков', 'Проект решения'],
       outputArtifacts: ['Протокол заседания Кредитного комитета'],
-      geometry: { x: 1000, y: 635, width: 180, height: 70 },
+      geometry: { x: 1140, y: 625, width: 200, height: 80 },
       style: 'rounded=1;',
     },
     {
@@ -182,7 +182,7 @@ export const sqbCreditProcess: BusinessProcess = {
       laneId: 'lane-comm',
       laneName: 'Кредитный комитет',
       role: 'Члены кредитного комитета',
-      geometry: { x: 1230, y: 647, width: 46, height: 46 },
+      geometry: { x: 1400, y: 641, width: 48, height: 48 },
       style: 'rhombus;',
     },
     // Lane 2: RPA Auto-Contract
@@ -203,7 +203,7 @@ export const sqbCreditProcess: BusinessProcess = {
         'Робот формирует кредитный договор по шаблону и создает ссудный счет 16... в АБС ЦФТ.',
       inputArtifacts: ['Протокол комитета', 'Реквизиты заемщика'],
       outputArtifacts: ['Кредитный договор (PDF)', 'Номер ссудного счета в АБС'],
-      geometry: { x: 1300, y: 275, width: 190, height: 70 },
+      geometry: { x: 1380, y: 255, width: 200, height: 80 },
       style: 'rounded=1;fillColor=#dcfce7;',
     },
     // Lane 5: Back
@@ -223,7 +223,7 @@ export const sqbCreditProcess: BusinessProcess = {
       description: 'Подписание договора клиентом в Didox и проведение банковской проводки зачисления кредита.',
       inputArtifacts: ['Подписанный договор с ЭЦП'],
       outputArtifacts: ['Мемориальный ордер', 'Выписка по ссудному счету'],
-      geometry: { x: 1310, y: 815, width: 180, height: 70 },
+      geometry: { x: 1380, y: 795, width: 200, height: 80 },
       style: 'rounded=1;',
     },
     {
@@ -235,7 +235,7 @@ export const sqbCreditProcess: BusinessProcess = {
       laneId: 'lane-back',
       laneName: 'Бэк-офис и учет (АБС)',
       role: 'АБС ЦФТ',
-      geometry: { x: 1535, y: 826, width: 48, height: 48 },
+      geometry: { x: 1630, y: 813, width: 44, height: 44 },
       style: 'ellipse;',
     },
     {
@@ -247,7 +247,7 @@ export const sqbCreditProcess: BusinessProcess = {
       laneId: 'lane-risk',
       laneName: 'Служба рисков и безопасности (СБ)',
       role: 'Андеррайтер',
-      geometry: { x: 899, y: 525, width: 48, height: 48 },
+      geometry: { x: 1020, y: 510, width: 44, height: 44 },
       style: 'ellipse;fillColor=#ef4444;',
     },
   ],

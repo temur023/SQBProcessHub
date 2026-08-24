@@ -15,10 +15,49 @@ interface ProcessVisualizerProps {
 
 const GRID_MINOR = 10
 const GRID_MAJOR = 100
-const MIN_ZOOM = 0.15
+const MIN_ZOOM = 0.12
 const MAX_ZOOM = 3.0
+const LANE_HEAD = 56
+
+const C = {
+  canvas: '#1c1c1c',
+  gridMinor: 'rgba(255,255,255,0.055)',
+  gridMajor: 'rgba(255,255,255,0.13)',
+  laneLine: 'rgba(255,255,255,0.38)',
+  laneHead: '#111111',
+  laneText: '#f4f4f5',
+  taskFill: '#1a1a1a',
+  taskStroke: '#ececec',
+  taskText: '#f5f5f5',
+  rpaFill: '#10261a',
+  rpaStroke: '#34d399',
+  badFill: '#2a1f0a',
+  badStroke: '#fbbf24',
+  edge: '#d4d4d4',
+  edgeHi: '#60a5fa',
+  labelBg: '#1c1c1c',
+  gwStroke: '#eab308',
+  start: '#f4f4f5',
+  endOk: '#4ade80',
+  endNo: '#f87171',
+}
 
 function snap(v: number) { return Math.round(v / GRID_MINOR) * GRID_MINOR }
+
+function boxOf(n: ProcessNode) {
+  const isEv = n.type === 'startEvent' || n.type === 'endEvent'
+  const isGw = n.type === 'exclusiveGateway' || n.type === 'parallelGateway' || n.type === 'inclusiveGateway'
+  const w = isEv ? 44 : isGw ? 48 : (n.geometry.width || 160)
+  const h = isEv ? 44 : isGw ? 48 : (n.geometry.height || 70)
+  return {
+    x: n.geometry.x,
+    y: n.geometry.y,
+    w,
+    h,
+    cx: n.geometry.x + w / 2,
+    cy: n.geometry.y + h / 2,
+  }
+}
 
 function edgePath(
   src: ProcessNode,
@@ -28,40 +67,45 @@ function edgePath(
   if (pts && pts.length >= 2) {
     const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
     const mid = pts[Math.floor(pts.length / 2)]
-    return { d, lx: mid.x, ly: mid.y - 8 }
+    return { d, lx: mid.x, ly: mid.y - 10 }
   }
 
-  const sw = src.geometry.width  || 160
-  const sh = src.geometry.height || 70
-  const tw = tgt.geometry.width  || 160
-  const th = tgt.geometry.height || 70
+  const a = boxOf(src)
+  const b = boxOf(tgt)
+  const dx = b.cx - a.cx
+  const dy = b.cy - a.cy
+  const horiz = Math.abs(dx) >= Math.abs(dy) * 0.55
 
-  let x1 = src.geometry.x + sw
-  let y1 = src.geometry.y + sh / 2
-  let x2 = tgt.geometry.x
-  let y2 = tgt.geometry.y + th / 2
+  let x1: number, y1: number, x2: number, y2: number
+  if (horiz) {
+    if (dx >= 0) { x1 = a.x + a.w; y1 = a.cy; x2 = b.x; y2 = b.cy }
+    else { x1 = a.x; y1 = a.cy; x2 = b.x + b.w; y2 = b.cy }
+  } else {
+    if (dy >= 0) { x1 = a.cx; y1 = a.y + a.h; x2 = b.cx; y2 = b.y }
+    else { x1 = a.cx; y1 = a.y; x2 = b.cx; y2 = b.y + b.h }
+  }
 
-  const vertBelow = tgt.geometry.y > src.geometry.y + sh + 5
-  const hClose    = Math.abs(tgt.geometry.x - src.geometry.x) < sw
+  if (Math.abs(y1 - y2) < 2) {
+    return { d: `M${x1},${y1} L${x2},${y2}`, lx: (x1 + x2) / 2, ly: y1 - 10 }
+  }
+  if (Math.abs(x1 - x2) < 2) {
+    return { d: `M${x1},${y1} L${x2},${y2}`, lx: x1 + 10, ly: (y1 + y2) / 2 }
+  }
 
-  if (vertBelow && hClose) {
-    x1 = src.geometry.x + sw / 2
-    y1 = src.geometry.y + sh
-    x2 = tgt.geometry.x + tw / 2
-    y2 = tgt.geometry.y
+  if (horiz) {
+    const midX = snap((x1 + x2) / 2)
     return {
-      d: `M${x1},${y1} L${x1},${y2} L${x2},${y2}`,
-      lx: x1 + 6,
-      ly: (y1 + y2) / 2,
+      d: `M${x1},${y1} L${midX},${y1} L${midX},${y2} L${x2},${y2}`,
+      lx: midX,
+      ly: (y1 + y2) / 2 - 10,
     }
   }
-
-  const midX = snap((x1 + x2) / 2)
-  const d = Math.abs(y1 - y2) < 4
-    ? `M${x1},${y1} L${x2},${y2}`
-    : `M${x1},${y1} L${midX},${y1} L${midX},${y2} L${x2},${y2}`
-
-  return { d, lx: midX, ly: (y1 + y2) / 2 - 10 }
+  const midY = snap((y1 + y2) / 2)
+  return {
+    d: `M${x1},${y1} L${x1},${midY} L${x2},${midY} L${x2},${y2}`,
+    lx: (x1 + x2) / 2,
+    ly: midY - 10,
+  }
 }
 
 function wrapText(text: string, maxChars: number): string[] {
@@ -81,12 +125,25 @@ function wrapText(text: string, maxChars: number): string[] {
   return lines.slice(0, 3)
 }
 
+function slaLabel(mins?: number): string {
+  if (mins == null) return ''
+  if (mins < 1) return `${mins} min`
+  if (mins % 60 === 0 && mins >= 60) return `${mins / 60} ч`
+  return `${mins} min`
+}
+
+function shortLane(name: string): string {
+  const inner = name.match(/\(([^)]+)\)/)
+  if (inner && inner[1].length <= 22) return inner[1]
+  return name.length > 28 ? name.slice(0, 27) + '…' : name
+}
+
 export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   process,
   onSelectNode,
   selectedNodeId,
 }) => {
-  const [zoom, setZoom]                 = useState(0.85)
+  const [zoom, setZoom]                 = useState(0.7)
   const [showGrid, setShowGrid]         = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [activeFilter, setActiveFilter] = useState<'all' | 'rpa' | 'bottlenecks'>('all')
@@ -108,7 +165,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
       maxY = Math.max(maxY, y + h)
     }
     for (const l of process.lanes) bump(l.geometry.x, l.geometry.y, l.geometry.width, l.geometry.height)
-    for (const n of process.nodes) bump(n.geometry.x, n.geometry.y, n.geometry.width || 160, n.geometry.height || 70)
+    for (const n of process.nodes) bump(n.geometry.x, n.geometry.y, n.geometry.width || 160, (n.geometry.height || 70) + 18)
     if (!Number.isFinite(minX)) {
       minX = 0
       minY = 0
@@ -138,7 +195,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
     if (!wrapRef.current) return
     const { width, height } = wrapRef.current.getBoundingClientRect()
     if (width < 40 || height < 40) return
-    const pad = 28
+    const pad = 32
     const s = Math.min((width - pad * 2) / bounds.w, (height - pad * 2) / bounds.h, 1)
     const z = +Math.max(s, MIN_ZOOM).toFixed(2)
     setZoom(z)
@@ -193,7 +250,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
     if (!el) return
     const handler = (e: WheelEvent) => {
       e.preventDefault()
-      const delta = e.deltaY > 0 ? -0.1 : 0.1
+      const delta = e.deltaY > 0 ? -0.08 : 0.08
       setZoom((z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, +(z + delta).toFixed(2))))
     }
     el.addEventListener('wheel', handler, { passive: false })
@@ -206,25 +263,24 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   }
 
   return (
-    <div className={`flex flex-col bg-slate-50 dark:bg-[#1e1e1e] rounded-xl border shadow-sm overflow-hidden transition-all duration-200 ${
+    <div className={`flex flex-col bg-[#161616] rounded-xl border border-zinc-800 shadow-sm overflow-hidden transition-all duration-200 ${
       isFullscreen ? 'fixed inset-0 z-50 rounded-none border-none' : 'flex-1 min-h-0 h-full'
     }`}>
-      {/* Toolbar */}
-      <div className="px-3 py-2 border-b bg-white dark:bg-slate-900 flex flex-wrap items-center justify-between gap-2 shrink-0">
+      <div className="px-3 py-2 border-b border-zinc-800 bg-[#141414] flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide">BPMN Карта</span>
-          <span className="text-[10px] text-muted-foreground bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+          <span className="text-xs font-bold text-zinc-200 uppercase tracking-wide">BPMN Карта</span>
+          <span className="text-[10px] text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-full">
             {process.nodes.length} эл. · {process.lanes.length} дорожек
           </span>
-          <div className="h-4 w-px bg-slate-200 mx-1" />
+          <div className="h-4 w-px bg-zinc-700 mx-1" />
           {(['all', 'rpa', 'bottlenecks'] as const).map(f => (
             <button key={f} onClick={() => setActiveFilter(f)}
               className={`flex items-center gap-1 px-2.5 py-1 text-xs rounded transition-colors ${
                 activeFilter === f
                   ? f === 'rpa' ? 'bg-emerald-600 text-white'
                   : f === 'bottlenecks' ? 'bg-amber-500 text-white'
-                  : 'bg-slate-700 text-white'
-                  : 'border hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground'
+                  : 'bg-zinc-200 text-zinc-900'
+                  : 'border border-zinc-700 hover:bg-zinc-800 text-zinc-400'
               }`}>
               {f === 'all' && `Все (${process.nodes.length})`}
               {f === 'rpa' && <><Cpu className="w-3 h-3 mr-0.5" />RPA ({process.nodes.filter(n=>n.category==='rpa_bot').length})</>}
@@ -235,28 +291,28 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
 
         <div className="flex items-center gap-1.5">
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500" />
             <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Поиск..." className="pl-6 h-7 text-xs w-32" />
+              placeholder="Поиск..." className="pl-6 h-7 text-xs w-32 bg-zinc-900 border-zinc-700 text-zinc-200" />
           </div>
-          <div className="flex items-center gap-1 border-l pl-2">
-            <Button variant={showGrid ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7"
+          <div className="flex items-center gap-1 border-l border-zinc-700 pl-2">
+            <Button variant={showGrid ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7 text-zinc-300"
               onClick={() => setShowGrid(v => !v)} title="Сетка 10px">
               <Grid className="w-3.5 h-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7"
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-300"
               onClick={() => setZoom(z => Math.max(MIN_ZOOM, +(z-0.15).toFixed(2)))}>
               <ZoomOut className="w-3.5 h-3.5" />
             </Button>
-            <span className="text-[11px] w-9 text-center font-mono text-muted-foreground">{Math.round(zoom*100)}%</span>
-            <Button variant="ghost" size="icon" className="h-7 w-7"
+            <span className="text-[11px] w-9 text-center font-mono text-zinc-400">{Math.round(zoom*100)}%</span>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-300"
               onClick={() => setZoom(z => Math.min(MAX_ZOOM, +(z+0.15).toFixed(2)))}>
               <ZoomIn className="w-3.5 h-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={fitToScreen} title="Вписать">
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-300" onClick={fitToScreen} title="Вписать">
               <RotateCcw className="w-3.5 h-3.5" />
             </Button>
-            <Button variant={isFullscreen ? 'default' : 'ghost'} size="sm" className="h-7 gap-1 text-xs px-2"
+            <Button variant={isFullscreen ? 'default' : 'ghost'} size="sm" className="h-7 gap-1 text-xs px-2 text-zinc-200"
               onClick={() => setIsFullscreen(v => !v)}>
               {isFullscreen ? <><Minimize2 className="w-3.5 h-3.5" />Свернуть</> : <><Maximize2 className="w-3.5 h-3.5" />На весь экран</>}
             </Button>
@@ -264,7 +320,6 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
         </div>
       </div>
 
-      {/* SVG Canvas */}
       <div
         ref={wrapRef}
         className={`relative flex-1 min-h-0 overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
@@ -280,78 +335,76 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
           preserveAspectRatio="xMidYMid meet"
         >
           <defs>
-            {/* Draw.io style grid: minor 10px lines + major 100px lines */}
             <pattern id="g-minor" width={GRID_MINOR * zoom} height={GRID_MINOR * zoom} patternUnits="userSpaceOnUse"
               x={patternOffset.x} y={patternOffset.y}>
               <path d={`M ${GRID_MINOR * zoom} 0 L 0 0 0 ${GRID_MINOR * zoom}`}
-                fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="0.5" />
+                fill="none" stroke={C.gridMinor} strokeWidth="1" />
             </pattern>
             <pattern id="g-major" width={GRID_MAJOR * zoom} height={GRID_MAJOR * zoom} patternUnits="userSpaceOnUse"
               x={patternOffset.x} y={patternOffset.y}>
               <rect width={GRID_MAJOR * zoom} height={GRID_MAJOR * zoom} fill="url(#g-minor)" />
               <path d={`M ${GRID_MAJOR * zoom} 0 L 0 0 0 ${GRID_MAJOR * zoom}`}
-                fill="none" stroke="rgba(0,0,0,0.14)" strokeWidth="1" />
+                fill="none" stroke={C.gridMajor} strokeWidth="1" />
             </pattern>
             <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-              <polygon points="0 0,8 3,0 6" fill="#64748b" />
+              <polygon points="0 0,8 3,0 6" fill={C.edge} />
             </marker>
             <marker id="arr-hi" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-              <polygon points="0 0,8 3,0 6" fill="#2563eb" />
+              <polygon points="0 0,8 3,0 6" fill={C.edgeHi} />
             </marker>
           </defs>
 
-          <rect width="100%" height="100%" fill="#f8fafc" />
-
-          {/* Grid overlay */}
+          <rect width="100%" height="100%" fill={C.canvas} />
           {showGrid && <rect width="100%" height="100%" fill="url(#g-major)" />}
 
-          {/* All diagram content in one transform group */}
           <g transform={`translate(${panPos.x},${panPos.y}) scale(${zoom})`}>
-
-            {/* 1. Swimlane backgrounds */}
-            {process.lanes.map((lane, idx) => (
+            {process.lanes.map((lane) => (
               <g key={lane.id}>
-                <rect x={lane.geometry.x} y={lane.geometry.y}
+                <rect
+                  x={lane.geometry.x} y={lane.geometry.y}
                   width={lane.geometry.width} height={lane.geometry.height}
-                  fill={idx % 2 === 0 ? '#eef2f7' : '#e2e8f0'}
-                  stroke="#94a3b8" strokeWidth="1" />
-                <rect x={lane.geometry.x} y={lane.geometry.y}
-                  width={40} height={lane.geometry.height}
-                  fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1" />
+                  fill="none" stroke={C.laneLine} strokeWidth="1.2"
+                />
+                <rect
+                  x={lane.geometry.x} y={lane.geometry.y}
+                  width={LANE_HEAD} height={lane.geometry.height}
+                  fill={C.laneHead} stroke={C.laneLine} strokeWidth="1.2"
+                />
                 <text
-                  x={lane.geometry.x + 20}
+                  x={lane.geometry.x + LANE_HEAD / 2}
                   y={lane.geometry.y + lane.geometry.height / 2}
                   textAnchor="middle" dominantBaseline="central"
-                  transform={`rotate(-90,${lane.geometry.x + 20},${lane.geometry.y + lane.geometry.height / 2})`}
-                  fontSize="11" fontWeight="700" fill="#334155"
+                  transform={`rotate(-90,${lane.geometry.x + LANE_HEAD / 2},${lane.geometry.y + lane.geometry.height / 2})`}
+                  fontSize="12" fontWeight="600" fill={C.laneText}
                   style={{ userSelect: 'none' }}>
-                  {lane.name}
+                  {shortLane(lane.name)}
                 </text>
               </g>
             ))}
 
-            {/* 2. Edges (below nodes) */}
             {process.edges.map(edge => {
               const src = process.nodes.find(n => n.id === edge.sourceId)
               const tgt = process.nodes.find(n => n.id === edge.targetId)
               if (!src || !tgt) return null
               const { d, lx, ly } = edgePath(src, tgt, edge.points || [])
-              const hi = selectedNodeId && (edge.sourceId === selectedNodeId || edge.targetId === selectedNodeId)
+              const hi = Boolean(selectedNodeId && (edge.sourceId === selectedNodeId || edge.targetId === selectedNodeId))
+              const label = (edge.name || '').trim()
+              const lw = Math.min(140, Math.max(36, label.length * 6.2 + 10))
               return (
                 <g key={edge.id}>
                   <path d={d} fill="none"
-                    stroke={hi ? '#2563eb' : '#64748b'}
-                    strokeWidth={hi ? 2.5 : 1.5}
+                    stroke={hi ? C.edgeHi : C.edge}
+                    strokeWidth={hi ? 2.2 : 1.4}
                     strokeLinejoin="round"
                     markerEnd={hi ? 'url(#arr-hi)' : 'url(#arr)'} />
-                  {edge.name && (
+                  {label && (
                     <>
-                      <rect x={lx-38} y={ly-9} width={76} height={16} rx={3}
-                        fill="white" stroke="#cbd5e1" strokeWidth="0.8" />
-                      <text x={lx} y={ly+4} textAnchor="middle"
-                        fontSize="9" fill="#475569" fontWeight="600"
+                      <rect x={lx - lw / 2} y={ly - 8} width={lw} height={16} rx={3}
+                        fill={C.labelBg} stroke="#3f3f46" strokeWidth="0.8" />
+                      <text x={lx} y={ly + 4} textAnchor="middle"
+                        fontSize="10" fill="#e4e4e7" fontWeight="500"
                         style={{ userSelect: 'none' }}>
-                        {edge.name}
+                        {label.length > 22 ? label.slice(0, 21) + '…' : label}
                       </text>
                     </>
                   )}
@@ -359,7 +412,6 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               )
             })}
 
-            {/* 3. Nodes */}
             {process.nodes.map(node => {
               const faded = !visibleIds.has(node.id)
               const sel   = selectedNodeId === node.id
@@ -374,134 +426,106 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
 
               if (node.type === 'startEvent') {
                 return (
-                  <g key={node.id} opacity={faded ? 0.2 : 1}
+                  <g key={node.id} opacity={faded ? 0.18 : 1}
                     onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
-                    {sel && <circle cx={x+24} cy={y+24} r={29} fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="5 3" />}
-                    <circle cx={x+24} cy={y+24} r={24} fill="#10b981" stroke={sel?'#2563eb':'#059669'} strokeWidth={sel?3:2} />
-                    <polygon points={`${x+18},${y+16} ${x+34},${y+24} ${x+18},${y+32}`} fill="white" />
-                    <text x={x+24} y={y+56} textAnchor="middle" fontSize="10" fontWeight="700"
-                      fill="#0f172a" style={{ userSelect: 'none' }}>
-                      {node.name.length > 22 ? node.name.slice(0,21)+'…' : node.name}
+                    {sel && <circle cx={x + 22} cy={y + 22} r={28} fill="none" stroke={C.edgeHi} strokeWidth="1.5" strokeDasharray="4 3" />}
+                    <circle cx={x + 22} cy={y + 22} r={21} fill={C.canvas} stroke={sel ? C.edgeHi : C.start} strokeWidth={2} />
+                    <text x={x + 22} y={y + 54} textAnchor="middle" fontSize="10" fontWeight="500"
+                      fill="#d4d4d8" style={{ userSelect: 'none' }}>
+                      {node.name.length > 24 ? node.name.slice(0, 23) + '…' : node.name}
                     </text>
                   </g>
                 )
               }
 
               if (node.type === 'endEvent') {
-                const fc = isRej ? '#ef4444' : '#10b981'
-                const sc = isRej ? '#b91c1c' : '#047857'
+                const sc = isRej ? C.endNo : C.endOk
                 return (
-                  <g key={node.id} opacity={faded ? 0.2 : 1}
+                  <g key={node.id} opacity={faded ? 0.18 : 1}
                     onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
-                    {sel && <circle cx={x+24} cy={y+24} r={29} fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="5 3" />}
-                    <circle cx={x+24} cy={y+24} r={24} fill={fc} stroke={sel?'#2563eb':sc} strokeWidth={sel?3:4} />
-                    <circle cx={x+24} cy={y+24} r={13} fill="none" stroke="white" strokeWidth="2.5" />
-                    <text x={x+24} y={y+56} textAnchor="middle" fontSize="10" fontWeight="700"
-                      fill={isRej?'#b91c1c':'#047857'} style={{ userSelect: 'none' }}>
-                      {node.name.length > 22 ? node.name.slice(0,21)+'…' : node.name}
+                    {sel && <circle cx={x + 22} cy={y + 22} r={28} fill="none" stroke={C.edgeHi} strokeWidth="1.5" strokeDasharray="4 3" />}
+                    <circle cx={x + 22} cy={y + 22} r={21} fill={C.canvas} stroke={sel ? C.edgeHi : sc} strokeWidth={4} />
+                    <circle cx={x + 22} cy={y + 22} r={13} fill="none" stroke={sel ? C.edgeHi : sc} strokeWidth="1.6" />
+                    <text x={x + 22} y={y + 54} textAnchor="middle" fontSize="10" fontWeight="500"
+                      fill={isRej ? C.endNo : C.endOk} style={{ userSelect: 'none' }}>
+                      {node.name.length > 24 ? node.name.slice(0, 23) + '…' : node.name}
                     </text>
                   </g>
                 )
               }
 
               if (node.type === 'exclusiveGateway' || node.type === 'parallelGateway' || node.type === 'inclusiveGateway') {
-                const cx = x + 23, cy = y + 23
+                const cx = x + 24, cy = y + 24
                 return (
-                  <g key={node.id} opacity={faded ? 0.2 : 1}
+                  <g key={node.id} opacity={faded ? 0.18 : 1}
                     onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
-                    {sel && <polygon points={`${cx},${cy-29} ${cx+29},${cy} ${cx},${cy+29} ${cx-29},${cy}`}
-                      fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="5 3" />}
-                    <polygon points={`${cx},${cy-23} ${cx+23},${cy} ${cx},${cy+23} ${cx-23},${cy}`}
-                      fill="#fef3c7" stroke={sel?'#2563eb':'#f59e0b'} strokeWidth={sel?3:2} />
-                    <text x={cx} y={cy+6} textAnchor="middle" fontSize="18" fontWeight="900"
-                      fill="#92400e" style={{ userSelect: 'none' }}>
+                    {sel && <polygon points={`${cx},${cy-30} ${cx+30},${cy} ${cx},${cy+30} ${cx-30},${cy}`}
+                      fill="none" stroke={C.edgeHi} strokeWidth="1.5" strokeDasharray="4 3" />}
+                    <polygon points={`${cx},${cy-22} ${cx+22},${cy} ${cx},${cy+22} ${cx-22},${cy}`}
+                      fill={C.canvas} stroke={sel ? C.edgeHi : C.gwStroke} strokeWidth={2} />
+                    <text x={cx} y={cy + 6} textAnchor="middle" fontSize="18" fontWeight="700"
+                      fill={C.gwStroke} style={{ userSelect: 'none' }}>
                       {node.type === 'parallelGateway' ? '+' : '×'}
                     </text>
                     {node.name && node.name !== 'Условие' && (
-                      <text x={cx} y={y-8} textAnchor="middle" fontSize="9" fontWeight="700"
-                        fill="#92400e" style={{ userSelect: 'none' }}>
-                        {node.name.length > 28 ? node.name.slice(0,27)+'…' : node.name}
+                      <text x={cx} y={y - 8} textAnchor="middle" fontSize="10" fontWeight="500"
+                        fill="#e4e4e7" style={{ userSelect: 'none' }}>
+                        {node.name.length > 32 ? node.name.slice(0, 31) + '…' : node.name}
                       </text>
                     )}
                   </g>
                 )
               }
 
-              // Task card
-              const fc2 = isRpa ? '#f0fdf4' : isBad ? '#fffbeb' : '#ffffff'
-              const sc2 = sel ? '#2563eb' : isRpa ? '#16a34a' : isBad ? '#f59e0b' : '#94a3b8'
-              const sw2 = sel || isRpa ? 2 : 1.5
-              const lines = wrapText(node.name, Math.max(14, Math.floor((w - 18) / 6.5)))
+              const fill = isRpa ? C.rpaFill : isBad ? C.badFill : C.taskFill
+              const stroke = sel ? C.edgeHi : isRpa ? C.rpaStroke : isBad ? C.badStroke : C.taskStroke
+              const lines = wrapText(node.name, Math.max(12, Math.floor((w - 16) / 6.6)))
+              const sla = slaLabel(node.slaMinutes)
 
               return (
-                <g key={node.id} opacity={faded ? 0.2 : 1}
+                <g key={node.id} opacity={faded ? 0.18 : 1}
                   onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
-                  <rect x={x} y={y} width={w} height={h} rx={7} ry={7}
-                    fill={fc2} stroke={sc2} strokeWidth={sw2} />
-                  {sel && <rect x={x-2} y={y-2} width={w+4} height={h+4} rx={9} ry={9}
-                    fill="none" stroke="#2563eb" strokeWidth="1.5" strokeDasharray="4 2" />}
-
-                  {/* Code badge */}
-                  {node.code && (
-                    <>
-                      <rect x={x+5} y={y+5} width={node.code.length*6+8} height={13} rx={3} fill="white" stroke="#cbd5e1" strokeWidth="0.8" />
-                      <text x={x+9} y={y+14} fontSize="8" fill="#475569" fontWeight="700"
-                        fontFamily="monospace" style={{ userSelect: 'none' }}>{node.code}</text>
-                    </>
-                  )}
-
-                  {/* RPA badge */}
+                  <rect x={x} y={y} width={w} height={h} rx={10} ry={10}
+                    fill={fill} stroke={stroke} strokeWidth={sel ? 2.2 : 1.6} />
                   {isRpa && (
-                    <>
-                      <rect x={x+w-50} y={y+5} width={45} height={13} rx={3} fill="#16a34a" />
-                      <text x={x+w-27} y={y+14} textAnchor="middle" fontSize="8" fill="white" fontWeight="700"
-                        style={{ userSelect: 'none' }}>PIX RPA</text>
-                    </>
+                    <text x={x + w - 8} y={y + 13} textAnchor="end" fontSize="8" fill={C.rpaStroke} fontWeight="700"
+                      style={{ userSelect: 'none' }}>PIX RPA</text>
                   )}
-
-                  {/* Task name */}
                   {lines.map((line, i) => (
-                    <text key={i} x={x+w/2} y={y + 26 + i * 13}
-                      textAnchor="middle" fontSize="11" fontWeight="600"
-                      fill="#0f172a" style={{ userSelect: 'none' }}>
+                    <text key={i} x={x + w / 2} y={y + h / 2 - ((lines.length - 1) * 12) / 2 + i * 13}
+                      textAnchor="middle" fontSize="12" fontWeight="500"
+                      fill={C.taskText} style={{ userSelect: 'none' }}>
                       {line}
                     </text>
                   ))}
-
-                  {/* Divider + footer */}
-                  <line x1={x+4} y1={y+h-19} x2={x+w-4} y2={y+h-19} stroke="#e2e8f0" strokeWidth="1" />
-                  <text x={x+8} y={y+h-7} fontSize="9" fill="#64748b" style={{ userSelect: 'none' }}>
-                    {(node.system || 'АБС').slice(0,14)}
-                  </text>
-                  <text x={x+w-6} y={y+h-7} textAnchor="end" fontSize="9"
-                    fill={isBad ? '#d97706' : '#94a3b8'} fontWeight={isBad?'700':'400'}
-                    style={{ userSelect: 'none' }}>
-                    {node.slaMinutes||60}м
-                  </text>
+                  {sla && (
+                    <text x={x + w / 2} y={y + h + 14} textAnchor="middle"
+                      fontSize="10" fill="#a1a1aa" style={{ userSelect: 'none' }}>
+                      {sla}
+                    </text>
+                  )}
                 </g>
               )
             })}
           </g>
         </svg>
 
-        {/* Zoom readout */}
-        <div className="absolute bottom-3 right-3 pointer-events-none bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded px-2 py-0.5 text-[11px] font-mono text-slate-500 shadow-sm select-none">
-          {Math.round(zoom*100)}%
+        <div className="absolute bottom-3 right-3 pointer-events-none bg-black/70 border border-zinc-700 rounded px-2 py-0.5 text-[11px] font-mono text-zinc-400 shadow-sm select-none">
+          {Math.round(zoom * 100)}%
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="px-3 py-1.5 bg-white dark:bg-slate-900 border-t flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted-foreground shrink-0">
+      <div className="px-3 py-1.5 bg-[#141414] border-t border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-400 shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-500 inline-block" />Старт</div>
-          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-600 border-2 border-emerald-300 inline-block" />Успех</div>
-          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-rose-500 inline-block" />Отказ</div>
-          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-emerald-50 border border-emerald-400 inline-block" />PIX RPA</div>
-          <div className="flex items-center gap-1"><span className="h-3 w-3 inline-block border border-amber-400 bg-yellow-100" style={{transform:'rotate(45deg)'}} />Шлюз</div>
-          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-amber-50 border border-amber-400 inline-block" />SLA&gt;2ч</div>
+          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded-full border-2 border-zinc-200 inline-block" />Старт</div>
+          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded-full border-2 border-emerald-400 inline-block" />Успех</div>
+          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded-full border-2 border-rose-400 inline-block" />Отказ</div>
+          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-emerald-950 border border-emerald-400 inline-block" />PIX RPA</div>
+          <div className="flex items-center gap-1"><span className="h-3 w-3 inline-block border border-amber-400" style={{ transform: 'rotate(45deg)' }} />Шлюз</div>
+          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-amber-950 border border-amber-400 inline-block" />SLA&gt;2ч</div>
         </div>
         <div className="flex items-center gap-1">
-          <Info className="w-3 h-3 text-blue-500" />
+          <Info className="w-3 h-3 text-sky-400" />
           Клик — детали · Колёсико — зум · Тащить — пан
         </div>
       </div>

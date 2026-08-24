@@ -687,15 +687,15 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
                 clean_name = f"Операция {code or node_id}"
 
         if node_type in ('startEvent', 'endEvent'):
-            width, height = 48, 48
+            width, height = max(int(width or 44), 40), max(int(height or 44), 40)
         elif 'Gateway' in node_type:
-            width, height = 46, 46
+            width, height = max(int(width or 46), 40), max(int(height or 46), 40)
         elif node_type == 'lane':
-            width = max(int(width), 1400)
-            height = max(int(height), 160)
+            width = max(int(width), 200)
+            height = max(int(height), 80)
         else:
-            width = max(int(width), 160)
-            height = max(int(height), 70)
+            width = max(int(width), 100)
+            height = max(int(height), 48)
 
         fot_cost = (sla_min * 1932) if category != 'rpa_bot' else 800
 
@@ -747,58 +747,46 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
     def snap(v: float) -> int:
         return int(round(v / GRID_SIZE) * GRID_SIZE)
 
-    # 1. Snap lanes
+    # Keep draw.io coordinates. Only snap to the 10px grid and nudge real overlaps.
     for lane in lanes:
         lane.geometry.x = snap(lane.geometry.x)
         lane.geometry.y = snap(lane.geometry.y)
-        lane.geometry.width = max(snap(lane.geometry.width), 1600)
-        lane.geometry.height = max(snap(lane.geometry.height), 180)
+        lane.geometry.width = max(snap(lane.geometry.width), 200)
+        lane.geometry.height = max(snap(lane.geometry.height), 80)
 
-    # 2. Snap and resolve node collisions within each lane
+    for node in flow_nodes:
+        node.geometry.x = snap(node.geometry.x)
+        node.geometry.y = snap(node.geometry.y)
+        node.geometry.width = snap(node.geometry.width)
+        node.geometry.height = snap(node.geometry.height)
+
+    GAP = 24
     for lane in lanes:
         lane_nodes = [n for n in flow_nodes if n.laneId == lane.id]
+        lane_nodes.sort(key=lambda n: (n.geometry.x, n.geometry.y))
+        for idx in range(1, len(lane_nodes)):
+            prev = lane_nodes[idx - 1]
+            node = lane_nodes[idx]
+            overlap_x = prev.geometry.x + prev.geometry.width + GAP > node.geometry.x
+            overlap_y = not (
+                node.geometry.y + node.geometry.height <= prev.geometry.y
+                or node.geometry.y >= prev.geometry.y + prev.geometry.height
+            )
+            if overlap_x and overlap_y:
+                node.geometry.x = snap(prev.geometry.x + prev.geometry.width + GAP)
+
         if not lane_nodes:
             continue
-
-        lane_center_y = lane.geometry.y + snap((lane.geometry.height - 70) / 2)
-        lane_nodes.sort(key=lambda n: n.geometry.x)
-
-        for idx, node in enumerate(lane_nodes):
-            node.geometry.width = snap(node.geometry.width)
-            node.geometry.height = snap(node.geometry.height)
-
-            is_reject_branch = (
-                'reject' in node.id.lower() or
-                'отказ' in node.name.lower() or
-                'rad etildi' in node.name.lower()
-            )
-
-            if is_reject_branch:
-                prev_gw = next((
-                    other for other in lane_nodes
-                    if 'Gateway' in other.type and abs(other.geometry.x - node.geometry.x) < 120
-                ), None)
-                if prev_gw:
-                    node.geometry.x = prev_gw.geometry.x
-                    node.geometry.y = prev_gw.geometry.y + prev_gw.geometry.height + 30
-                    continue
-
-            if idx > 0:
-                prev = lane_nodes[idx - 1]
-                min_x = prev.geometry.x + prev.geometry.width + 40
-                if node.geometry.x < min_x:
-                    node.geometry.x = snap(min_x)
-                else:
-                    node.geometry.x = snap(node.geometry.x)
-            else:
-                node.geometry.x = snap(max(lane.geometry.x + 40, node.geometry.x))
-
-            if node.type in ('startEvent', 'endEvent'):
-                node.geometry.y = lane.geometry.y + snap((lane.geometry.height - 48) / 2)
-            elif 'Gateway' in node.type:
-                node.geometry.y = lane.geometry.y + snap((lane.geometry.height - 46) / 2)
-            else:
-                node.geometry.y = lane_center_y
+        max_x = max(n.geometry.x + n.geometry.width for n in lane_nodes)
+        max_y = max(n.geometry.y + n.geometry.height for n in lane_nodes)
+        min_y = min(n.geometry.y for n in lane_nodes)
+        lane.geometry.width = max(lane.geometry.width, max_x - lane.geometry.x + 40)
+        if min_y < lane.geometry.y:
+            extra = lane.geometry.y - min_y + 16
+            lane.geometry.y -= extra
+            lane.geometry.height += extra
+        if max_y > lane.geometry.y + lane.geometry.height:
+            lane.geometry.height = max_y - lane.geometry.y + 24
 
     valid_node_ids = {n.id for n in flow_nodes}
 
