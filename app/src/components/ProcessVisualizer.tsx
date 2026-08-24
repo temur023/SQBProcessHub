@@ -45,7 +45,9 @@ const C = {
 
 function snap(v: number) { return Math.round(v / GRID_MINOR) * GRID_MINOR }
 
-function boxOf(n: ProcessNode) {
+type Box = { x: number; y: number; w: number; h: number; cx: number; cy: number }
+
+function rawBox(n: ProcessNode): Box {
   const w = Math.max(n.geometry.width || 40, 24)
   const h = Math.max(n.geometry.height || 40, 24)
   return {
@@ -58,9 +60,47 @@ function boxOf(n: ProcessNode) {
   }
 }
 
+function laneOf(node: ProcessNode, lanes: ProcessNode[]): ProcessNode | undefined {
+  if (node.laneId) {
+    const hit = lanes.find((l) => l.id === node.laneId)
+    if (hit) return hit
+  }
+  const cx = node.geometry.x + (node.geometry.width || 0) / 2
+  const cy = node.geometry.y + (node.geometry.height || 0) / 2
+  return lanes.find((l) =>
+    cx >= l.geometry.x &&
+    cx <= l.geometry.x + l.geometry.width &&
+    cy >= l.geometry.y &&
+    cy <= l.geometry.y + l.geometry.height,
+  )
+}
+
+function isEventNode(n: ProcessNode): boolean {
+  return n.type === 'startEvent' || n.type === 'endEvent'
+}
+
+/** Keep event circles inside the lane body so they never sit on the title column. */
+function displayBox(n: ProcessNode, lanes: ProcessNode[]): Box {
+  const b = rawBox(n)
+  if (!isEventNode(n)) return b
+  const lane = laneOf(n, lanes)
+  if (!lane) return b
+  const pad = 8
+  const minX = lane.geometry.x + LANE_HEAD + pad
+  const maxX = lane.geometry.x + lane.geometry.width - b.w - pad
+  const minY = lane.geometry.y + pad
+  const maxY = lane.geometry.y + lane.geometry.height - b.h - pad
+  let { x, y } = b
+  if (x < minX) x = minX
+  if (maxX >= minX && x > maxX) x = maxX
+  if (y < minY) y = minY
+  if (maxY >= minY && y > maxY) y = maxY
+  return { x, y, w: b.w, h: b.h, cx: x + b.w / 2, cy: y + b.h / 2 }
+}
+
 function edgePath(
-  src: ProcessNode,
-  tgt: ProcessNode,
+  a: Box,
+  b: Box,
   pts: { x: number; y: number }[],
 ): { d: string; lx: number; ly: number } {
   if (pts && pts.length >= 2) {
@@ -69,8 +109,6 @@ function edgePath(
     return { d, lx: mid.x, ly: mid.y - 8 }
   }
 
-  const a = boxOf(src)
-  const b = boxOf(tgt)
   const dx = b.cx - a.cx
   const dy = b.cy - a.cy
   const horiz = Math.abs(dx) >= Math.abs(dy) * 0.55
@@ -211,6 +249,17 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
     }
     return map
   }, [process.lanes])
+
+  const nodeBoxes = useMemo(() => {
+    const map = new Map<string, Box>()
+    for (const n of process.nodes) map.set(n.id, displayBox(n, process.lanes))
+    return map
+  }, [process.nodes, process.lanes])
+
+  const paintOrder = useMemo(
+    () => [...process.nodes].sort((a, b) => Number(isEventNode(b)) - Number(isEventNode(a))),
+    [process.nodes],
+  )
 
   const visibleIds = useMemo(() => {
     let list = process.nodes
@@ -389,63 +438,42 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
             <marker id="arr-hi" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
               <polygon points="0 0,8 3,0 6" fill={C.edgeHi} />
             </marker>
-            {process.nodes.map((node) => (
-              <clipPath key={`clip-${node.id}`} id={`clip-${node.id}`}>
-                <rect
-                  x={node.geometry.x + 6}
-                  y={node.geometry.y + 5}
-                  width={Math.max(8, (node.geometry.width || 160) - 12)}
-                  height={Math.max(8, (node.geometry.height || 70) - 10)}
-                  rx={6}
-                />
-              </clipPath>
-            ))}
+            {process.nodes.map((node) => {
+              const b = nodeBoxes.get(node.id) || rawBox(node)
+              return (
+                <clipPath key={`clip-${node.id}`} id={`clip-${node.id}`}>
+                  <rect
+                    x={b.x + 6}
+                    y={b.y + 5}
+                    width={Math.max(8, b.w - 12)}
+                    height={Math.max(8, b.h - 10)}
+                    rx={6}
+                  />
+                </clipPath>
+              )
+            })}
           </defs>
 
           <rect width="100%" height="100%" fill={C.canvas} />
           {showGrid && <rect width="100%" height="100%" fill="url(#g-major)" />}
 
           <g transform={`translate(${panPos.x},${panPos.y}) scale(${zoom})`}>
-            {process.lanes.map((lane) => {
-              const label = laneLabels.get(lane.id) || { lines: [lane.name], fontSize: 11 }
-              const cx = lane.geometry.x + LANE_HEAD / 2
-              const cy = lane.geometry.y + lane.geometry.height / 2
-              const lineH = label.fontSize + 2
-              return (
-                <g key={lane.id}>
-                  <rect
-                    x={lane.geometry.x} y={lane.geometry.y}
-                    width={lane.geometry.width} height={lane.geometry.height}
-                    fill="none" stroke={C.laneLine} strokeWidth="1"
-                  />
-                  <rect
-                    x={lane.geometry.x} y={lane.geometry.y}
-                    width={LANE_HEAD} height={lane.geometry.height}
-                    fill={C.laneHead} stroke={C.laneLine} strokeWidth="1"
-                  />
-                  <g>
-                    {label.lines.map((line, i) => (
-                      <text
-                        key={i}
-                        x={cx - ((label.lines.length - 1) * lineH) / 2 + i * lineH}
-                        y={cy}
-                        textAnchor="middle" dominantBaseline="central"
-                        transform={`rotate(-90, ${cx - ((label.lines.length - 1) * lineH) / 2 + i * lineH}, ${cy})`}
-                        fontSize={label.fontSize} fontWeight="600" fill={C.laneText}
-                        style={{ userSelect: 'none', fontFamily: FONT }}>
-                        {line}
-                      </text>
-                    ))}
-                  </g>
-                </g>
-              )
-            })}
+            {process.lanes.map((lane) => (
+              <rect
+                key={`body-${lane.id}`}
+                x={lane.geometry.x} y={lane.geometry.y}
+                width={lane.geometry.width} height={lane.geometry.height}
+                fill="none" stroke={C.laneLine} strokeWidth="1"
+              />
+            ))}
 
             {process.edges.map(edge => {
               const src = process.nodes.find(n => n.id === edge.sourceId)
               const tgt = process.nodes.find(n => n.id === edge.targetId)
               if (!src || !tgt) return null
-              const { d, lx, ly } = edgePath(src, tgt, edge.points || [])
+              const sb = nodeBoxes.get(src.id) || rawBox(src)
+              const tb = nodeBoxes.get(tgt.id) || rawBox(tgt)
+              const { d, lx, ly } = edgePath(sb, tb, edge.points || [])
               const hi = Boolean(selectedNodeId && (edge.sourceId === selectedNodeId || edge.targetId === selectedNodeId))
               const raw = (edge.name || '').trim()
               const cap = raw ? fitCaption(raw, 90, 1) : null
@@ -480,19 +508,24 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               const isRej = node.id.toLowerCase().includes('reject') ||
                             node.name.toLowerCase().includes('отказ') ||
                             node.name.toLowerCase().includes('rad etildi')
-              const b = boxOf(node)
+              const b = nodeBoxes.get(node.id) || rawBox(node)
               const { x, y, w, h, cx, cy } = b
+              const home = laneOf(node, process.lanes)
 
               if (node.type === 'startEvent') {
                 const r = Math.max(10, Math.min(w, h) / 2 - 1)
-                const cap = fitCaption(node.name, 86, 2)
+                const cap = fitCaption(node.name, 90, 2)
+                const labelRight = Boolean(home && x <= home.geometry.x + LANE_HEAD + 16)
                 return (
                   <g key={node.id} opacity={faded ? 0.18 : 1}
                     onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
                     {sel && <circle cx={cx} cy={cy} r={r + 6} fill="none" stroke={C.edgeHi} strokeWidth="1.2" strokeDasharray="4 3" />}
                     <circle cx={cx} cy={cy} r={r} fill={C.canvas} stroke={sel ? C.edgeHi : C.start} strokeWidth={1.8} />
                     {cap.lines.map((line, i) => (
-                      <text key={i} x={cx} y={y + h + 11 + i * (cap.fontSize + 2)} textAnchor="middle"
+                      <text key={i}
+                        x={labelRight ? x + w + 6 : cx}
+                        y={labelRight ? cy - ((cap.lines.length - 1) * (cap.fontSize + 2)) / 2 + i * (cap.fontSize + 2) + 3 : y + h + 11 + i * (cap.fontSize + 2)}
+                        textAnchor={labelRight ? 'start' : 'middle'}
                         fontSize={cap.fontSize} fill="#d8d8d8"
                         style={{ userSelect: 'none', fontFamily: FONT }}>
                         {line}
@@ -505,15 +538,19 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               if (node.type === 'endEvent') {
                 const r = Math.max(10, Math.min(w, h) / 2 - 1)
                 const sc = isRej ? C.endNo : C.endOk
-                const cap = fitCaption(node.name, 86, 2)
+                const cap = fitCaption(node.name, 90, 2)
+                const labelLeft = Boolean(home && x + w >= home.geometry.x + home.geometry.width - 20)
                 return (
                   <g key={node.id} opacity={faded ? 0.18 : 1}
                     onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
                     {sel && <circle cx={cx} cy={cy} r={r + 6} fill="none" stroke={C.edgeHi} strokeWidth="1.2" strokeDasharray="4 3" />}
                     <circle cx={cx} cy={cy} r={r} fill={C.canvas} stroke={sel ? C.edgeHi : sc} strokeWidth={3.4} />
-                    <circle cx={cx} cy={cy} r={r - 7} fill="none" stroke={sel ? C.edgeHi : sc} strokeWidth="1.4" />
+                    <circle cx={cx} cy={cy} r={Math.max(4, r - 6)} fill="none" stroke={sel ? C.edgeHi : sc} strokeWidth="1.4" />
                     {cap.lines.map((line, i) => (
-                      <text key={i} x={cx} y={y + h + 11 + i * (cap.fontSize + 2)} textAnchor="middle"
+                      <text key={i}
+                        x={labelLeft ? x - 6 : cx}
+                        y={labelLeft ? cy - ((cap.lines.length - 1) * (cap.fontSize + 2)) / 2 + i * (cap.fontSize + 2) + 3 : y + h + 11 + i * (cap.fontSize + 2)}
+                        textAnchor={labelLeft ? 'end' : 'middle'}
                         fontSize={cap.fontSize} fill={isRej ? C.endNo : C.endOk}
                         style={{ userSelect: 'none', fontFamily: FONT }}>
                         {line}
@@ -576,6 +613,36 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                       {sla}
                     </text>
                   )}
+                </g>
+              )
+            })}
+
+            {process.lanes.map((lane) => {
+              const label = laneLabels.get(lane.id) || { lines: [lane.name], fontSize: 11 }
+              const cx = lane.geometry.x + LANE_HEAD / 2
+              const cy = lane.geometry.y + lane.geometry.height / 2
+              const lineH = label.fontSize + 3
+              return (
+                <g key={`head-${lane.id}`}>
+                  <rect
+                    x={lane.geometry.x} y={lane.geometry.y}
+                    width={LANE_HEAD} height={lane.geometry.height}
+                    fill={C.laneHead} stroke={C.laneLine} strokeWidth="1"
+                  />
+                  <g transform={`rotate(-90, ${cx}, ${cy})`}>
+                    {label.lines.map((line, i) => (
+                      <text
+                        key={i}
+                        x={cx}
+                        y={cy - ((label.lines.length - 1) * lineH) / 2 + i * lineH}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fontSize={label.fontSize} fontWeight="600" fill={C.laneText}
+                        style={{ userSelect: 'none', fontFamily: FONT }}>
+                        {line}
+                      </text>
+                    ))}
+                  </g>
                 </g>
               )
             })}
