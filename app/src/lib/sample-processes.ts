@@ -635,6 +635,31 @@ export const sqbAccountProcess: BusinessProcess = {
 sqbAccountProcess.miningMetrics = analyzeProcessConformance(sqbAccountProcess)
 
 /**
+ * Клонирует процесс шаблона с новыми уникальными id (избегает коллизий при повторном сохранении в backend)
+ */
+export function cloneSampleProcess(process: BusinessProcess): BusinessProcess {
+  const newId = `proc_${crypto.randomUUID().slice(0, 8)}`
+  const newRegId = `reg-${crypto.randomUUID().slice(0, 8)}`
+  const now = new Date().toISOString().split('T')[0]
+  return {
+    ...process,
+    id: newId,
+    fileName: process.fileName,
+    passport: { ...process.passport, createdDate: now, updatedDate: now },
+    nodes: process.nodes.map((n) => ({ ...n })),
+    edges: process.edges.map((e) => ({ ...e })),
+    lanes: process.lanes.map((l) => ({ ...l })),
+    registry: {
+      ...process.registry,
+      id: newRegId,
+      records: process.registry.records.map((r) => ({ ...r, data: { ...r.data } })),
+    },
+    validation: [...process.validation],
+    miningMetrics: { ...process.miningMetrics, deviations: [...process.miningMetrics.deviations] },
+  }
+}
+
+/**
  * All pre-loaded processes
  */
 export const SAMPLE_PROCESSES = [sqbCreditProcess, sqbAccountProcess]

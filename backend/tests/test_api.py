@@ -78,7 +78,7 @@ class TestSQBProcessHubApi(unittest.TestCase):
         # 5. Test Regulation CSV Export
         reg_res = self.client.get(f"/api/v1/import/{proc_id}/export/regulation")
         self.assertEqual(reg_res.status_code, 200)
-        self.assertIn("Потенциал PIX RPA", reg_res.text)
+        self.assertIn("Потенциал роботизации (PIX RPA)", reg_res.text)
 
         # 6. Test PIX Registry Case Creation
         case_res = self.client.post(f"/api/v1/processes/{proc_id}/registry/cases", json={

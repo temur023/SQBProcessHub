@@ -69,7 +69,19 @@ export const PixRegistryView: React.FC<PixRegistryViewProps> = ({
       return
     }
 
-    const newCaseNum = `SQB-2026-${String(registry.records.length + 45).padStart(4, '0')}`
+    // Генерация уникального CaseId без коллизий после удалений: max существующего номера +1
+    const existingNumbers = registry.records
+      .map((r) => {
+        const m = r.caseId.match(/(\d+)\s*$/)
+        return m ? parseInt(m[1], 10) : 0
+      })
+      .filter((n) => Number.isFinite(n))
+    const nextNum = (existingNumbers.length ? Math.max(...existingNumbers) : 44) + 1
+    // Fallback на timestamp если формат не SQB-YYYY-NNNN
+    const hasNumericCaseIds = existingNumbers.some((n) => n > 0)
+    const newCaseNum = hasNumericCaseIds
+      ? `SQB-2026-${String(nextNum).padStart(4, '0')}`
+      : `SQB-${Date.now().toString(36).toUpperCase()}-${String(nextNum).padStart(3, '0')}`
     const firstTask = process.nodes.find((n) => n.type === 'userTask' || n.type === 'serviceTask') || process.nodes[0]
     if (!firstTask) {
       setFormError('Не удалось определить первый шаг процесса')

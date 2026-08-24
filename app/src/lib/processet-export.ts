@@ -203,7 +203,7 @@ export function generateProcessRegulationCsv(process: BusinessProcess): string {
 
   let stepNum = 1
   process.nodes
-    .filter((n) => n.type !== 'lane')
+    .filter((n) => n.type !== 'lane' && n.type !== 'exclusiveGateway' && n.type !== 'parallelGateway' && n.type !== 'inclusiveGateway')
     .forEach((node) => {
       const num = stepNum++
       rows.push(

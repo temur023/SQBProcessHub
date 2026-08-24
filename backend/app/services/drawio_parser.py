@@ -77,24 +77,87 @@ def extract_graph_xml(content: str) -> Tuple[str, bool]:
 
     if '<mxfile' in trimmed or '<diagram' in trimmed:
         root = ET.fromstring(trimmed)
-        diagram = root.find('.//diagram')
-        if diagram is None:
+        diagrams = root.findall('.//diagram')
+        if not diagrams:
             raise ValueError('В файле draw.io не найдено ни одной диаграммы (<diagram>)')
 
-        model = diagram.find('.//mxGraphModel')
-        if model is not None:
-            return ET.tostring(model, encoding='unicode'), False
-
-        root_el = diagram.find('.//root')
-        if root_el is not None:
-            return f"<mxGraphModel>{ET.tostring(root_el, encoding='unicode')}</mxGraphModel>", False
-
-        inner_text = (diagram.text or '').strip()
-        if inner_text:
-            if '<mxGraphModel' in inner_text:
-                return inner_text, False
-            decompressed = inflate_diagram(inner_text)
-            return decompressed, False
+        # Собираем все диаграммы — если их несколько, объединяем с вертикальным смещением
+        models = []
+        for diag in diagrams:
+            m = diag.find('.//mxGraphModel')
+            if m is not None:
+                models.append(ET.tostring(m, encoding='unicode'))
+                continue
+            r = diag.find('.//root')
+            if r is not None:
+                models.append(f"<mxGraphModel>{ET.tostring(r, encoding='unicode')}</mxGraphModel>")
+                continue
+            inner = (diag.text or '').strip()
+            if inner:
+                if '<mxGraphModel' in inner:
+                    models.append(inner)
+                else:
+                    try:
+                        models.append(inflate_diagram(inner))
+                    except Exception:
+                        continue
+        if not models:
+            raise ValueError('Не удалось извлечь ни одной диаграммы из mxfile')
+        if len(models) == 1:
+            return models[0], False
+        # Объединяем несколько диаграмм: собираем все mxCell в один root
+        # Для избежания наложения добавляем вертикальный offset по высоте каждой диаграммы
+        try:
+            combined_root = ET.Element('root')
+            # базовые ячейки 0 и 1
+            ET.SubElement(combined_root, 'mxCell', {'id': '0'})
+            ET.SubElement(combined_root, 'mxCell', {'id': '1', 'parent': '0'})
+            y_offset = 0
+            for mx in models:
+                try:
+                    m_root = ET.fromstring(mx)
+                    r = m_root.find('.//root')
+                    if r is None:
+                        continue
+                    # вычисляем высоту этой диаграммы для offset
+                    max_y = 0
+                    for c in r.findall('mxCell'):
+                        geo = c.find('mxGeometry')
+                        if geo is not None:
+                            try:
+                                y = float(geo.get('y', '0') or 0)
+                                h = float(geo.get('height', '0') or 0)
+                                max_y = max(max_y, y + h)
+                            except ValueError:
+                                pass
+                    for c in r.findall('mxCell'):
+                        cid = c.get('id')
+                        if cid in ('0', '1'):
+                            continue
+                        # клонируем ячейку
+                        new_c = ET.SubElement(combined_root, 'mxCell', dict(c.attrib))
+                        # копируем геометрию с y_offset для pool-совместимости
+                        geo = c.find('mxGeometry')
+                        if geo is not None:
+                            ng = ET.SubElement(new_c, 'mxGeometry', dict(geo.attrib))
+                            if y_offset != 0 and geo.get('relative') != '1':
+                                try:
+                                    orig_y = float(geo.get('y', '0') or 0)
+                                    ng.set('y', str(orig_y + y_offset))
+                                except ValueError:
+                                    pass
+                            for child in geo:
+                                ET.SubElement(ng, child.tag, dict(child.attrib))
+                        for child in c:
+                            if child.tag != 'mxGeometry':
+                                ET.SubElement(new_c, child.tag, dict(child.attrib))
+                    y_offset += max_y + 100
+                except Exception:
+                    continue
+            return f"<mxGraphModel>{ET.tostring(combined_root, encoding='unicode')}</mxGraphModel>", False
+        except Exception:
+            # fallback — первая диаграмма
+            return models[0], False
 
     raise ValueError('Файл не распознан как диаграмма draw.io или BPMN 2.0 XML')
 
@@ -120,7 +183,7 @@ ARTIFACT_TAGS = {
 }
 
 CONDITION_TAGS = {
-    "ha", "yo'q", "yo`q", "yo’q", "yo'q ", "ha ", "да", "нет", "yes", "no",
+    "ha", "yo'q", "yo`q", "yo’q", "да", "нет", "yes", "no",
     "to'liq", "to'liq emas", "to`liq", "to`liq emas",
     "mos keldi", "mos kelmaydi", "mos kelmadi", "to'liq mos keladi",
     "manba aniqlandi", "qabul qilindi", "rad etildi", "rad javob berildi",
@@ -145,6 +208,13 @@ def is_decoration_style(style: str) -> bool:
         or 'eventicon' in s
         or 'symbol=timer' in s
         or 'symbol=clock' in s
+        or 'shape=datastore' in s
+        or 'shape=mxgraph.bpmn.datastore' in s
+        or 'kind=datastore' in s
+        or 'shape=mxgraph.signs' in s  # транспортные иконки car/train в файле кредита
+        or 'shape=mxgraph.bpmn.dataobject' in s
+        or 'shape=note' in s
+        or 'shape=mxgraph.bpmn.annotation' in s
     )
 
 
@@ -198,7 +268,13 @@ def _style_float(style_map: Dict[str, str], key: str) -> Optional[float]:
 
 
 def _parent_origin(cell_id: Optional[str], cell_map: Dict[str, ET.Element], cache: Dict[str, Tuple[float, float]]) -> Tuple[float, float]:
-    """Absolute top-left of a cell's parent chain (mxGraph: Absolute = Local + Parent)."""
+    """Absolute top-left of a cell's parent chain.
+
+    mxGraph semantics: children of a swimlane are positioned relative to the
+    swimlane's FULL origin (including the title/startSize area) — verified by
+    pool/lane geometry fitting exactly (lane y+h == pool h). Therefore we add
+    only geo.x/geo.y of ancestors, no startSize shift.
+    """
     if not cell_id or cell_id in ('0', '1'):
         return 0.0, 0.0
     if cell_id in cache:
@@ -256,12 +332,11 @@ def classify_vertex(style: str, label: str, has_incoming: bool, has_outgoing: bo
         or _id_has_token(node_id, 'start')
         or _id_has_token(node_id, 'end')
         or _id_has_token(node_id, 'reject')
-        or 'reject' in i
     )
     if is_event_shape:
         if (
             any(k in l for k in ('rad etildi', 'rad javob', 'otkaz', 'отказ', 'bekor', 'отклон'))
-            or 'reject' in i
+            or _id_has_token(node_id, 'reject')
             or any(c in s for c in ('#ef4444', '#e11d48', '#be123c', '#dc2626', '#b91c1c'))
         ):
             return 'endEvent'
@@ -631,12 +706,19 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         x_val = float(lx) if lx not in (None, '') else None
         y_val = float(ly) if ly not in (None, '') else None
         if off is not None:
-            # mxGraph offset is extra pixels; fold Y into the perpendicular slot when geometry y is unused
+            ox = float(off.get('x', '0') or 0)
             oy = float(off.get('y', '0') or 0)
+            # offset.y всегда прибавляется к перпендикулярному смещению
             if y_val is None:
                 y_val = oy
             else:
                 y_val += oy
+            # offset.x добавляем к доле вдоль ребра (маленький шаг, т.к. x - доля -1..1)
+            if x_val is not None and ox != 0:
+                # 100px ~ 0.1 доли, эвристика
+                x_val += ox * 0.005
+            elif x_val is None and ox != 0:
+                x_val = ox * 0.005
         if x_val is not None or y_val is not None:
             edge_label_geo[edge_id] = (x_val, y_val)
 
@@ -698,6 +780,9 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
     swimlane_ids = {c.get('id', '') for c in swimlane_cells if c.get('id')}
     container_ids = set(pool_ids) | swimlane_ids | {'0', '1'}
 
+    def _is_artifact_shape(s: str) -> bool:
+        return any(k in s for k in ('datastore', 'dataobject', 'shape=note', 'shape=mxgraph.signs', 'shape=mxgraph.bpmn.annotation'))
+
     raw_vertices = []
     for c in cells:
         if c.get('vertex') != '1':
@@ -706,6 +791,9 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         if not c_id or c_id in ignore_cell_ids or c_id in pool_ids:
             continue
         style = (c.get('style') or '').lower()
+        # артефакты (datastore IABS/EHA, note, иконки) — всегда игнор, даже если есть ребра-ассоциации
+        if _is_artifact_shape(style):
+            continue
         parent_id = c.get('parent') or ''
         parent_el = cell_map.get(parent_id)
         if parent_el is not None and parent_el.get('vertex') == '1' and parent_id not in container_ids:
@@ -733,8 +821,9 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         parent_id = cell.get('parent')
 
         geo = cell.find('mxGeometry')
-        local_x = float(geo.get('x', '100')) if geo is not None else 100.0
-        local_y = float(geo.get('y', '100')) if geo is not None else 100.0
+        # В draw.io отсутствующий x/y означает 0 (не 100!)
+        local_x = float(geo.get('x', '0')) if geo is not None else 0.0
+        local_y = float(geo.get('y', '0')) if geo is not None else 0.0
         width = float(geo.get('width', '120')) if geo is not None else 120.0
         height = float(geo.get('height', '60')) if geo is not None else 60.0
 
@@ -780,13 +869,21 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             else:
                 clean_name = f"Операция {code or node_id}"
 
-        # Keep original mxGeometry size; only guard against zero/negative boxes.
+        # Guard against zero/negative and invisible boxes (8px не читаемо)
         if node_type == 'lane':
-            width = max(int(round(width)), 8)
-            height = max(int(round(height)), 8)
+            width = max(int(round(width)), 40)
+            height = max(int(round(height)), 40)
+        elif node_type in ('startEvent', 'endEvent'):
+            # Круг/эллипс: минимум 32px для читаемости
+            width = max(int(round(width or 44)), 32)
+            height = max(int(round(height or 44)), 32)
+        elif 'Gateway' in node_type:
+            width = max(int(round(width or 48)), 32)
+            height = max(int(round(height or 48)), 32)
         else:
-            width = max(int(round(width or 1)), 8)
-            height = max(int(round(height or 1)), 8)
+            # task / serviceTask: минимум 80x40 для текста
+            width = max(int(round(width or 120)), 80)
+            height = max(int(round(height or 60)), 40)
 
         fot_cost = (sla_min * 1932) if category != 'rpa_bot' else 800
 
@@ -812,11 +909,12 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         if n.laneId and n.laneId not in lane_ids:
             n.laneId = None
 
+    LANE_HEAD_WIDTH = 44
     for n in flow_nodes:
         if not n.laneId:
             hit = next((
                 l for l in lanes
-                if (n.geometry.x >= l.geometry.x - 50 and
+                if (n.geometry.x >= l.geometry.x + LANE_HEAD_WIDTH - 10 and
                     n.geometry.x <= l.geometry.x + l.geometry.width + 50 and
                     n.geometry.y >= l.geometry.y and
                     n.geometry.y < l.geometry.y + l.geometry.height)
@@ -933,13 +1031,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         ]
     )
 
-    validations: List[ProcessValidation] = []
-    starts = [n for n in flow_nodes if n.type == 'startEvent']
-    ends = [n for n in flow_nodes if n.type == 'endEvent']
-    if not starts:
-        validations.append(ProcessValidation(level='error', message='Отсутствует стартовое событие процесса'))
-    if not ends:
-        validations.append(ProcessValidation(level='warning', message='Отсутствует событие успешного завершения'))
+    validations = _collect_validations(flow_nodes, edges)
 
     metrics = analyze_process_conformance(flow_nodes, passport, len(registry.records))
 

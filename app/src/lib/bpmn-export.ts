@@ -4,8 +4,16 @@ import type { BusinessProcess, ProcessNode, ProcessEdge } from '@/types/process'
  * Generates official BPMN 2.0 XML compliant with OMG BPMN 2.0 standard
  * and optimized for Infomaximum Processet Process Mining model import.
  */
+function sanitizeBpmnId(raw: string, prefix: string = "id"): string {
+  let s = (raw || '').replace(/[^A-Za-z0-9_.-]+/g, '_').trim()
+  if (!s) s = `${prefix}_1`
+  if (!/^[A-Za-z_]/.test(s)) s = `${prefix}_${s}`
+  return s.slice(0, 120)
+}
+
 export function generateBpmn2Xml(process: BusinessProcess): string {
-  const processId = `Process_${process.passport.code.replace(/[^a-zA-Z0-9_]/g, '_') || 'SQB_BPM'}`
+  const processId = sanitizeBpmnId(`Process_${process.passport.code || 'SQB_BPM'}`, 'Process')
+  const definitionsId = sanitizeBpmnId(`Definitions_${process.id}`, 'Definitions')
   const processName = escapeXml(process.passport.name || process.name || 'Бизнес-процесс SQB')
 
   // Map nodes to BPMN element tags
@@ -43,13 +51,14 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
           break
         case 'serviceTask':
           tag = 'bpmn:serviceTask'
-          extraAttrs = ` implementation="##WebService"`
+          extraAttrs = ` implementation="PIX_RPA"`
           break
         case 'userTask':
           tag = 'bpmn:userTask'
           break
         default:
           tag = node.category === 'rpa_bot' ? 'bpmn:serviceTask' : 'bpmn:userTask'
+          if (tag === 'bpmn:serviceTask' && !extraAttrs) extraAttrs = ` implementation="PIX_RPA"`
       }
 
       return `      <${tag} id="${id}" name="${name}"${extraAttrs}>
@@ -57,18 +66,19 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
     })
     .join('\n')
 
-  // Sequence flows
-  const sequenceFlowsXml = process.edges
+  // Sequence flows — фильтруем невалидные (без source/target)
+  const validEdges = process.edges.filter((e) => e.sourceId && e.targetId)
+  const sequenceFlowsXml = validEdges
     .map((edge) => {
-      const id = escapeXml(edge.id)
-      const name = escapeXml(edge.name || '')
-      const sourceRef = escapeXml(edge.sourceId || '')
-      const targetRef = escapeXml(edge.targetId || '')
+      const id = escapeXml(sanitizeBpmnId(edge.id, 'Flow'))
+      const name = edge.name ? ` name="${escapeXml(edge.name)}"` : ''
+      const sourceRef = ` sourceRef="${escapeXml(edge.sourceId!)}"`
+      const targetRef = ` targetRef="${escapeXml(edge.targetId!)}"`
       const cond = edge.condition
         ? `\n        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${escapeXml(edge.condition)}</bpmn:conditionExpression>`
         : ''
 
-      return `      <bpmn:sequenceFlow id="${id}" name="${name}" sourceRef="${sourceRef}" targetRef="${targetRef}"${cond ? '>' + cond + '\n      </bpmn:sequenceFlow>' : ' />'}`
+      return `      <bpmn:sequenceFlow id="${id}"${name}${sourceRef}${targetRef}${cond ? '>' + cond + '\n      </bpmn:sequenceFlow>' : ' />'}`
     })
     .join('\n')
 
@@ -111,14 +121,34 @@ ${lanesList}
     }),
   ].join('\n')
 
-  const edgesXml = process.edges
+  const edgesXml = validEdges
     .map((edge) => {
-      const points = edge.points.length > 0 ? edge.points : generateDefaultPoints(edge, process.nodes)
+      const src = process.nodes.find((n) => n.id === edge.sourceId)
+      const tgt = process.nodes.find((n) => n.id === edge.targetId)
+      let points: { x: number; y: number }[] = []
+      if (edge.points.length > 0) {
+        // учитываем промежуточные точки + constraint points
+        const start = edge.exitX != null && edge.exitY != null && src
+          ? { x: src.geometry.x + edge.exitX * src.geometry.width, y: src.geometry.y + edge.exitY * src.geometry.height }
+          : null
+        const end = edge.entryX != null && edge.entryY != null && tgt
+          ? { x: tgt.geometry.x + edge.entryX * tgt.geometry.width, y: tgt.geometry.y + edge.entryY * tgt.geometry.height }
+          : null
+        points = [...(start ? [start] : []), ...edge.points, ...(end ? [end] : [])]
+        if (!start || !end) {
+          // fallback к дефолтным если constraint отсутствует
+          const def = generateDefaultPoints(edge, process.nodes)
+          if (!start) points.unshift(def[0])
+          if (!end) points.push(def[def.length - 1])
+        }
+      } else {
+        points = generateDefaultPoints(edge, process.nodes)
+      }
       const waypointsXml = points
-        .map((p) => `<di:waypoint x="${p.x}" y="${p.y}" />`)
+        .map((p) => `<di:waypoint x="${Math.round(p.x)}" y="${Math.round(p.y)}" />`)
         .join('\n        ')
 
-      return `      <bpmndi:BPMNEdge id="${escapeXml(edge.id)}_di" bpmnElement="${escapeXml(edge.id)}">
+      return `      <bpmndi:BPMNEdge id="${escapeXml(sanitizeBpmnId(edge.id, 'Flow'))}_di" bpmnElement="${escapeXml(edge.id)}">
         ${waypointsXml}
       </bpmndi:BPMNEdge>`
     })
@@ -130,7 +160,7 @@ ${lanesList}
                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-                  id="Definitions_SQB_Processet"
+                  id="${definitionsId}"
                   targetNamespace="http://bpmn.io/schema/bpmn"
                   exporter="SQB Bank PIX-Processet Bridge"
                   exporterVersion="1.0">

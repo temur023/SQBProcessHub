@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { importDrawioFileApi, importDrawioXmlApi } from '@/lib/api'
-import { SAMPLE_PROCESSES } from '@/lib/sample-processes'
+import { SAMPLE_PROCESSES, cloneSampleProcess } from '@/lib/sample-processes'
 import type { BusinessProcess } from '@/types/process'
 
 interface ProcessImportModalProps {
@@ -102,7 +102,7 @@ export const ProcessImportModal: React.FC<ProcessImportModalProps> = ({
   }
 
   const handleSelectTemplate = (template: BusinessProcess) => {
-    onProcessLoaded(template)
+    onProcessLoaded(cloneSampleProcess(template))
     onOpenChange(false)
   }
 

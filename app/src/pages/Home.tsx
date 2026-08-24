@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { sqbCreditProcess } from '@/lib/sample-processes'
+import { sqbCreditProcess, cloneSampleProcess } from '@/lib/sample-processes'
 import type { BusinessProcess, ProcessNode } from '@/types/process'
 import { Header } from '@/components/Header'
 import { ProcessVisualizer } from '@/components/ProcessVisualizer'
@@ -11,10 +11,11 @@ import { NodeDetailDrawer } from '@/components/NodeDetailDrawer'
 import { ExportDrawer } from '@/components/ExportDrawer'
 import { generateProcessRegulationCsv, downloadFile } from '@/lib/processet-export'
 import { saveProcessToBackend } from '@/lib/api'
+import { analyzeProcessConformance } from '@/lib/conformance'
 import { Toaster, toast } from 'sonner'
 
 export default function Home() {
-  const [currentProcess, setCurrentProcess] = useState<BusinessProcess>(sqbCreditProcess)
+  const [currentProcess, setCurrentProcess] = useState<BusinessProcess>(() => cloneSampleProcess(sqbCreditProcess))
   const [activeTab, setActiveTab] = useState<string>('visualizer')
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
@@ -40,9 +41,41 @@ export default function Home() {
     const updatedNodes = currentProcess.nodes.map((n) =>
       n.id === updatedNode.id ? updatedNode : n,
     )
-    const updated = {
+    // Пересчитываем паспорт SLA и метрики conformance
+    const totalSlaMin = updatedNodes
+      .filter((n) => n.type === 'userTask' || n.type === 'serviceTask' || n.type === 'task')
+      .reduce((acc, n) => acc + (n.slaMinutes || 0), 0)
+    const newTargetHours = Math.max(1, Math.round((totalSlaMin / 60) * 10) / 10)
+    const interim: BusinessProcess = {
       ...currentProcess,
       nodes: updatedNodes,
+      passport: { ...currentProcess.passport, targetSlaHours: newTargetHours, updatedDate: new Date().toISOString().split('T')[0] },
+    }
+    const updated: BusinessProcess = {
+      ...interim,
+      miningMetrics: analyzeProcessConformance(interim),
+      validation: (() => {
+        // Локальная валидация start/end + orphan
+        const starts = updatedNodes.filter((n) => n.type === 'startEvent').length
+        const ends = updatedNodes.filter((n) => n.type === 'endEvent').length
+        const issues: BusinessProcess['validation'] = []
+        if (starts === 0) issues.push({ level: 'error', message: 'Отсутствует стартовое событие процесса' })
+        if (ends === 0) issues.push({ level: 'warning', message: 'Отсутствует событие успешного завершения' })
+        // orphan check
+        const edgeSrc = new Set(currentProcess.edges.map((e) => e.sourceId))
+        const edgeTgt = new Set(currentProcess.edges.map((e) => e.targetId))
+        for (const n of updatedNodes) {
+          if (n.type === 'lane' || n.type === 'startEvent') {
+            // start не требует входа
+          } else if (!edgeTgt.has(n.id)) {
+            issues.push({ level: 'error', message: `Шаг «${n.name}» не имеет входящих переходов`, nodeId: n.id })
+          }
+          if (n.type !== 'endEvent' && n.type !== 'lane' && !edgeSrc.has(n.id)) {
+            issues.push({ level: 'warning', message: `Шаг «${n.name}» не имеет исходящих переходов`, nodeId: n.id })
+          }
+        }
+        return issues
+      })(),
     }
     setCurrentProcess(updated)
     void saveProcessToBackend(updated)

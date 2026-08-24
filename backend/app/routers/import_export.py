@@ -10,17 +10,33 @@ from app.services.drawio_parser import parse_drawio_xml
 from app.services.bpmn_exporter import generate_bpmn_xml
 from app.services.exporters import generate_event_log_csv, generate_regulation_csv
 from app.models.process import BusinessProcess
-from app.routers.processes import get_store
+from app.routers.processes import get_store, _persist_store, _store_lock
 
 router = APIRouter(prefix="/import", tags=["import & export"])
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
+def _sanitize_filename(filename: str) -> str:
+    """Удаляет path traversal и недопустимые символы, гарантирует безопасное имя файла."""
+    # Убираем директории: оставляем только basename
+    basename = filename.rsplit('/', 1)[-1].rsplit('\\', 1)[-1]
+    # Заменяем недопустимые символы, убираем ведущие точки/дефисы (скрытые файлы)
+    safe = re.sub(r'[^A-Za-z0-9._-]+', '_', basename).strip('._')
+    # Ограничиваем длину
+    safe = safe[:120] if len(safe) > 120 else safe
+    return safe or 'export'
+
+
 def attachment_headers(filename: str) -> dict:
-    ascii_name = re.sub(r'[^A-Za-z0-9._-]+', '_', filename).strip('._') or 'export'
+    ascii_name = _sanitize_filename(filename)
+    # quote для RFC5987 filename* (UTF-8)
+    quoted = quote(_sanitize_filename(filename), safe='')
+    # На случай если исходное имя содержало не-ASCII, также экранируем для filename*
+    utf8_quoted = quote(filename, safe='')
+    # Используем sanitized ascii_name для fallback filename, оригинальное quote для filename*
     return {
-        'Content-Disposition': f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(filename)}"
+        'Content-Disposition': f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{utf8_quoted}"
     }
 
 
@@ -38,9 +54,15 @@ class XmlImportBody(BaseModel):
 )
 async def import_file(file: UploadFile = File(...)):
     allowed = {'.drawio', '.xml', '.bpmn', '.txt'}
-    ext = '.' + (file.filename or '').rsplit('.', 1)[-1].lower()
+    raw_name = file.filename or ''
+    if '.' in raw_name:
+        ext = '.' + raw_name.rsplit('.', 1)[-1].lower()
+        # нормализуем: убираем пробелы, оставляем только точку+расширение
+        ext = '.' + ext.lstrip('.').strip()
+    else:
+        ext = ''
     if ext not in allowed:
-        raise HTTPException(400, f"Unsupported file type '{ext}'. Allowed: {', '.join(allowed)}")
+        raise HTTPException(400, f"Unsupported file type '{ext or '(no extension)'}'. Allowed: {', '.join(sorted(allowed))}")
 
     content = await file.read()
     if len(content) > MAX_UPLOAD_BYTES:
@@ -56,8 +78,10 @@ async def import_file(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(422, f"Ошибка парсинга: {str(e)}")
 
-    # Auto-save to in-memory store
-    get_store()[process.id] = process
+    # Auto-save to in-memory store с персистом
+    with _store_lock:
+        get_store()[process.id] = process
+        _persist_store()
     return process
 
 
@@ -76,7 +100,9 @@ def import_xml(body: XmlImportBody):
     except Exception as e:
         raise HTTPException(422, f"Ошибка парсинга: {str(e)}")
 
-    get_store()[process.id] = process
+    with _store_lock:
+        get_store()[process.id] = process
+        _persist_store()
     return process
 
 
@@ -92,7 +118,9 @@ def export_bpmn(process_id: str):
         raise HTTPException(404, f"Process '{process_id}' not found")
 
     xml = generate_bpmn_xml(process)
-    filename = f"{process.passport.code}_{process.name.replace(' ', '_')}.bpmn"
+    safe_code = _sanitize_filename(process.passport.code)
+    safe_name = _sanitize_filename(process.name.replace(' ', '_'))
+    filename = f"{safe_code}_{safe_name}.bpmn"
     return Response(
         content=xml.encode('utf-8'),
         media_type='application/xml',
@@ -110,7 +138,7 @@ def export_event_log(process_id: str):
         raise HTTPException(404, f"Process '{process_id}' not found")
 
     csv_data = generate_event_log_csv(process)
-    filename = f"{process.passport.code}_EventLog.csv"
+    filename = f"{_sanitize_filename(process.passport.code)}_EventLog.csv"
     return StreamingResponse(
         io.BytesIO(csv_data.encode('utf-8-sig')),
         media_type='text/csv',
@@ -128,7 +156,7 @@ def export_regulation(process_id: str):
         raise HTTPException(404, f"Process '{process_id}' not found")
 
     csv_data = generate_regulation_csv(process)
-    filename = f"{process.passport.code}_Regulation.csv"
+    filename = f"{_sanitize_filename(process.passport.code)}_Regulation.csv"
     return StreamingResponse(
         io.BytesIO(csv_data.encode('utf-8-sig')),
         media_type='text/csv',
@@ -149,7 +177,7 @@ def export_pix_json(process_id: str):
     registry_data = process.registry.model_dump()
     registry_data['processCode'] = process.passport.code
     registry_data['processName'] = process.name
-    filename = f"{process.passport.code}_PIX_Registry.json"
+    filename = f"{_sanitize_filename(process.passport.code)}_PIX_Registry.json"
     return Response(
         content=json.dumps(registry_data, ensure_ascii=False, indent=2).encode('utf-8'),
         media_type='application/json',

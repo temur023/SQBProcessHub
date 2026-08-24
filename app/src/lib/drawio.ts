@@ -91,16 +91,12 @@ async function inflateDiagram(data: string): Promise<string> {
       } catch {
         return decoded
       }
-    } catch {
-      // Fallback
+    } catch (e) {
+      throw new Error(`Не удалось распаковать сжатый draw.io: ${e instanceof Error ? e.message : String(e)}. Сохраните диаграмму как несжатый XML (File → Export)` )
     }
   }
 
-  try {
-    return decodeURIComponent(binaryString)
-  } catch {
-    return binaryString
-  }
+  throw new Error('Браузер не поддерживает DecompressionStream для сжатых draw.io. Сохраните диаграмму как несжатый XML или откройте в современном браузере.')
 }
 
 async function extractGraphXml(text: string): Promise<{ xml: string; isBpmn: boolean }> {
@@ -125,7 +121,7 @@ async function extractGraphXml(text: string): Promise<{ xml: string; isBpmn: boo
     }
   }
 
-  // 3. mxfile container
+  // 3. mxfile container — поддерживаем несколько diagram, объединяем
   if (trimmed.includes('<mxfile') || trimmed.includes('<diagram')) {
     const doc = new DOMParser().parseFromString(trimmed, 'text/xml')
     const parserError = doc.querySelector('parsererror')
@@ -133,29 +129,85 @@ async function extractGraphXml(text: string): Promise<{ xml: string; isBpmn: boo
       throw new Error(`Ошибка XML: ${parserError.textContent?.slice(0, 80)}`)
     }
 
-    const diagram = doc.querySelector('diagram')
-    if (!diagram) throw new Error('В файле draw.io не найдено ни одной диаграммы (<diagram>)')
+    const diagrams = Array.from(doc.querySelectorAll('diagram')) as Element[]
+    if (diagrams.length === 0) throw new Error('В файле draw.io не найдено ни одной диаграммы (<diagram>)')
 
-    const model = diagram.querySelector('mxGraphModel')
-    if (model) {
-      return { xml: new XMLSerializer().serializeToString(model), isBpmn: false }
-    }
-
-    const rootEl = diagram.querySelector('root')
-    if (rootEl) {
-      return {
-        xml: `<mxGraphModel>${new XMLSerializer().serializeToString(rootEl)}</mxGraphModel>`,
-        isBpmn: false,
+    const models: string[] = []
+    for (const diagram of diagrams) {
+      const model = diagram.querySelector('mxGraphModel')
+      if (model) {
+        models.push(new XMLSerializer().serializeToString(model))
+        continue
+      }
+      const rootEl = diagram.querySelector('root')
+      if (rootEl) {
+        models.push(`<mxGraphModel>${new XMLSerializer().serializeToString(rootEl)}</mxGraphModel>`)
+        continue
+      }
+      const innerText = diagram.textContent?.trim() ?? ''
+      if (innerText) {
+        if (innerText.startsWith('<mxGraphModel') || innerText.includes('<mxGraphModel')) {
+          models.push(innerText)
+        } else {
+          try {
+            const decompressed = await inflateDiagram(innerText)
+            models.push(decompressed)
+          } catch {
+            // пропускаем битую диаграмму
+          }
+        }
       }
     }
-
-    const innerText = diagram.textContent?.trim() ?? ''
-    if (innerText) {
-      if (innerText.startsWith('<mxGraphModel') || innerText.includes('<mxGraphModel')) {
-        return { xml: innerText, isBpmn: false }
+    if (models.length === 0) throw new Error('Не удалось извлечь ни одной диаграммы')
+    if (models.length === 1) return { xml: models[0], isBpmn: false }
+    // объединяем несколько диаграмм с вертикальным offset
+    try {
+      const ser = new XMLSerializer()
+      let yOffset = 0
+      const combinedRoot = doc.createElement('root')
+      const c0 = doc.createElement('mxCell'); c0.setAttribute('id', '0'); combinedRoot.appendChild(c0)
+      const c1 = doc.createElement('mxCell'); c1.setAttribute('id', '1'); c1.setAttribute('parent', '0'); combinedRoot.appendChild(c1)
+      for (const mXml of models) {
+        const mDoc = new DOMParser().parseFromString(mXml, 'text/xml')
+        const root = mDoc.querySelector('root')
+        if (!root) continue
+        let maxY = 0
+        Array.from(root.querySelectorAll('mxCell')).forEach((c) => {
+          const geo = c.querySelector('mxGeometry')
+          if (geo) {
+            const y = Number(geo.getAttribute('y') ?? 0)
+            const h = Number(geo.getAttribute('height') ?? 0)
+            maxY = Math.max(maxY, y + h)
+          }
+        })
+        Array.from(root.querySelectorAll('mxCell')).forEach((c) => {
+          const cid = c.getAttribute('id')
+          if (cid === '0' || cid === '1') return
+          const clone = doc.createElement('mxCell')
+          Array.from(c.attributes).forEach((a) => clone.setAttribute(a.name, a.value))
+          const geo = c.querySelector('mxGeometry')
+          if (geo) {
+            const ng = doc.createElement('mxGeometry')
+            Array.from(geo.attributes).forEach((a) => ng.setAttribute(a.name, a.value))
+            if (yOffset !== 0 && geo.getAttribute('relative') !== '1') {
+              const origY = Number(geo.getAttribute('y') ?? 0)
+              ng.setAttribute('y', String(origY + yOffset))
+            }
+            Array.from(geo.children).forEach((ch) => ng.appendChild(ch.cloneNode(true)))
+            clone.appendChild(ng)
+          }
+          Array.from(c.children).forEach((ch) => {
+            if ((ch as Element).tagName !== 'mxGeometry') clone.appendChild(ch.cloneNode(true))
+          })
+          combinedRoot.appendChild(clone)
+        })
+        yOffset += maxY + 100
       }
-      const decompressed = await inflateDiagram(innerText)
-      return { xml: decompressed, isBpmn: false }
+      const wrapper = doc.createElement('mxGraphModel')
+      wrapper.appendChild(combinedRoot)
+      return { xml: ser.serializeToString(wrapper), isBpmn: false }
+    } catch {
+      return { xml: models[0], isBpmn: false }
     }
   }
 
@@ -197,7 +249,11 @@ function styleFloat(map: Record<string, string>, key: string): number | undefine
   return Number.isFinite(n) ? n : undefined
 }
 
-/** Absolute origin of a cell (own x/y plus every non-relative ancestor). */
+/**
+ * Absolute origin of a cell (own x/y plus every non-relative ancestor).
+ * mxGraph semantics: children of a swimlane are relative to the swimlane's
+ * FULL origin (including title/startSize area) — no extra startSize shift.
+ */
 function parentOrigin(
   cellId: string | null | undefined,
   cellMap: Map<string, Element>,
@@ -212,7 +268,7 @@ function parentOrigin(
     return { x: 0, y: 0 }
   }
   const parent = parentOrigin(cell.getAttribute('parent'), cellMap, cache)
-  const geo = cell.querySelector('mxGeometry')
+  const geo = cell.querySelector(':scope > mxGeometry') as Element | null
   let x = parent.x
   let y = parent.y
   if (geo && geo.getAttribute('relative') !== '1') {
@@ -247,7 +303,7 @@ const ARTIFACT_TAGS = new Set([
 ])
 
 const CONDITION_TAGS = new Set([
-  "ha", "yo'q", "yo`q", "yo’q", "yo'q ", "ha ", "да", "нет", "yes", "no",
+  "ha", "yo'q", "yo`q", "yo’q", "да", "нет", "yes", "no",
   "to'liq", "to'liq emas", "to`liq", "to`liq emas",
   "mos keldi", "mos kelmaydi", "mos kelmadi", "to'liq mos keladi",
   "manba aniqlandi", "qabul qilindi", "rad etildi", "rad javob berildi",
@@ -271,7 +327,14 @@ function isDecorationStyle(style: string): boolean {
     s.includes('shape=mxgraph.bpmn.timer') ||
     s.includes('eventicon') ||
     s.includes('symbol=timer') ||
-    s.includes('symbol=clock')
+    s.includes('symbol=clock') ||
+    s.includes('shape=datastore') ||
+    s.includes('shape=mxgraph.bpmn.datastore') ||
+    s.includes('kind=datastore') ||
+    s.includes('shape=mxgraph.signs') ||
+    s.includes('shape=mxgraph.bpmn.dataobject') ||
+    s.includes('shape=note') ||
+    s.includes('shape=mxgraph.bpmn.annotation')
   )
 }
 
@@ -320,9 +383,9 @@ function classifyVertex(
     s.includes('ellipse') ||
     s.includes('bpmn.shape') ||
     s.includes('shape=ellipse') ||
-    i.includes('start') ||
-    i.includes('end') ||
-    i.includes('reject')
+    idHasToken(id, 'start') ||
+    idHasToken(id, 'end') ||
+    idHasToken(id, 'reject')
   ) {
     // Explicit Reject / Declined End Event (Red)
     if (
@@ -332,7 +395,7 @@ function classifyVertex(
       l.includes('отказ') ||
       l.includes('bekor') ||
       l.includes('отклон') ||
-      i.includes('reject') ||
+      idHasToken(id, 'reject') ||
       s.includes('fillcolor=#ef4444') ||
       s.includes('fillcolor=#e11d48') ||
       s.includes('fillcolor=#be123c') ||
@@ -673,8 +736,13 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     let y = rawY != null && rawY !== '' ? Number(rawY) : undefined
     const offset = Array.from(geo.querySelectorAll('mxPoint')).find((p) => p.getAttribute('as') === 'offset')
     if (offset) {
+      const ox = Number(offset.getAttribute('x') ?? 0)
       const oy = Number(offset.getAttribute('y') ?? 0)
       y = y == null ? oy : y + oy
+      if (ox !== 0) {
+        if (x == null) x = ox * 0.005
+        else x += ox * 0.005
+      }
     }
     if (x != null || y != null) edgeLabelGeo.set(edgeId, { x, y })
   }
@@ -735,13 +803,15 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
   swimlaneCells.forEach((sw) => {
     const swId = sw.getAttribute('id') ?? ''
     const hasChildLanes = swimlaneCells.some((other) => other.getAttribute('parent') === swId)
-    if (hasChildLanes || getStyle(sw).includes('stackLayout')) {
+    if (hasChildLanes || getStyle(sw).toLowerCase().includes('stacklayout')) {
       poolIds.add(swId)
     }
   })
 
   const swimlaneIds = new Set(swimlaneCells.map((c) => c.getAttribute('id') || '').filter(Boolean))
   const containerIds = new Set<string>([...poolIds, ...swimlaneIds, '0', '1'])
+
+  const isArtifactShape = (s: string) => s.includes('datastore') || s.includes('dataobject') || s.includes('shape=note') || s.includes('shape=mxgraph.signs') || s.includes('shape=mxgraph.bpmn.annotation')
 
   const rawVertices = cells.filter((c) => {
     const id = c.getAttribute('id') ?? ''
@@ -750,13 +820,14 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     if (ignoreCellIds.has(id)) return false
     if (poolIds.has(id)) return false
     const style = getStyle(c).toLowerCase()
+    if (isArtifactShape(style)) return false
     const parentId = c.getAttribute('parent') ?? ''
     const parentEl = cellMap.get(parentId)
     if (parentEl && parentEl.getAttribute('vertex') === '1' && !containerIds.has(parentId)) {
       // Clock / icon nested inside a task — not a flow node
       return false
     }
-    const geo = c.querySelector('mxGeometry')
+    const geo = c.querySelector(':scope > mxGeometry') as Element | null
     const w = Number(geo?.getAttribute('width') ?? 0)
     const h = Number(geo?.getAttribute('height') ?? 0)
     const unlabeled = !cleanLabel(c.getAttribute('value')) && !labelMap.has(id)
@@ -786,9 +857,10 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     const parentId = cell.getAttribute('parent') ?? undefined
 
     // AbsoluteX = LocalX + ParentX + GrandparentX + ...
-    const geo = cell.querySelector('mxGeometry')
-    const localX = Number(geo?.getAttribute('x') ?? 100)
-    const localY = Number(geo?.getAttribute('y') ?? 100)
+    // В draw.io отсутствующий x/y означает 0 (не 100!)
+    const geo = cell.querySelector(':scope > mxGeometry') as Element | null
+    const localX = Number(geo?.getAttribute('x') ?? 0)
+    const localY = Number(geo?.getAttribute('y') ?? 0)
     let width = Number(geo?.getAttribute('width') ?? 120)
     let height = Number(geo?.getAttribute('height') ?? 60)
     const origin = parentOrigin(parentId, cellMap, originCache)
@@ -837,8 +909,20 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
           : `Операция ${code || id}`
     }
 
-    width = Math.max(Math.round(width || 1), 8)
-    height = Math.max(Math.round(height || 1), 8)
+    // Guard against invisible boxes: разные минимумы по типу
+    if (type === 'lane') {
+      width = Math.max(Math.round(width || 40), 40)
+      height = Math.max(Math.round(height || 40), 40)
+    } else if (type === 'startEvent' || type === 'endEvent') {
+      width = Math.max(Math.round(width || 44), 32)
+      height = Math.max(Math.round(height || 44), 32)
+    } else if (type.includes('Gateway')) {
+      width = Math.max(Math.round(width || 48), 32)
+      height = Math.max(Math.round(height || 48), 32)
+    } else {
+      width = Math.max(Math.round(width || 120), 80)
+      height = Math.max(Math.round(height || 60), 40)
+    }
 
     const fotCost = category !== 'rpa_bot' ? slaMin * 1932 : 800
 
@@ -871,12 +955,13 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     if (n.laneId && !laneIds.has(n.laneId)) n.laneId = undefined
   }
 
-  // Geometry-based lane assignment fallback
+  // Geometry-based lane assignment fallback — учитываем ширину заголовка дорожки (44px)
+  const LANE_HEAD_WIDTH = 44
   for (const n of flowNodes) {
     if (!n.laneId) {
       const hit = lanes.find(
         (l) =>
-          n.geometry.x >= l.geometry.x - 50 &&
+          n.geometry.x >= l.geometry.x + LANE_HEAD_WIDTH - 10 &&
           n.geometry.x <= l.geometry.x + l.geometry.width + 50 &&
           n.geometry.y >= l.geometry.y &&
           n.geometry.y < l.geometry.y + l.geometry.height,

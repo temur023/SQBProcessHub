@@ -15,10 +15,23 @@ interface ProcessVisualizerProps {
 
 const GRID_MINOR = 10
 const GRID_MAJOR = 100
-const MIN_ZOOM = 0.12
+const MIN_ZOOM = 0.08
 const MAX_ZOOM = 3.0
-const LANE_HEAD = 44
+const LANE_HEAD_DEFAULT = 44
 const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif'
+
+function laneHeaderWidth(lane: ProcessNode): number {
+  const m = parseStyleMap(lane.style || '')
+  const raw = m['startsize']
+  if (raw) {
+    const n = Number(raw)
+    if (Number.isFinite(n) && n > 0) return Math.max(18, Math.min(80, Math.round(n)))
+  }
+  // эвристика: узбекские swimlane обычно 26-80
+  const low = (lane.style || '').toLowerCase()
+  if (low.includes('swimlane')) return LANE_HEAD_DEFAULT
+  return LANE_HEAD_DEFAULT
+}
 
 const C = {
   canvas: '#1a1a1a',
@@ -88,8 +101,24 @@ function constraintPoint(box: Box, fx?: number, fy?: number): Pt | null {
   return { x: box.x + fx * box.w, y: box.y + fy * box.h }
 }
 
+function isGatewayNode(n: ProcessNode): boolean {
+  return n.type === 'exclusiveGateway' || n.type === 'parallelGateway' || n.type === 'inclusiveGateway'
+}
+
+// Точный ромб-пересечение (gateway)
+function intersectRhombus(box: Box, toward: Pt): Pt {
+  const dx = toward.x - box.cx
+  const dy = toward.y - box.cy
+  if (dx === 0 && dy === 0) return { x: box.x + box.w, y: box.cy }
+  const hw = box.w / 2
+  const hh = box.h / 2
+  const t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh || 1)
+  return { x: box.cx + dx * t, y: box.cy + dy * t }
+}
+
 /** Intersection of the ray from the box centre toward `toward` with the shape border. */
-function intersectBorder(box: Box, toward: Pt, circular: boolean): Pt {
+function intersectBorder(box: Box, toward: Pt, circular: boolean, isGateway = false): Pt {
+  if (isGateway) return intersectRhombus(box, toward)
   const dx = toward.x - box.cx
   const dy = toward.y - box.cy
   if (dx === 0 && dy === 0) return { x: box.x + box.w, y: box.cy }
@@ -98,6 +127,7 @@ function intersectBorder(box: Box, toward: Pt, circular: boolean): Pt {
     const len = Math.hypot(dx, dy) || 1
     return { x: box.cx + (dx / len) * r, y: box.cy + (dy / len) * r }
   }
+  // Прямоугольник
   const hw = box.w / 2
   const hh = box.h / 2
   const sx = dx === 0 ? Infinity : hw / Math.abs(dx)
@@ -155,13 +185,16 @@ function edgePath(
   const endToward = wp.length ? wp[wp.length - 1] : { x: srcBox.cx, y: srcBox.cy }
   const start =
     constraintPoint(srcBox, edge.exitX, edge.exitY) ||
-    intersectBorder(srcBox, startToward, isEventNode(src))
+    intersectBorder(srcBox, startToward, isEventNode(src), isGatewayNode(src))
   const end =
     constraintPoint(tgtBox, edge.entryX, edge.entryY) ||
-    intersectBorder(tgtBox, endToward, isEventNode(tgt))
+    intersectBorder(tgtBox, endToward, isEventNode(tgt), isGatewayNode(tgt))
   const pts = [start, ...wp, end]
   const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
-  const label = pointAlong(pts, labelT(edge.labelX), edge.labelY ?? -10)
+  // Метка ребра: если labelY задан — используем его, иначе -8 только для длинных ребер
+  const rawLabelY = edge.labelY
+  const perp = rawLabelY != null ? rawLabelY : (pts.length > 2 ? -8 : -10)
+  const label = pointAlong(pts, labelT(edge.labelX), perp)
   return { d, lx: label.x, ly: label.y }
 }
 
@@ -243,23 +276,35 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   const bounds = useMemo(() => {
     let minX = Infinity
     let minY = Infinity
-    let maxX = 0
-    let maxY = 0
+    let maxX = -Infinity
+    let maxY = -Infinity
     const bump = (x: number, y: number, w: number, h: number) => {
       minX = Math.min(minX, x)
       minY = Math.min(minY, y)
       maxX = Math.max(maxX, x + w)
       maxY = Math.max(maxY, y + h)
     }
-    for (const l of process.lanes) bump(l.geometry.x - 6, l.geometry.y - 10, l.geometry.width + 12, l.geometry.height + 20)
-    for (const n of process.nodes) bump(n.geometry.x - 8, n.geometry.y - 22, (n.geometry.width || 160) + 16, (n.geometry.height || 70) + 40)
+    // Ланес и ноды уже в абсолютных координатах (с учетом startSize)
+    for (const l of process.lanes) bump(l.geometry.x - 8, l.geometry.y - 8, l.geometry.width + 16, l.geometry.height + 16)
+    for (const n of process.nodes) {
+      const padY = n.type === 'startEvent' || n.type === 'endEvent' ? 22 : 18
+      const padW = 16
+      bump(n.geometry.x - 8, n.geometry.y - padY, (n.geometry.width || 140) + padW, (n.geometry.height || 60) + padY * 2)
+    }
+    // Учитываем заголовки дорожек и внешние отступы для huge диаграмм (4700x2000)
+    for (const e of process.edges) {
+      for (const p of e.points) bump(p.x - 4, p.y - 4, 8, 8)
+    }
     if (!Number.isFinite(minX)) {
       minX = 0
       minY = 0
       maxX = 800
       maxY = 500
     }
-    return { minX, minY, w: Math.max(maxX - minX, 200), h: Math.max(maxY - minY, 160) }
+    // Минимальные размеры и padding для центрирования
+    const w = Math.max(maxX - minX + 24, 400)
+    const h = Math.max(maxY - minY + 24, 300)
+    return { minX: minX - 12, minY: minY - 12, w, h }
   }, [process])
 
   const laneLabels = useMemo(() => {
@@ -491,6 +536,10 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               const src = process.nodes.find(n => n.id === edge.sourceId)
               const tgt = process.nodes.find(n => n.id === edge.targetId)
               if (!src || !tgt) return null
+              // Скрываем рёбра если один из узлов отфильтрован (кроме 'all')
+              if (activeFilter !== 'all' || searchQuery.trim()) {
+                if (!visibleIds.has(edge.sourceId!) || !visibleIds.has(edge.targetId!)) return null
+              }
               const sb = nodeBoxes.get(src.id) || rawBox(src)
               const tb = nodeBoxes.get(tgt.id) || rawBox(tgt)
               const { d, lx, ly } = edgePath(src, tgt, sb, tb, edge)
@@ -655,14 +704,15 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
 
             {process.lanes.map((lane) => {
               const label = laneLabels.get(lane.id) || { lines: [lane.name], fontSize: 11 }
-              const hx = lane.geometry.x + LANE_HEAD / 2
+              const hw = laneHeaderWidth(lane)
+              const hx = lane.geometry.x + hw / 2
               const hy = lane.geometry.y + lane.geometry.height / 2
               const lineH = label.fontSize + 3
               return (
                 <g key={`head-${lane.id}`}>
                   <rect
                     x={lane.geometry.x} y={lane.geometry.y}
-                    width={LANE_HEAD} height={lane.geometry.height}
+                    width={hw} height={lane.geometry.height}
                     fill={C.laneHead} stroke={C.laneLine} strokeWidth="1"
                   />
                   <g transform={`rotate(-90, ${hx}, ${hy})`}>

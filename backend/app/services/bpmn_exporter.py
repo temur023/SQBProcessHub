@@ -1,3 +1,5 @@
+import re
+
 from app.models.process import BusinessProcess
 
 
@@ -14,14 +16,26 @@ def escape_xml(value) -> str:
     )
 
 
+def _sanitize_bpmn_id(raw: str, prefix: str = "id") -> str:
+    """Делает строку валидным BPMN NCName: [A-Za-z_][A-Za-z0-9_.-]*"""
+    s = re.sub(r'[^A-Za-z0-9_.-]+', '_', (raw or '').strip())
+    if not s:
+        s = f"{prefix}_1"
+    if not re.match(r'^[A-Za-z_]', s):
+        s = f"{prefix}_{s}"
+    # BPMN ID не должен содержать двойной дефис в комментариях, но в ID допустим
+    return s[:120]
+
+
 def generate_bpmn_xml(process: BusinessProcess) -> str:
     """
     Generates standard OMG BPMN 2.0 XML with BPMNDiagram elements
     for direct import into Infomaximum Processet.
     """
-    proc_id = f"Process_{process.passport.code.replace('-', '_')}"
-    diag_id = f"Diagram_{proc_id}"
-    plane_id = f"Plane_{proc_id}"
+    proc_id = _sanitize_bpmn_id(f"Process_{process.passport.code}", "Process")
+    diag_id = _sanitize_bpmn_id(f"Diagram_{proc_id}", "Diagram")
+    plane_id = _sanitize_bpmn_id(f"Plane_{proc_id}", "Plane")
+    definitions_id = _sanitize_bpmn_id(f"Definitions_{process.id}", "Definitions")
 
     flow_nodes = [n for n in process.nodes if n.type != 'lane']
     lanes = process.lanes
@@ -44,7 +58,7 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         '  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"',
         '  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"',
         '  xmlns:sqb="http://sqb.uz/schema/bpmn"',
-        f'  id="Definitions_{escape_xml(process.id)}"',
+        f'  id="{escape_xml(definitions_id)}"',
         '  targetNamespace="http://bpmn.io/schema/bpmn">',
         '',
         f'  <!-- Process Definition: {safe_comment} -->',
@@ -106,12 +120,17 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         else:
             xml_lines.append(f'    <{tag} id="{nid}" {name_attr}{extra} />')
 
-    for edge in process.edges:
-        name_attr = f'name="{escape_xml(edge.name)}"' if edge.name else ''
-        src_attr = f'sourceRef="{escape_xml(edge.sourceId)}"' if edge.sourceId else ''
-        tgt_attr = f'targetRef="{escape_xml(edge.targetId)}"' if edge.targetId else ''
+    # Фильтруем невалидные sequenceFlow (без source/target) — иначе BPMN невалиден
+    valid_edges = [e for e in process.edges if e.sourceId and e.targetId]
+    for edge in valid_edges:
+        # Собираем атрибуты без лишних пробелов
+        attrs = [f'id="{escape_xml(edge.id)}"']
+        if edge.name:
+            attrs.append(f'name="{escape_xml(edge.name)}"')
+        attrs.append(f'sourceRef="{escape_xml(edge.sourceId)}"')
+        attrs.append(f'targetRef="{escape_xml(edge.targetId)}"')
         xml_lines.append(
-            f'    <bpmn:sequenceFlow id="{escape_xml(edge.id)}" {name_attr} {src_attr} {tgt_attr} />'
+            f'    <bpmn:sequenceFlow {" ".join(attrs)} />'
         )
 
     xml_lines.append('  </bpmn:process>')
@@ -138,19 +157,32 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         )
         xml_lines.append('      </bpmndi:BPMNShape>')
 
-    for edge in process.edges:
+    for edge in valid_edges:
         xml_lines.append(
             f'      <bpmndi:BPMNEdge id="{escape_xml(edge.id)}_di" bpmnElement="{escape_xml(edge.id)}">'
         )
         src = next((n for n in flow_nodes if n.id == edge.sourceId), None)
         tgt = next((n for n in flow_nodes if n.id == edge.targetId), None)
         if src and tgt:
-            x1 = src.geometry.x + src.geometry.width
-            y1 = src.geometry.y + src.geometry.height // 2
-            x2 = tgt.geometry.x
-            y2 = tgt.geometry.y + tgt.geometry.height // 2
-            xml_lines.append(f'        <di:waypoint x="{x1}" y="{y1}" />')
-            xml_lines.append(f'        <di:waypoint x="{x2}" y="{y2}" />')
+            # Учитываем exitX/entryY и промежуточные точки edge.points
+            def _constraint_point(node, fx, fy):
+                if fx is not None and fy is not None:
+                    return (node.geometry.x + fx * node.geometry.width,
+                            node.geometry.y + fy * node.geometry.height)
+                return None
+            start = _constraint_point(src, edge.exitX, edge.exitY)
+            end = _constraint_point(tgt, edge.entryX, edge.entryY)
+            if start is None:
+                start = (src.geometry.x + src.geometry.width, src.geometry.y + src.geometry.height // 2)
+            if end is None:
+                end = (tgt.geometry.x, tgt.geometry.y + tgt.geometry.height // 2)
+            waypoints = [start]
+            # промежуточные точки из draw.io
+            for pt in (edge.points or []):
+                waypoints.append((pt.x, pt.y))
+            waypoints.append(end)
+            for (x, y) in waypoints:
+                xml_lines.append(f'        <di:waypoint x="{int(round(x))}" y="{int(round(y))}" />')
         xml_lines.append('      </bpmndi:BPMNEdge>')
 
     xml_lines.append('    </bpmndi:BPMNPlane>')
