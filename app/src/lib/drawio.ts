@@ -727,6 +727,7 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
   const edgeLabelGeo = new Map<string, { x?: number; y?: number }>()
   const ignoreCellIds = new Set<string>()
   const originCache = new Map<string, { x: number; y: number }>()
+  const orphanConditionLabels: { text: string; x: number; y: number }[] = []
 
   const rememberLabelGeo = (edgeId: string, geo: Element | null) => {
     if (!geo || edgeLabelGeo.has(edgeId)) return
@@ -777,18 +778,46 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       ignoreCellIds.add(id)
       const baseId = id.replace(/_label$/, '')
       if (baseId && cleaned) labelMap.set(baseId, cleaned)
+      // Сохраняем условия Yo'q/Ha/To'liq как отдельные метки для привязки к ближайшему ребру
+      if (CONDITION_TAGS.has(cleaned.toLowerCase()) && cleaned) {
+        const geo2 = c.querySelector('mxGeometry')
+        if (geo2) {
+          const o = parentOrigin(parentId, cellMap, originCache)
+          const lx = Number(geo2.getAttribute('x') ?? 0) + o.x + Number(geo2.getAttribute('width') ?? 40) / 2
+          const ly = Number(geo2.getAttribute('y') ?? 0) + o.y + Number(geo2.getAttribute('height') ?? 20) / 2
+          orphanConditionLabels.push({ text: cleaned, x: lx, y: ly })
+        }
+      }
       return
     }
 
     // Condition 4: Diagram title banner (e.g. "Kredit shartnomasi muddatini o'zgartirish (AS IS)")
     if (style.includes('text;') && isNonTaskLabel(cleaned)) {
       ignoreCellIds.add(id)
+      if (CONDITION_TAGS.has(cleaned.toLowerCase()) && cleaned) {
+        const geo2 = c.querySelector('mxGeometry')
+        if (geo2) {
+          const o = parentOrigin(parentId, cellMap, originCache)
+          const lx = Number(geo2.getAttribute('x') ?? 0) + o.x + Number(geo2.getAttribute('width') ?? 40) / 2
+          const ly = Number(geo2.getAttribute('y') ?? 0) + o.y + Number(geo2.getAttribute('height') ?? 20) / 2
+          orphanConditionLabels.push({ text: cleaned, x: lx, y: ly })
+        }
+      }
       return
     }
 
     // Condition 5: Non-task system tags, artifacts, conditions with no sequence connections
     if (isNonTaskLabel(cleaned) && !incoming.has(id) && !outgoing.has(id)) {
       ignoreCellIds.add(id)
+      if (CONDITION_TAGS.has(cleaned.toLowerCase()) && cleaned) {
+        const geo2 = c.querySelector('mxGeometry')
+        if (geo2) {
+          const o = parentOrigin(parentId, cellMap, originCache)
+          const lx = Number(geo2.getAttribute('x') ?? 0) + o.x + Number(geo2.getAttribute('width') ?? 40) / 2
+          const ly = Number(geo2.getAttribute('y') ?? 0) + o.y + Number(geo2.getAttribute('height') ?? 20) / 2
+          orphanConditionLabels.push({ text: cleaned, x: lx, y: ly })
+        }
+      }
       return
     }
   })
@@ -820,7 +849,8 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     if (ignoreCellIds.has(id)) return false
     if (poolIds.has(id)) return false
     const style = getStyle(c).toLowerCase()
-    if (isArtifactShape(style)) return false
+    // Datastore/Note/Annotation — показываем только если участвует в потоке (иначе это легенда)
+    if (isArtifactShape(style) && !incoming.has(id) && !outgoing.has(id)) return false
     const parentId = c.getAttribute('parent') ?? ''
     const parentEl = cellMap.get(parentId)
     if (parentEl && parentEl.getAttribute('vertex') === '1' && !containerIds.has(parentId)) {
@@ -984,12 +1014,16 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
   }
 
   const validNodeIdSet = new Set(flowNodes.map((n) => n.id))
+  const validLaneIdSet = new Set(lanes.map((l) => l.id))
 
   const edges: ProcessEdge[] = rawEdges
     .filter((cell) => {
       const s = cell.getAttribute('source')
       const t = cell.getAttribute('target')
-      return Boolean(s && t && validNodeIdSet.has(s) && validNodeIdSet.has(t))
+      if (!s || !t) return false
+      const sOk = validNodeIdSet.has(s) || validLaneIdSet.has(s)
+      const tOk = validNodeIdSet.has(t) || validLaneIdSet.has(t)
+      return sOk && tOk
     })
     .map((cell) => {
       const edgeId = cell.getAttribute('id') ?? `edge_${crypto.randomUUID()}`
@@ -999,7 +1033,8 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
         edgeName = labelMap.get(edgeId)!
       }
 
-      const smap = parseStyleMap(getStyle(cell))
+      const rawStyle = getStyle(cell)
+      const smap = parseStyleMap(rawStyle)
       const origin = parentOrigin(cell.getAttribute('parent'), cellMap, originCache)
       const points: ProcessEdgePoint[] = []
       cell.querySelectorAll('Array[as="points"] > mxPoint').forEach((p) => {
@@ -1016,6 +1051,13 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       const labelX = stored?.x ?? (rawLX != null && rawLX !== '' ? Number(rawLX) : undefined)
       const labelY = stored?.y ?? (rawLY != null && rawLY !== '' ? Number(rawLY) : undefined)
 
+      const lowerStyle = rawStyle.toLowerCase()
+      const dashed = lowerStyle.includes('dashed=1') || lowerStyle.includes('dashed = 1')
+      const dashPattern = smap['dashpattern']
+      const edgeStyle = smap['edgestyle']
+      const strokeColor = smap['strokecolor']
+      const sw = styleFloat(smap, 'strokewidth')
+
       return {
         id: edgeId,
         name: edgeName,
@@ -1028,8 +1070,55 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
         entryY: styleFloat(smap, 'entryy'),
         labelX,
         labelY,
+        style: rawStyle,
+        dashed: dashed || undefined,
+        dashPattern,
+        edgeStyle,
+        strokeColor,
+        strokeWidth: sw,
       }
     })
+
+  // Привязываем висячие метки Yo'q/Ha/To'liq к ближайшему безымянному ребру (обычно от шлюза)
+  if (orphanConditionLabels.length > 0) {
+    const nodeById = new Map<string, ProcessNode>()
+    for (const n of [...flowNodes, ...lanes]) nodeById.set(n.id, n)
+    for (const lbl of orphanConditionLabels) {
+      let best: ProcessEdge | null = null
+      let bestDist = Infinity
+      for (const e of edges) {
+        if (e.name) continue
+        const s = nodeById.get(e.sourceId || '')
+        const t = nodeById.get(e.targetId || '')
+        if (!s || !t) continue
+        const isGw = s.type === 'exclusiveGateway' || s.type === 'parallelGateway' || s.type === 'inclusiveGateway'
+        // центр ребра (с учётом waypoints)
+        let cx: number, cy: number
+        if (e.points.length > 0) {
+          let sx = s.geometry.x + s.geometry.width / 2
+          let sy = s.geometry.y + s.geometry.height / 2
+          let ex = t.geometry.x + t.geometry.width / 2
+          let ey = t.geometry.y + t.geometry.height / 2
+          const pts = [{ x: sx, y: sy }, ...e.points, { x: ex, y: ey }]
+          let tx = 0, ty = 0
+          for (const p of pts) { tx += p.x; ty += p.y }
+          cx = tx / pts.length; cy = ty / pts.length
+        } else {
+          cx = (s.geometry.x + s.geometry.width / 2 + t.geometry.x + t.geometry.width / 2) / 2
+          cy = (s.geometry.y + s.geometry.height / 2 + t.geometry.y + t.geometry.height / 2) / 2
+        }
+        const d = Math.hypot(lbl.x - cx, lbl.y - cy)
+        const penalty = isGw ? 0 : 35
+        if (d + penalty < bestDist && d < 140) {
+          bestDist = d + penalty
+          best = e
+        }
+      }
+      if (best) {
+        best.name = lbl.text
+      }
+    }
+  }
 
   const validation = validate(flowNodes, edges)
 

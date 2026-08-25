@@ -77,6 +77,13 @@ export interface ProcessEdge {
   /** Relative edge-label: x along the polyline (0..1), y perpendicular in px */
   labelX?: number
   labelY?: number
+  /** draw.io style */
+  style?: string
+  dashed?: boolean
+  dashPattern?: string
+  edgeStyle?: string // e.g. orthogonalEdgeStyle
+  strokeColor?: string
+  strokeWidth?: number
 }
 
 export interface ProcessValidation {

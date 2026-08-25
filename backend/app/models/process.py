@@ -76,6 +76,12 @@ class ProcessEdge(BaseModel):
     entryY: Optional[float] = None
     labelX: Optional[float] = None
     labelY: Optional[float] = None
+    style: Optional[str] = None
+    dashed: Optional[bool] = None
+    dashPattern: Optional[str] = None
+    edgeStyle: Optional[str] = None
+    strokeColor: Optional[str] = None
+    strokeWidth: Optional[float] = None
 
 class ProcessValidation(BaseModel):
     level: Literal['error', 'warning', 'info']

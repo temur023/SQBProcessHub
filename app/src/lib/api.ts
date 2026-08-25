@@ -5,6 +5,33 @@ import { generateProcessetEventLogCsv, generateProcessRegulationCsv, generatePix
 
 const API_BASE = '/api/v1'
 
+/** Load process from backend store */
+export async function loadProcessFromBackend(processId: string): Promise<BusinessProcess | null> {
+  try {
+    const res = await fetch(`${API_BASE}/processes/${encodeURIComponent(processId)}`)
+    if (res.ok) {
+      return await res.json()
+    }
+  } catch (err) {
+    console.warn('Failed to load process from backend:', err)
+  }
+  return null
+}
+
+/** List all processes from backend */
+export async function listProcessesFromBackend(): Promise<Array<{id: string, name: string}>> {
+  try {
+    const res = await fetch(`${API_BASE}/processes/`)
+    if (res.ok) {
+      const data = await res.json()
+      return data.map((p: any) => ({ id: p.id, name: p.name }))
+    }
+  } catch (err) {
+    console.warn('Failed to list processes from backend:', err)
+  }
+  return []
+}
+
 /** Check if Python FastAPI server is live on :8000 */
 export async function checkBackendHealth(): Promise<boolean> {
   try {

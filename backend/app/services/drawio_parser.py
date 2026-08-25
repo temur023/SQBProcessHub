@@ -692,6 +692,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
     edge_label_geo: Dict[str, Tuple[Optional[float], Optional[float]]] = {}
     ignore_cell_ids: Set[str] = set()
     origin_cache: Dict[str, Tuple[float, float]] = {}
+    orphan_condition_labels: List[Tuple[str, float, float]] = []  # text, x, y
 
     def _remember_label_geo(edge_id: str, geo_el: Optional[ET.Element]) -> None:
         if geo_el is None or edge_id in edge_label_geo:
@@ -753,16 +754,49 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             base_id = re.sub(r'_label$', '', c_id)
             if base_id and cleaned:
                 label_map[base_id] = cleaned
+            if cleaned and cleaned.lower() in CONDITION_TAGS:
+                g2 = c.find('mxGeometry')
+                if g2 is not None:
+                    # absolute centre
+                    ox, oy = _parent_origin(c.get('parent'), {k: v for k, v in cell_map.items()}, origin_cache)  # approximate, will be recomputed later but ok
+                    # fallback to direct parent origin
+                    try:
+                        lx = float(g2.get('x', '0') or 0) + ox + float(g2.get('width', '40') or 40) / 2
+                        ly = float(g2.get('y', '0') or 0) + oy + float(g2.get('height', '20') or 20) / 2
+                        orphan_condition_labels.append((cleaned, lx, ly))
+                    except ValueError:
+                        pass
             continue
 
         # 4. Diagram title banner
         if 'text;' in style and is_non_task_label(cleaned):
             ignore_cell_ids.add(c_id)
+            if cleaned and cleaned.lower() in CONDITION_TAGS:
+                g2 = c.find('mxGeometry')
+                if g2 is not None:
+                    try:
+                        # need parent origin
+                        px, py = _parent_origin(c.get('parent'), cell_map, origin_cache)
+                        lx = float(g2.get('x', '0') or 0) + px + float(g2.get('width', '40') or 40) / 2
+                        ly = float(g2.get('y', '0') or 0) + py + float(g2.get('height', '20') or 20) / 2
+                        orphan_condition_labels.append((cleaned, lx, ly))
+                    except ValueError:
+                        pass
             continue
 
         # 5. Non-task system tags, artifacts, conditions without connections
         if is_non_task_label(cleaned) and c_id not in incoming and c_id not in outgoing:
             ignore_cell_ids.add(c_id)
+            if cleaned and cleaned.lower() in CONDITION_TAGS:
+                g2 = c.find('mxGeometry')
+                if g2 is not None:
+                    try:
+                        px, py = _parent_origin(c.get('parent'), cell_map, origin_cache)
+                        lx = float(g2.get('x', '0') or 0) + px + float(g2.get('width', '40') or 40) / 2
+                        ly = float(g2.get('y', '0') or 0) + py + float(g2.get('height', '20') or 20) / 2
+                        orphan_condition_labels.append((cleaned, lx, ly))
+                    except ValueError:
+                        pass
             continue
 
     swimlane_cells = [
@@ -791,8 +825,8 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         if not c_id or c_id in ignore_cell_ids or c_id in pool_ids:
             continue
         style = (c.get('style') or '').lower()
-        # артефакты (datastore IABS/EHA, note, иконки) — всегда игнор, даже если есть ребра-ассоциации
-        if _is_artifact_shape(style):
+        # артефакты (datastore IABS/EHA, note) — игнор только если без связей (легенда)
+        if _is_artifact_shape(style) and c_id not in incoming and c_id not in outgoing:
             continue
         parent_id = c.get('parent') or ''
         parent_el = cell_map.get(parent_id)
@@ -932,18 +966,22 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         n.system = detect_system(n.name, n.laneName or '')
 
     valid_node_ids = {n.id for n in flow_nodes}
+    valid_lane_ids = {l.id for l in lanes}
 
     edges: List[ProcessEdge] = []
     for cell in raw_edges:
         s_id = cell.get('source')
         t_id = cell.get('target')
-        if not s_id or not t_id or s_id not in valid_node_ids or t_id not in valid_node_ids:
+        if not s_id or not t_id:
+            continue
+        if not ((s_id in valid_node_ids or s_id in valid_lane_ids) and (t_id in valid_node_ids or t_id in valid_lane_ids)):
             continue
 
         edge_id = cell.get('id') or f"edge_{uuid.uuid4().hex[:8]}"
         raw_val = cell.get('value')
         edge_name = clean_label(raw_val) or label_map.get(edge_id, '')
-        smap = _style_map(cell.get('style') or '')
+        raw_style = cell.get('style') or ''
+        smap = _style_map(raw_style)
 
         eox, eoy = _parent_origin(cell.get('parent'), cell_map, origin_cache)
         pts: List[ProcessEdgePoint] = []
@@ -969,6 +1007,13 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             except ValueError:
                 pass
 
+        lower_style = raw_style.lower()
+        is_dashed = 'dashed=1' in lower_style
+        dash_pat = smap.get('dashpattern')
+        edge_style = smap.get('edgestyle')
+        stroke_col = smap.get('strokecolor')
+        sw = _style_float(smap, 'strokewidth')
+
         edges.append(ProcessEdge(
             id=edge_id,
             name=edge_name,
@@ -981,7 +1026,46 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             entryY=_style_float(smap, 'entryy'),
             labelX=lx,
             labelY=ly,
+            style=raw_style,
+            dashed=is_dashed if is_dashed else None,
+            dashPattern=dash_pat,
+            edgeStyle=edge_style,
+            strokeColor=stroke_col,
+            strokeWidth=sw,
         ))
+
+    # Привязываем висячие метки Yo'q/Ha/To'liq к ближайшему безымянному ребру (как в draw.io отдельные text)
+    if orphan_condition_labels:
+        node_by_id = {n.id: n for n in flow_nodes + lanes}
+        for text, lx, ly in orphan_condition_labels:
+            best = None
+            best_dist = float('inf')
+            for e in edges:
+                if e.name:
+                    continue
+                s = node_by_id.get(e.sourceId or '')
+                t = node_by_id.get(e.targetId or '')
+                if not s or not t:
+                    continue
+                is_gw = s.type in ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway')
+                if e.points:
+                    sx = s.geometry.x + s.geometry.width / 2
+                    sy = s.geometry.y + s.geometry.height / 2
+                    ex = t.geometry.x + t.geometry.width / 2
+                    ey = t.geometry.y + t.geometry.height / 2
+                    pts = [(sx, sy)] + [(p.x, p.y) for p in e.points] + [(ex, ey)]
+                    cx = sum(p[0] for p in pts) / len(pts)
+                    cy = sum(p[1] for p in pts) / len(pts)
+                else:
+                    cx = (s.geometry.x + s.geometry.width / 2 + t.geometry.x + t.geometry.width / 2) / 2
+                    cy = (s.geometry.y + s.geometry.height / 2 + t.geometry.y + t.geometry.height / 2) / 2
+                d = ((lx - cx) ** 2 + (ly - cy) ** 2) ** 0.5
+                penalty = 0 if is_gw else 35
+                if d + penalty < best_dist and d < 140:
+                    best_dist = d + penalty
+                    best = e
+            if best:
+                best.name = text
 
     title = filename.replace('.drawio', '').replace('.xml', '')
     total_hours = round(sum(n.slaMinutes or 0 for n in flow_nodes) / 60, 1) or 8.0

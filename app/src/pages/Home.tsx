@@ -10,9 +10,11 @@ import { ProcessImportModal } from '@/components/ProcessImportModal'
 import { NodeDetailDrawer } from '@/components/NodeDetailDrawer'
 import { ExportDrawer } from '@/components/ExportDrawer'
 import { generateProcessRegulationCsv, downloadFile } from '@/lib/processet-export'
-import { saveProcessToBackend } from '@/lib/api'
+import { saveProcessToBackend, listProcessesFromBackend, loadProcessFromBackend } from '@/lib/api'
 import { analyzeProcessConformance } from '@/lib/conformance'
 import { Toaster, toast } from 'sonner'
+import { Database } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export default function Home() {
   const [currentProcess, setCurrentProcess] = useState<BusinessProcess>(() => cloneSampleProcess(sqbCreditProcess))
@@ -20,6 +22,8 @@ export default function Home() {
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [selectedNode, setSelectedNode] = useState<ProcessNode | null>(null)
+  const [backendProcesses, setBackendProcesses] = useState<Array<{id: string, name: string}>>([])
+  const [selectedBackendProcess, setSelectedBackendProcess] = useState<string>('')
 
   useEffect(() => {
     void saveProcessToBackend(currentProcess)
@@ -27,6 +31,19 @@ export default function Home() {
     // Subsequent edits save explicitly from handlers below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    void listProcessesFromBackend().then(setBackendProcesses)
+  }, [])
+
+  const handleLoadBackendProcess = async (processId: string) => {
+    if (!processId) return
+    const proc = await loadProcessFromBackend(processId)
+    if (proc) {
+      handleProcessLoaded(proc)
+      setSelectedBackendProcess(processId)
+    }
+  }
 
   const handleProcessLoaded = (newProcess: BusinessProcess) => {
     setCurrentProcess(newProcess)
@@ -96,6 +113,24 @@ export default function Home() {
   return (
     <div className="h-screen overflow-hidden bg-background text-foreground flex flex-col">
       <Toaster position="top-right" richColors />
+
+      {/* Backend process selector bar */}
+      {(backendProcesses.length > 0) && (
+        <div className="px-4 py-2 bg-muted/50 border-b border-border flex items-center gap-3 flex-wrap">
+          <Database className="w-4 h-4 text-muted-foreground" />
+          <span className="text-xs font-medium text-muted-foreground">Backend процессы:</span>
+          <Select value={selectedBackendProcess} onValueChange={(v) => handleLoadBackendProcess(v)}>
+            <SelectTrigger className="w-[280px] h-8 text-xs">
+              <SelectValue placeholder="Выбрать процесс из бэкенда..." />
+            </SelectTrigger>
+            <SelectContent>
+              {backendProcesses.map(p => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Main Bank Header */}
       <Header
