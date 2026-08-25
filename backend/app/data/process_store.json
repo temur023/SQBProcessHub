@@ -32302,5 +32302,857 @@
         }
       ]
     }
+  },
+  "proc_c4f9dfbb": {
+    "id": "proc_c4f9dfbb",
+    "name": "Выдача кредита юридическим лицам",
+    "fileName": "process.drawio",
+    "passport": {
+      "code": "PRC-SQB-CRED-001",
+      "name": "Регламент предоставления кредитов корпоративным клиентам и МСБ",
+      "version": "2.4",
+      "status": "active",
+      "owner": "Департамент корпоративного кредитования АКБ «Узпромстройбанк»",
+      "department": "Управление кредитования малого и среднего бизнеса",
+      "category": "Кредитные операции ЮЛ",
+      "targetSlaHours": 24.0,
+      "description": "Сквозной регламент рассмотрения кредитных заявок юридических лиц от первичного приема до выдачи транша в АБС ЦФТ-Банк с автоматической проверкой через PIX RPA.",
+      "createdDate": "2026-08-25",
+      "updatedDate": "2026-08-25"
+    },
+    "nodes": [
+      {
+        "id": "node-start",
+        "name": "Поступление кредитной заявки",
+        "type": "startEvent",
+        "category": "notification",
+        "code": "START",
+        "laneId": "lane-front",
+        "laneName": "Фронт-офис (Кредитный эксперт)",
+        "role": "Кредитный эксперт филиала",
+        "system": "SQB Business Portal / CRM",
+        "slaMinutes": 10,
+        "costPerExecution": 5000,
+        "automationPotential": 80,
+        "description": "Заявка поступает через портал банка или при личном визите клиента в филиал.",
+        "inputArtifacts": [],
+        "outputArtifacts": [],
+        "formFields": [],
+        "geometry": {
+          "x": 130,
+          "y": 98,
+          "width": 44,
+          "height": 44
+        },
+        "style": "ellipse;"
+      },
+      {
+        "id": "node-step-1",
+        "name": "Первичная проверка и сбор документов",
+        "type": "userTask",
+        "category": "manual",
+        "code": "STEP-01",
+        "laneId": "lane-front",
+        "laneName": "Фронт-офис (Кредитный эксперт)",
+        "role": "Кредитный эксперт филиала",
+        "system": "SQB CRM / Document Hub",
+        "slaMinutes": 60,
+        "costPerExecution": 25000,
+        "automationPotential": 65,
+        "description": "Проверка учредительных документов, баланса, формы 1 и 2 за последние 4 квартала.",
+        "inputArtifacts": [
+          "Заявление на кредит",
+          "Финотчетность",
+          "Устав ЮЛ"
+        ],
+        "outputArtifacts": [
+          "Кредитное досье (электронное)"
+        ],
+        "formFields": [],
+        "geometry": {
+          "x": 250,
+          "y": 85,
+          "width": 190,
+          "height": 80
+        },
+        "style": "rounded=1;"
+      },
+      {
+        "id": "node-step-2",
+        "name": "Авто-скоринг & Проверка ГНК (Soliq) / KATM",
+        "type": "serviceTask",
+        "category": "rpa_bot",
+        "code": "STEP-02",
+        "laneId": "lane-rpa",
+        "laneName": "PIX RPA & Автоматические сервисы",
+        "role": "Робот PIX RPA",
+        "system": "PIX RPA / API KATM / API Soliq (ГНК)",
+        "slaMinutes": 5,
+        "costPerExecution": 800,
+        "automationPotential": 95,
+        "description": "Робот PIX автоматически запрашивает кредитную историю в КАТМ, налоговую задолженность в ГНК и реестр залогов.",
+        "inputArtifacts": [
+          "ИНН компании",
+          "Паспортные данные учредителей"
+        ],
+        "outputArtifacts": [
+          "Скоринговый отчет KATM",
+          "Справка ГНК об отсутствии долгов"
+        ],
+        "formFields": [],
+        "geometry": {
+          "x": 500,
+          "y": 255,
+          "width": 200,
+          "height": 80
+        },
+        "style": "rounded=1;fillColor=#dcfce7;"
+      },
+      {
+        "id": "node-step-3",
+        "name": "Андеррайтинг и оценка рисков / залога",
+        "type": "userTask",
+        "category": "validation",
+        "code": "STEP-03",
+        "laneId": "lane-risk",
+        "laneName": "Служба рисков и безопасности (СБ)",
+        "role": "Андеррайтер / Риск-офицер",
+        "system": "SQB Risk Engine / Реестр залогов",
+        "slaMinutes": 180,
+        "costPerExecution": 45000,
+        "automationPotential": 40,
+        "description": "Глубокий финансовый анализ денежных потоков, оценка ликвидности залогового имущества.",
+        "inputArtifacts": [
+          "Скоринговый отчет",
+          "Оценка залога"
+        ],
+        "outputArtifacts": [
+          "Заключение риск-департамента"
+        ],
+        "formFields": [],
+        "geometry": {
+          "x": 760,
+          "y": 415,
+          "width": 200,
+          "height": 80
+        },
+        "style": "rounded=1;"
+      },
+      {
+        "id": "node-gw-risk",
+        "name": "Риск допустим?",
+        "type": "exclusiveGateway",
+        "category": "manual",
+        "code": "GW-RISK",
+        "laneId": "lane-risk",
+        "laneName": "Служба рисков и безопасности (СБ)",
+        "role": "Андеррайтер / Риск-офицер",
+        "system": null,
+        "slaMinutes": 30,
+        "costPerExecution": 5000,
+        "automationPotential": 50,
+        "description": null,
+        "inputArtifacts": [],
+        "outputArtifacts": [],
+        "formFields": [],
+        "geometry": {
+          "x": 1020,
+          "y": 431,
+          "width": 48,
+          "height": 48
+        },
+        "style": "rhombus;"
+      },
+      {
+        "id": "node-step-4",
+        "name": "Рассмотрение Кредитным комитетом",
+        "type": "userTask",
+        "category": "approval",
+        "code": "STEP-04",
+        "laneId": "lane-comm",
+        "laneName": "Кредитный комитет",
+        "role": "Члены кредитного комитета",
+        "system": "Портал голосования SQB Committee",
+        "slaMinutes": 240,
+        "costPerExecution": 60000,
+        "automationPotential": 30,
+        "description": "Электронное голосование членов комитета с цифровой подписью ЭЦП.",
+        "inputArtifacts": [
+          "Заключение рисков",
+          "Проект решения"
+        ],
+        "outputArtifacts": [
+          "Протокол заседания Кредитного комитета"
+        ],
+        "formFields": [],
+        "geometry": {
+          "x": 1140,
+          "y": 625,
+          "width": 200,
+          "height": 80
+        },
+        "style": "rounded=1;"
+      },
+      {
+        "id": "node-gw-comm",
+        "name": "Кредит одобрен?",
+        "type": "exclusiveGateway",
+        "category": "manual",
+        "code": "GW-COMM",
+        "laneId": "lane-comm",
+        "laneName": "Кредитный комитет",
+        "role": "Члены кредитного комитета",
+        "system": null,
+        "slaMinutes": 30,
+        "costPerExecution": 5000,
+        "automationPotential": 50,
+        "description": null,
+        "inputArtifacts": [],
+        "outputArtifacts": [],
+        "formFields": [],
+        "geometry": {
+          "x": 1400,
+          "y": 641,
+          "width": 48,
+          "height": 48
+        },
+        "style": "rhombus;"
+      },
+      {
+        "id": "node-step-5",
+        "name": "PIX RPA Генерация договора и счета в АБС",
+        "type": "serviceTask",
+        "category": "rpa_bot",
+        "code": "STEP-05",
+        "laneId": "lane-rpa",
+        "laneName": "PIX RPA & Автоматические сервисы",
+        "role": "Робот PIX RPA",
+        "system": "PIX RPA / АБС ЦФТ-Банк",
+        "slaMinutes": 10,
+        "costPerExecution": 1200,
+        "automationPotential": 90,
+        "description": "Робот формирует кредитный договор по шаблону и создает ссудный счет 16... в АБС ЦФТ.",
+        "inputArtifacts": [
+          "Протокол комитета",
+          "Реквизиты заемщика"
+        ],
+        "outputArtifacts": [
+          "Кредитный договор (PDF)",
+          "Номер ссудного счета в АБС"
+        ],
+        "formFields": [],
+        "geometry": {
+          "x": 1380,
+          "y": 255,
+          "width": 200,
+          "height": 80
+        },
+        "style": "rounded=1;fillColor=#dcfce7;"
+      },
+      {
+        "id": "node-step-6",
+        "name": "Подписание Didox (ЭДО) и зачисление средств",
+        "type": "userTask",
+        "category": "manual",
+        "code": "STEP-06",
+        "laneId": "lane-back",
+        "laneName": "Бэк-офис и учет (АБС)",
+        "role": "Бухгалтер-контролер / АБС",
+        "system": "АБС ЦФТ-Банк / Didox (ЭДО)",
+        "slaMinutes": 60,
+        "costPerExecution": 20000,
+        "automationPotential": 70,
+        "description": "Подписание договора клиентом в Didox и проведение банковской проводки зачисления кредита.",
+        "inputArtifacts": [
+          "Подписанный договор с ЭЦП"
+        ],
+        "outputArtifacts": [
+          "Мемориальный ордер",
+          "Выписка по ссудному счету"
+        ],
+        "formFields": [],
+        "geometry": {
+          "x": 1380,
+          "y": 795,
+          "width": 200,
+          "height": 80
+        },
+        "style": "rounded=1;"
+      },
+      {
+        "id": "node-end",
+        "name": "Кредит успешно выдан",
+        "type": "endEvent",
+        "category": "notification",
+        "code": "END",
+        "laneId": "lane-back",
+        "laneName": "Бэк-офис и учет (АБС)",
+        "role": "АБС ЦФТ",
+        "system": null,
+        "slaMinutes": 30,
+        "costPerExecution": 5000,
+        "automationPotential": 50,
+        "description": null,
+        "inputArtifacts": [],
+        "outputArtifacts": [],
+        "formFields": [],
+        "geometry": {
+          "x": 1630,
+          "y": 813,
+          "width": 44,
+          "height": 44
+        },
+        "style": "ellipse;"
+      },
+      {
+        "id": "node-reject",
+        "name": "Отказ / Архив",
+        "type": "endEvent",
+        "category": "notification",
+        "code": "REJECT",
+        "laneId": "lane-risk",
+        "laneName": "Служба рисков и безопасности (СБ)",
+        "role": "Андеррайтер",
+        "system": null,
+        "slaMinutes": 30,
+        "costPerExecution": 5000,
+        "automationPotential": 50,
+        "description": null,
+        "inputArtifacts": [],
+        "outputArtifacts": [],
+        "formFields": [],
+        "geometry": {
+          "x": 1020,
+          "y": 510,
+          "width": 44,
+          "height": 44
+        },
+        "style": "ellipse;fillColor=#ef4444;"
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-1",
+        "name": "",
+        "sourceId": "node-start",
+        "targetId": "node-step-1",
+        "condition": null,
+        "probability": 100,
+        "points": [],
+        "exitX": null,
+        "exitY": null,
+        "entryX": null,
+        "entryY": null,
+        "labelX": null,
+        "labelY": null
+      },
+      {
+        "id": "edge-2",
+        "name": "Досье готово",
+        "sourceId": "node-step-1",
+        "targetId": "node-step-2",
+        "condition": null,
+        "probability": 100,
+        "points": [],
+        "exitX": null,
+        "exitY": null,
+        "entryX": null,
+        "entryY": null,
+        "labelX": null,
+        "labelY": null
+      },
+      {
+        "id": "edge-3",
+        "name": "Скоринг готов",
+        "sourceId": "node-step-2",
+        "targetId": "node-step-3",
+        "condition": null,
+        "probability": 100,
+        "points": [],
+        "exitX": null,
+        "exitY": null,
+        "entryX": null,
+        "entryY": null,
+        "labelX": null,
+        "labelY": null
+      },
+      {
+        "id": "edge-4",
+        "name": "",
+        "sourceId": "node-step-3",
+        "targetId": "node-gw-risk",
+        "condition": null,
+        "probability": 100,
+        "points": [],
+        "exitX": null,
+        "exitY": null,
+        "entryX": null,
+        "entryY": null,
+        "labelX": null,
+        "labelY": null
+      },
+      {
+        "id": "edge-5",
+        "name": "Да (Одобрено)",
+        "sourceId": "node-gw-risk",
+        "targetId": "node-step-4",
+        "condition": "risk_level <= 3",
+        "probability": 100,
+        "points": [],
+        "exitX": null,
+        "exitY": null,
+        "entryX": null,
+        "entryY": null,
+        "labelX": null,
+        "labelY": null
+      },
+      {
+        "id": "edge-risk-no",
+        "name": "Отказ",
+        "sourceId": "node-gw-risk",
+        "targetId": "node-reject",
+        "condition": null,
+        "probability": 100,
+        "points": [],
+        "exitX": null,
+        "exitY": null,
+        "entryX": null,
+        "entryY": null,
+        "labelX": null,
+        "labelY": null
+      },
+      {
+        "id": "edge-6",
+        "name": "",
+        "sourceId": "node-step-4",
+        "targetId": "node-gw-comm",
+        "condition": null,
+        "probability": 100,
+        "points": [],
+        "exitX": null,
+        "exitY": null,
+        "entryX": null,
+        "entryY": null,
+        "labelX": null,
+        "labelY": null
+      },
+      {
+        "id": "edge-7",
+        "name": "Одобрено",
+        "sourceId": "node-gw-comm",
+        "targetId": "node-step-5",
+        "condition": "committee_decision == \"APPROVED\"",
+        "probability": 100,
+        "points": [],
+        "exitX": null,
+        "exitY": null,
+        "entryX": null,
+        "entryY": null,
+        "labelX": null,
+        "labelY": null
+      },
+      {
+        "id": "edge-comm-no",
+        "name": "Отказ",
+        "sourceId": "node-gw-comm",
+        "targetId": "node-reject",
+        "condition": null,
+        "probability": 100,
+        "points": [],
+        "exitX": null,
+        "exitY": null,
+        "entryX": null,
+        "entryY": null,
+        "labelX": null,
+        "labelY": null
+      },
+      {
+        "id": "edge-8",
+        "name": "Счет в АБС открыт",
+        "sourceId": "node-step-5",
+        "targetId": "node-step-6",
+        "condition": null,
+        "probability": 100,
+        "points": [],
+        "exitX": null,
+        "exitY": null,
+        "entryX": null,
+        "entryY": null,
+        "labelX": null,
+        "labelY": null
+      },
+      {
+        "id": "edge-9",
+        "name": "Выдано",
+        "sourceId": "node-step-6",
+        "targetId": "node-end",
+        "condition": null,
+        "probability": 100,
+        "points": [],
+        "exitX": null,
+        "exitY": null,
+        "entryX": null,
+        "entryY": null,
+        "labelX": null,
+        "labelY": null
+      }
+    ],
+    "lanes": [
+      {
+        "id": "lane-front",
+        "name": "Фронт-офис (Кредитный эксперт)",
+        "type": "lane",
+        "category": "manual",
+        "code": null,
+        "laneId": null,
+        "laneName": null,
+        "role": "Кредитный эксперт филиала",
+        "system": null,
+        "slaMinutes": 30,
+        "costPerExecution": 5000,
+        "automationPotential": 50,
+        "description": null,
+        "inputArtifacts": [],
+        "outputArtifacts": [],
+        "formFields": [],
+        "geometry": {
+          "x": 40,
+          "y": 40,
+          "width": 1680,
+          "height": 170
+        },
+        "style": "swimlane;horizontal=0;"
+      },
+      {
+        "id": "lane-rpa",
+        "name": "PIX RPA & Автоматические сервисы",
+        "type": "lane",
+        "category": "manual",
+        "code": null,
+        "laneId": null,
+        "laneName": null,
+        "role": "Робот PIX RPA / Интеграция АБС",
+        "system": null,
+        "slaMinutes": 30,
+        "costPerExecution": 5000,
+        "automationPotential": 50,
+        "description": null,
+        "inputArtifacts": [],
+        "outputArtifacts": [],
+        "formFields": [],
+        "geometry": {
+          "x": 40,
+          "y": 210,
+          "width": 1680,
+          "height": 170
+        },
+        "style": "swimlane;horizontal=0;"
+      },
+      {
+        "id": "lane-risk",
+        "name": "Служба рисков и безопасности (СБ)",
+        "type": "lane",
+        "category": "manual",
+        "code": null,
+        "laneId": null,
+        "laneName": null,
+        "role": "Андеррайтер / Риск-офицер",
+        "system": null,
+        "slaMinutes": 30,
+        "costPerExecution": 5000,
+        "automationPotential": 50,
+        "description": null,
+        "inputArtifacts": [],
+        "outputArtifacts": [],
+        "formFields": [],
+        "geometry": {
+          "x": 40,
+          "y": 380,
+          "width": 1680,
+          "height": 200
+        },
+        "style": "swimlane;horizontal=0;"
+      },
+      {
+        "id": "lane-comm",
+        "name": "Кредитный комитет",
+        "type": "lane",
+        "category": "manual",
+        "code": null,
+        "laneId": null,
+        "laneName": null,
+        "role": "Члены кредитного комитета",
+        "system": null,
+        "slaMinutes": 30,
+        "costPerExecution": 5000,
+        "automationPotential": 50,
+        "description": null,
+        "inputArtifacts": [],
+        "outputArtifacts": [],
+        "formFields": [],
+        "geometry": {
+          "x": 40,
+          "y": 580,
+          "width": 1680,
+          "height": 170
+        },
+        "style": "swimlane;horizontal=0;"
+      },
+      {
+        "id": "lane-back",
+        "name": "Бэк-офис и учет (АБС)",
+        "type": "lane",
+        "category": "manual",
+        "code": null,
+        "laneId": null,
+        "laneName": null,
+        "role": "Бухгалтер-контролер / АБС",
+        "system": null,
+        "slaMinutes": 30,
+        "costPerExecution": 5000,
+        "automationPotential": 50,
+        "description": null,
+        "inputArtifacts": [],
+        "outputArtifacts": [],
+        "formFields": [],
+        "geometry": {
+          "x": 40,
+          "y": 750,
+          "width": 1680,
+          "height": 170
+        },
+        "style": "swimlane;horizontal=0;"
+      }
+    ],
+    "validation": [],
+    "registry": {
+      "id": "reg-b4cc3db6",
+      "name": "Реестр кредитных заявок ЮЛ (SQB Business)",
+      "code": "REG_CREDIT_CORP",
+      "description": "Единый реестр входящих заявок корпоративного кредитования АКБ «Узпромстройбанк»",
+      "fields": [
+        {
+          "id": "f1",
+          "name": "ИНН компании",
+          "code": "inn",
+          "type": "string",
+          "required": true,
+          "description": null,
+          "options": null,
+          "defaultValue": null
+        },
+        {
+          "id": "f2",
+          "name": "Наименование ЮЛ",
+          "code": "company_name",
+          "type": "string",
+          "required": true,
+          "description": null,
+          "options": null,
+          "defaultValue": null
+        },
+        {
+          "id": "f3",
+          "name": "Сумма кредита (UZS)",
+          "code": "amount_uzs",
+          "type": "number",
+          "required": true,
+          "description": null,
+          "options": null,
+          "defaultValue": null
+        },
+        {
+          "id": "f4",
+          "name": "Срок (мес.)",
+          "code": "term_months",
+          "type": "number",
+          "required": true,
+          "description": null,
+          "options": null,
+          "defaultValue": null
+        },
+        {
+          "id": "f5",
+          "name": "Ставка (%)",
+          "code": "interest_rate",
+          "type": "number",
+          "required": true,
+          "description": null,
+          "options": null,
+          "defaultValue": null
+        },
+        {
+          "id": "f6",
+          "name": "Скоринг KATM",
+          "code": "katm_score",
+          "type": "number",
+          "required": false,
+          "description": null,
+          "options": null,
+          "defaultValue": null
+        },
+        {
+          "id": "f7",
+          "name": "Решение рисков",
+          "code": "risk_decision",
+          "type": "select",
+          "required": true,
+          "description": null,
+          "options": [
+            "Одобрено",
+            "Отклонено",
+            "На доработку"
+          ],
+          "defaultValue": null
+        },
+        {
+          "id": "f8",
+          "name": "Ссудный счет АБС",
+          "code": "abs_account",
+          "type": "string",
+          "required": false,
+          "description": null,
+          "options": null,
+          "defaultValue": null
+        }
+      ],
+      "records": [
+        {
+          "id": "rec-001",
+          "caseId": "SQB-2026-0041",
+          "createdAt": "2026-08-23 09:15",
+          "status": "in_progress",
+          "currentStepId": "node-step-4",
+          "currentStepName": "Рассмотрение Кредитным комитетом",
+          "assignedTo": "Комитет ГО (Предс. Каримов А.)",
+          "elapsedMinutes": 320,
+          "data": {
+            "inn": "305128994",
+            "company_name": "OOO \"TOSHKENT TEXTILE GROUP\"",
+            "amount_uzs": 4500000000,
+            "term_months": 36,
+            "interest_rate": 21.5,
+            "katm_score": 740,
+            "risk_decision": "Одобрено",
+            "abs_account": "16103000800049281001"
+          }
+        },
+        {
+          "id": "rec-002",
+          "caseId": "SQB-2026-0042",
+          "createdAt": "2026-08-23 10:40",
+          "status": "completed",
+          "currentStepId": "node-end",
+          "currentStepName": "Кредит успешно выдан",
+          "assignedTo": "Бухгалтерия (Юсупова Д.)",
+          "elapsedMinutes": 720,
+          "data": {
+            "inn": "201948572",
+            "company_name": "СП \"SAMARQAND AGRO LOGISTICS\"",
+            "amount_uzs": 1800000000,
+            "term_months": 24,
+            "interest_rate": 22,
+            "katm_score": 810,
+            "risk_decision": "Одобрено",
+            "abs_account": "16103000900051294002"
+          }
+        },
+        {
+          "id": "rec-003",
+          "caseId": "SQB-2026-0043",
+          "createdAt": "2026-08-23 11:20",
+          "status": "delayed",
+          "currentStepId": "node-step-3",
+          "currentStepName": "Андеррайтинг и оценка рисков / залога",
+          "assignedTo": "Риск-менеджер (Султанов Ш.)",
+          "elapsedMinutes": 480,
+          "data": {
+            "inn": "308941205",
+            "company_name": "ЧП \"BUXORO MEBEL SERVIS\"",
+            "amount_uzs": 850000000,
+            "term_months": 18,
+            "interest_rate": 23.5,
+            "katm_score": 620,
+            "risk_decision": "На доработку",
+            "abs_account": "-"
+          }
+        },
+        {
+          "id": "rec-004",
+          "caseId": "SQB-2026-0044",
+          "createdAt": "2026-08-23 14:05",
+          "status": "in_progress",
+          "currentStepId": "node-step-2",
+          "currentStepName": "Авто-скоринг & Проверка ГНК (PIX RPA)",
+          "assignedTo": "Робот PIX RPA #02",
+          "elapsedMinutes": 4,
+          "data": {
+            "inn": "204859124",
+            "company_name": "OOO \"FERGANA PHARM DISTRIB\"",
+            "amount_uzs": 3200000000,
+            "term_months": 36,
+            "interest_rate": 21,
+            "katm_score": 790,
+            "risk_decision": "Одобрено",
+            "abs_account": "В процессе"
+          }
+        }
+      ]
+    },
+    "miningMetrics": {
+      "totalCases": 60,
+      "conformanceRate": 80.2,
+      "avgLeadTimeHours": 29.9,
+      "targetLeadTimeHours": 24.0,
+      "slaBreachRate": 19.8,
+      "reworkRate": 10.9,
+      "potentialRpaSavingsUzs": 128000000,
+      "deviations": [
+        {
+          "id": "dev-1",
+          "type": "redundant_step",
+          "title": "Ручной шаг с высоким потенциалом RPA: Первичная проверка и сбор документов",
+          "description": "Шаг «Первичная проверка и сбор документов» выполняется вручную при потенциале роботизации 65%. Его можно закрыть PIX RPA / API.",
+          "severity": "medium",
+          "affectedSteps": [
+            "Первичная проверка и сбор документов",
+            "Подписание Didox (ЭДО) и зачисление средств"
+          ],
+          "occurrenceCount": 40,
+          "totalDelayHours": 40.0,
+          "financialImpactUzs": 30000000,
+          "rpaOpportunity": "Роботизация «Первичная проверка и сбор документов» через PIX RPA без участия сотрудника."
+        },
+        {
+          "id": "dev-2",
+          "type": "sla_breach",
+          "title": "Узкое место: Рассмотрение Кредитным комитетом",
+          "description": "Норматив шага «Рассмотрение Кредитным комитетом» — 240 мин. По фактическим логам этап систематически превышает SLA.",
+          "severity": "high",
+          "affectedSteps": [
+            "Рассмотрение Кредитным комитетом",
+            "Андеррайтинг и оценка рисков / залога"
+          ],
+          "occurrenceCount": 20,
+          "totalDelayHours": 144.0,
+          "financialImpactUzs": 12000000,
+          "rpaOpportunity": "Цифровой реестр PIX с эскалацией и уведомлениями ответственным."
+        },
+        {
+          "id": "dev-3",
+          "type": "rework_loop",
+          "title": "Петли возвратов вокруг: Андеррайтинг и оценка рисков / залога",
+          "description": "Часть заявок возвращается на шаг «Андеррайтинг и оценка рисков / залога» из-за неполного пакета данных.",
+          "severity": "medium",
+          "affectedSteps": [
+            "Андеррайтинг и оценка рисков / залога"
+          ],
+          "occurrenceCount": 14,
+          "totalDelayHours": 42.0,
+          "financialImpactUzs": 3600000,
+          "rpaOpportunity": "Пред-валидатор в PIX Реестры: обязательные поля до передачи дальше."
+        }
+      ]
+    }
   }
 }
