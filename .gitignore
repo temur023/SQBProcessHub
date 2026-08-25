@@ -2,3 +2,6 @@ backend/venv/
 __pycache__/
 *.pyc
 .env
+# QA harness artifacts
+qa-*.json
+qa-render/

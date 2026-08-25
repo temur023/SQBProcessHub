@@ -9,6 +9,8 @@ export default defineConfig({
   plugins: [inspectAttr(), react()],
   server: {
     port: 3000,
+    // Разрешаем песочницы-превью (Arena/e2b) и локальные хосты
+    allowedHosts: ['.e2b.app', 'localhost', '127.0.0.1'],
     proxy: {
       '/api': {
         target: 'http://localhost:8000',

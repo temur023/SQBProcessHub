@@ -5,7 +5,21 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import type { BusinessProcess, ProcessEdge, ProcessNode } from '@/types/process'
+import type { BusinessProcess, ProcessNode } from '@/types/process'
+import {
+  rawBox,
+  parseStyleMap,
+  styleNum,
+  edgePath,
+  fitBoxText,
+  fitLaneLabel,
+  laneHeaderWidth,
+  layoutMapTexts,
+  edgeDashArray,
+  isRedStrokeColor,
+  markerIdFor,
+  type Box,
+} from '@/lib/visual-geometry'
 
 interface ProcessVisualizerProps {
   process: BusinessProcess
@@ -17,21 +31,7 @@ const GRID_MINOR = 10
 const GRID_MAJOR = 100
 const MIN_ZOOM = 0.08
 const MAX_ZOOM = 3.0
-const LANE_HEAD_DEFAULT = 44
 const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif'
-
-function laneHeaderWidth(lane: ProcessNode): number {
-  const m = parseStyleMap(lane.style || '')
-  const raw = m['startsize']
-  if (raw) {
-    const n = Number(raw)
-    if (Number.isFinite(n) && n > 0) return Math.max(18, Math.min(80, Math.round(n)))
-  }
-  // эвристика: узбекские swimlane обычно 26-80
-  const low = (lane.style || '').toLowerCase()
-  if (low.includes('swimlane')) return LANE_HEAD_DEFAULT
-  return LANE_HEAD_DEFAULT
-}
 
 const C = {
   canvas: '#1a1a1a',
@@ -54,295 +54,6 @@ const C = {
   start: '#f3f3f3',
   endOk: '#5ee08a',
   endNo: '#ff6b6b',
-}
-
-type Box = { x: number; y: number; w: number; h: number; cx: number; cy: number }
-type Pt = { x: number; y: number }
-
-function rawBox(n: ProcessNode): Box {
-  const w = Math.max(n.geometry.width || 8, 8)
-  const h = Math.max(n.geometry.height || 8, 8)
-  return {
-    x: n.geometry.x,
-    y: n.geometry.y,
-    w,
-    h,
-    cx: n.geometry.x + w / 2,
-    cy: n.geometry.y + h / 2,
-  }
-}
-
-function isEventNode(n: ProcessNode): boolean {
-  return n.type === 'startEvent' || n.type === 'endEvent'
-}
-
-function parseStyleMap(style: string): Record<string, string> {
-  const out: Record<string, string> = {}
-  for (const part of (style || '').split(';')) {
-    if (!part) continue
-    const eq = part.indexOf('=')
-    if (eq < 0) {
-      out[part.trim().toLowerCase()] = '1'
-      continue
-    }
-    out[part.slice(0, eq).trim().toLowerCase()] = part.slice(eq + 1).trim()
-  }
-  return out
-}
-
-function styleNum(map: Record<string, string>, key: string, fallback = 0): number {
-  const n = Number(map[key])
-  return Number.isFinite(n) ? n : fallback
-}
-
-/** Perimeter point from mxGraph exitX/exitY (0..1 of the box). */
-function constraintPoint(box: Box, fx?: number, fy?: number): Pt | null {
-  if (fx == null || fy == null || Number.isNaN(fx) || Number.isNaN(fy)) return null
-  return { x: box.x + fx * box.w, y: box.y + fy * box.h }
-}
-
-function isGatewayNode(n: ProcessNode): boolean {
-  return n.type === 'exclusiveGateway' || n.type === 'parallelGateway' || n.type === 'inclusiveGateway'
-}
-
-// Точный ромб-пересечение (gateway)
-function intersectRhombus(box: Box, toward: Pt): Pt {
-  const dx = toward.x - box.cx
-  const dy = toward.y - box.cy
-  if (dx === 0 && dy === 0) return { x: box.x + box.w, y: box.cy }
-  const hw = box.w / 2
-  const hh = box.h / 2
-  const t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh || 1)
-  return { x: box.cx + dx * t, y: box.cy + dy * t }
-}
-
-/** Intersection of the ray from the box centre toward `toward` with the shape border. */
-function intersectBorder(box: Box, toward: Pt, circular: boolean, isGateway = false): Pt {
-  if (isGateway) return intersectRhombus(box, toward)
-  const dx = toward.x - box.cx
-  const dy = toward.y - box.cy
-  if (dx === 0 && dy === 0) return { x: box.x + box.w, y: box.cy }
-  if (circular) {
-    const r = Math.max(4, Math.min(box.w, box.h) / 2)
-    const len = Math.hypot(dx, dy) || 1
-    return { x: box.cx + (dx / len) * r, y: box.cy + (dy / len) * r }
-  }
-  // Прямоугольник
-  const hw = box.w / 2
-  const hh = box.h / 2
-  const sx = dx === 0 ? Infinity : hw / Math.abs(dx)
-  const sy = dy === 0 ? Infinity : hh / Math.abs(dy)
-  const t = Math.min(sx, sy)
-  return { x: box.cx + dx * t, y: box.cy + dy * t }
-}
-
-function labelT(x?: number): number {
-  if (x == null || Number.isNaN(x)) return 0.5
-  // mxGraph uses -1..1 (0 = midpoint); the spec also allows 0..1 along the path.
-  if (x < 0 || x > 1) return Math.max(0, Math.min(1, (x + 1) / 2))
-  return x
-}
-
-function pointAlong(pts: Pt[], t: number, perp = 0): Pt {
-  if (pts.length === 0) return { x: 0, y: 0 }
-  if (pts.length === 1) return { ...pts[0] }
-  const segs: { a: Pt; b: Pt; len: number }[] = []
-  let total = 0
-  for (let i = 0; i < pts.length - 1; i++) {
-    const len = Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y)
-    segs.push({ a: pts[i], b: pts[i + 1], len })
-    total += len
-  }
-  if (total <= 0) return { ...pts[0] }
-  let walk = Math.max(0, Math.min(1, t)) * total
-  for (let i = 0; i < segs.length; i++) {
-    const s = segs[i]
-    if (walk > s.len && i < segs.length - 1) {
-      walk -= s.len
-      continue
-    }
-    const r = s.len === 0 ? 0 : walk / s.len
-    const x = s.a.x + (s.b.x - s.a.x) * r
-    const y = s.a.y + (s.b.y - s.a.y) * r
-    if (!perp) return { x, y }
-    const nx = -(s.b.y - s.a.y)
-    const ny = s.b.x - s.a.x
-    const nl = Math.hypot(nx, ny) || 1
-    return { x: x + (nx / nl) * perp, y: y + (ny / nl) * perp }
-  }
-  return { ...pts[pts.length - 1] }
-}
-
-function isOrthogonalEdge(edge: ProcessEdge): boolean {
-  const s = (edge.style || '').toLowerCase()
-  const es = (edge.edgeStyle || '').toLowerCase()
-  return s.includes('orthogonal') || es.includes('orthogonal')
-}
-
-function buildOrthogonalPts(start: Pt, end: Pt, wp: Pt[], edge: ProcessEdge, src?: ProcessNode, tgt?: ProcessNode): Pt[] {
-  if (wp.length > 0) return [start, ...wp, end]
-  const dx = end.x - start.x
-  const dy = end.y - start.y
-  const adx = Math.abs(dx)
-  const ady = Math.abs(dy)
-  if (adx < 8 || ady < 8) return [start, end]
-
-  // Для разных дорожек — делаем 3-сегментный маршрут через середину, чтобы не резать узлы
-  const differentLanes = src?.laneId && tgt?.laneId && src.laneId !== tgt.laneId
-  if (differentLanes) {
-    const midY = Math.round((start.y + end.y) / 2)
-    // Вертикально выйти, горизонтально пройти по межполосью, вертикально войти
-    const pts: Pt[] = [start, { x: start.x, y: midY }, { x: end.x, y: midY }, end]
-    return pts.filter((p, i, arr) => i === 0 || p.x !== arr[i-1].x || p.y !== arr[i-1].y)
-  }
-
-  let horizontalFirst: boolean
-  if (edge.exitX === 0 || edge.exitX === 1) horizontalFirst = true
-  else if (edge.exitY === 0 || edge.exitY === 1) horizontalFirst = false
-  else if (edge.entryX === 0 || edge.entryX === 1) horizontalFirst = true
-  else if (edge.entryY === 0 || edge.entryY === 1) horizontalFirst = false
-  else horizontalFirst = adx > ady * 0.7
-
-  const jetty = 12
-  let sx = start.x
-  let sy = start.y
-  let ex = end.x
-  let ey = end.y
-
-  if (edge.exitX != null && edge.exitY != null) {
-    if (edge.exitX === 1) sx += jetty
-    else if (edge.exitX === 0) sx -= jetty
-    else if (edge.exitY === 0) sy -= jetty
-    else if (edge.exitY === 1) sy += jetty
-  }
-  if (edge.entryX != null && edge.entryY != null) {
-    if (edge.entryX === 1) ex += jetty
-    else if (edge.entryX === 0) ex -= jetty
-    else if (edge.entryY === 0) ey -= jetty
-    else if (edge.entryY === 1) ey += jetty
-  }
-
-  const hasJetty = edge.exitX != null || edge.entryX != null
-  if (hasJetty) {
-    const mid = horizontalFirst ? { x: ex, y: sy } : { x: sx, y: ey }
-    const pts: Pt[] = [start]
-    if (Math.hypot(sx - start.x, sy - start.y) > 2) pts.push({ x: sx, y: sy })
-    pts.push(mid)
-    if (Math.hypot(ex - mid.x, ey - mid.y) > 2) pts.push({ x: ex, y: ey })
-    pts.push(end)
-    return pts.filter((p, i, arr) => i === 0 || p.x !== arr[i-1].x || p.y !== arr[i-1].y)
-  }
-
-  const mid = horizontalFirst ? { x: end.x, y: start.y } : { x: start.x, y: end.y }
-  return [start, mid, end]
-}
-
-function edgePath(
-  src: ProcessNode,
-  tgt: ProcessNode,
-  srcBox: Box,
-  tgtBox: Box,
-  edge: ProcessEdge,
-): { d: string; lx: number; ly: number; pts: Pt[] } {
-  const wp = edge.points || []
-  const startToward = wp[0] || { x: tgtBox.cx, y: tgtBox.cy }
-  const endToward = wp.length ? wp[wp.length - 1] : { x: srcBox.cx, y: srcBox.cy }
-  const isSrcLane = src.type === 'lane'
-  const isTgtLane = tgt.type === 'lane'
-  const start = isSrcLane
-    ? {
-        x: Math.max(srcBox.x, Math.min(tgtBox.cx, srcBox.x + srcBox.w)),
-        y: tgtBox.cy < srcBox.cy ? srcBox.y : srcBox.y + srcBox.h,
-      }
-    : constraintPoint(srcBox, edge.exitX, edge.exitY) ||
-      intersectBorder(srcBox, startToward, isEventNode(src), isGatewayNode(src))
-  const end = isTgtLane
-    ? {
-        x: Math.max(tgtBox.x, Math.min(srcBox.cx, tgtBox.x + tgtBox.w)),
-        y: srcBox.cy < tgtBox.cy ? tgtBox.y : tgtBox.y + tgtBox.h,
-      }
-    : constraintPoint(tgtBox, edge.entryX, edge.entryY) ||
-      intersectBorder(tgtBox, endToward, isEventNode(tgt), isGatewayNode(tgt))
-
-  let pts: Pt[]
-  if (wp.length > 0) {
-    pts = [start, ...wp, end]
-  } else if (isOrthogonalEdge(edge)) {
-    pts = buildOrthogonalPts(start, end, wp, edge, src, tgt)
-  } else {
-    const dx = end.x - start.x
-    const dy = end.y - start.y
-    if (Math.abs(dx) < 8 || Math.abs(dy) < 8) pts = [start, end]
-    else pts = buildOrthogonalPts(start, end, wp, edge, src, tgt)
-  }
-
-  // Скругление как в draw.io: вместо резких углов используем небольшие дуги через path
-  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
-  // Метка ребра: если labelY задан — используем его, иначе -8 только для длинных ребер
-  const rawLabelY = edge.labelY
-  const perp = rawLabelY != null ? rawLabelY : (pts.length > 2 ? -8 : -10)
-  const label = pointAlong(pts, labelT(edge.labelX), perp)
-  return { d, lx: label.x, ly: label.y, pts }
-}
-
-function wrapText(text: string, maxChars: number): string[] {
-  if (!text) return []
-  const words = text.split(/\s+/)
-  const lines: string[] = []
-  let cur = ''
-  for (const w of words) {
-    if ((cur + ' ' + w).trim().length <= maxChars) {
-      cur = (cur + ' ' + w).trim()
-    } else {
-      if (cur) lines.push(cur)
-      cur = w.length > maxChars ? w.slice(0, maxChars - 1) + '\u2026' : w
-    }
-  }
-  if (cur) lines.push(cur)
-  return lines
-}
-
-function fitBoxText(text: string, width: number, height: number, maxLines = 3): { lines: string[]; fontSize: number } {
-  const innerW = Math.max(20, width)
-  const innerH = Math.max(14, height)
-  for (let fs = 12; fs >= 8; fs--) {
-    const maxChars = Math.max(6, Math.floor(innerW / (fs * 0.56)))
-    const lines = wrapText(text, maxChars).slice(0, maxLines)
-    if (lines.length * (fs + 3) <= innerH) return { lines, fontSize: fs }
-  }
-  const fs = 8
-  const maxChars = Math.max(6, Math.floor(innerW / (fs * 0.56)))
-  return { lines: wrapText(text, maxChars).slice(0, maxLines), fontSize: fs }
-}
-
-function fitCaption(text: string, maxWidth: number, maxLines = 2): { lines: string[]; fontSize: number } {
-  for (let fs = 10; fs >= 8; fs--) {
-    const maxChars = Math.max(6, Math.floor(maxWidth / (fs * 0.56)))
-    const lines = wrapText(text, maxChars).slice(0, maxLines)
-    if (lines.every((l) => l.length * fs * 0.56 <= maxWidth)) return { lines, fontSize: fs }
-  }
-  const fs = 8
-  const maxChars = Math.max(6, Math.floor(maxWidth / (fs * 0.56)))
-  return { lines: wrapText(text, maxChars).slice(0, maxLines), fontSize: fs }
-}
-
-function fitLaneLabel(name: string, laneHeight: number): { lines: string[]; fontSize: number } {
-  const full = name.replace(/\s+/g, ' ').trim()
-  const avail = Math.max(48, laneHeight - 20)
-  for (let fs = 13; fs >= 7; fs--) {
-    if (full.length * fs * 0.56 <= avail) return { lines: [full], fontSize: fs }
-  }
-  const fs = 7
-  const maxChars = Math.max(8, Math.floor(avail / (fs * 0.56)))
-  const lines = wrapText(full, maxChars).slice(0, 2)
-  return { lines, fontSize: fs }
-}
-
-function slaLabel(mins?: number): string {
-  if (mins == null) return ''
-  if (mins < 1) return `${mins} min`
-  if (mins % 60 === 0 && mins >= 60) return `${mins / 60} ч`
-  return `${mins} min`
 }
 
 export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
@@ -407,6 +118,22 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
     for (const n of process.nodes) map.set(n.id, rawBox(n))
     return map
   }, [process.nodes])
+
+  /** Полный расчёт позиций всех подписей (шлюзы, SLA, события, рёбра) — без коллизий */
+  const textLayout = useMemo(
+    () =>
+      layoutMapTexts(process, {
+        labelBg: C.labelBg,
+        labelBorder: '#3a3a3a',
+        labelText: '#e8e8e8',
+        eventOk: C.endOk,
+        eventBad: C.endNo,
+        sla: '#9a9a9a',
+        gwCaption: '#e8e8e8',
+      }),
+    [process],
+  )
+
 
   const visibleIds = useMemo(() => {
     let list = process.nodes
@@ -595,8 +322,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               // динамический маркер под цвет ребра (зелёные/красные/серые пунктиры)
               const col = (edge.strokeColor || '').trim()
               if (!col) return null
-              // нормализуем #fff -> #ffffff уже есть, просто используем как есть
-              const safeId = `arr-${edge.id}`
+              const safeId = markerIdFor(edge)
               return (
                 <marker key={safeId} id={safeId} markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
                   <polygon points="0 0,8 3,0 6" fill={col} />
@@ -652,22 +378,24 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               }
               const sb = nodeBoxes.get(src.id) || rawBox(src)
               const tb = nodeBoxes.get(tgt.id) || rawBox(tgt)
-              const { d } = edgePath(src, tgt, sb, tb, edge)
+              // Обход препятствий: ребро не должно проходить сквозь другие узлы
+              const obstacles: Box[] = []
+              for (const n of process.nodes) {
+                if (n.id === src.id || n.id === tgt.id) continue
+                obstacles.push(nodeBoxes.get(n.id) || rawBox(n))
+              }
+              const { d } = edgePath(src, tgt, sb, tb, edge, obstacles)
               const hi = Boolean(selectedNodeId && (edge.sourceId === selectedNodeId || edge.targetId === selectedNodeId))
-              const isDashed = edge.dashed || Boolean(edge.dashPattern)
-              let dashArray: string | undefined
-              if (edge.dashPattern) {
-                const cleaned = edge.dashPattern.replace(/;/g, ' ').trim()
-                dashArray = cleaned || '9 9'
-              } else if (isDashed) dashArray = '9 9'
+              const isDashed = Boolean(edge.dashed) || Boolean(edge.dashPattern) || isRedStrokeColor(edge.strokeColor)
+              const dashArray = edgeDashArray(edge)
               const baseColor = edge.strokeColor ? edge.strokeColor : (isDashed ? '#e8e8e8' : C.edge)
               const strokeColor = hi ? C.edgeHi : baseColor
               const sw = isDashed ? 1.7 : (edge.strokeWidth ? Math.max(1, Math.min(3.5, edge.strokeWidth)) : (hi ? 2 : 1.35))
               let markerId: string
               if (hi) markerId = 'url(#arr-hi)'
-              else if (isDashed && edge.strokeColor === '#ff6b6b') markerId = 'url(#arr-dashed-red)'
-              else if (isDashed) markerId = edge.strokeColor ? `url(#arr-${edge.id})` : 'url(#arr-dashed)'
-              else if (edge.strokeColor) markerId = `url(#arr-${edge.id})`
+              else if (isDashed && isRedStrokeColor(edge.strokeColor)) markerId = 'url(#arr-dashed-red)'
+              else if (isDashed) markerId = edge.strokeColor ? `url(#${markerIdFor(edge)})` : 'url(#arr-dashed)'
+              else if (edge.strokeColor) markerId = `url(#${markerIdFor(edge)})`
               else markerId = 'url(#arr)'
               return (
                 <path key={edge.id} d={d} fill="none"
@@ -676,7 +404,6 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                   strokeLinejoin="round"
                   strokeLinecap="round"
                   strokeDasharray={dashArray}
-                  opacity={isDashed ? 1 : 1}
                   markerEnd={markerId} />
               )
             })}
@@ -697,23 +424,11 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
 
               if (node.type === 'startEvent') {
                 const r = Math.max(8, Math.min(w, h) / 2 - 1)
-                const cap = fitCaption(node.name, 90, 2)
-                const vpos = (st.verticallabelposition || 'bottom').toLowerCase()
                 return (
                   <g key={node.id} opacity={faded ? 0.18 : 1}
                     onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
                     {sel && <circle cx={cx} cy={cy} r={r + 6} fill="none" stroke={C.edgeHi} strokeWidth="1.2" strokeDasharray="4 3" />}
                     <circle cx={cx} cy={cy} r={r} fill={C.canvas} stroke={sel ? C.edgeHi : C.start} strokeWidth={1.8} />
-                    {cap.lines.map((line, i) => (
-                      <text key={i}
-                        x={cx}
-                        y={vpos === 'top' ? y - 6 - (cap.lines.length - 1 - i) * (cap.fontSize + 2) : y + h + 11 + i * (cap.fontSize + 2)}
-                        textAnchor="middle"
-                        fontSize={cap.fontSize} fill="#d8d8d8"
-                        style={{ userSelect: 'none', fontFamily: FONT }}>
-                        {line}
-                      </text>
-                    ))}
                   </g>
                 )
               }
@@ -721,31 +436,18 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               if (node.type === 'endEvent') {
                 const r = Math.max(8, Math.min(w, h) / 2 - 1)
                 const sc = isRej ? C.endNo : C.endOk
-                const cap = fitCaption(node.name, 90, 2)
-                const vpos = (st.verticallabelposition || 'bottom').toLowerCase()
                 return (
                   <g key={node.id} opacity={faded ? 0.18 : 1}
                     onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
                     {sel && <circle cx={cx} cy={cy} r={r + 6} fill="none" stroke={C.edgeHi} strokeWidth="1.2" strokeDasharray="4 3" />}
                     <circle cx={cx} cy={cy} r={r} fill={C.canvas} stroke={sel ? C.edgeHi : sc} strokeWidth={3.4} />
                     <circle cx={cx} cy={cy} r={Math.max(4, r - 6)} fill="none" stroke={sel ? C.edgeHi : sc} strokeWidth="1.4" />
-                    {cap.lines.map((line, i) => (
-                      <text key={i}
-                        x={cx}
-                        y={vpos === 'top' ? y - 6 - (cap.lines.length - 1 - i) * (cap.fontSize + 2) : y + h + 11 + i * (cap.fontSize + 2)}
-                        textAnchor="middle"
-                        fontSize={cap.fontSize} fill={isRej ? C.endNo : C.endOk}
-                        style={{ userSelect: 'none', fontFamily: FONT }}>
-                        {line}
-                      </text>
-                    ))}
                   </g>
                 )
               }
 
               if (node.type === 'exclusiveGateway' || node.type === 'parallelGateway' || node.type === 'inclusiveGateway') {
                 const s = Math.max(12, Math.min(w, h) / 2)
-                const cap = node.name && node.name !== 'Условие' ? fitCaption(node.name, 92, 2) : null
                 return (
                   <g key={node.id} opacity={faded ? 0.18 : 1}
                     onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
@@ -757,13 +459,6 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                       fill={C.gwStroke} style={{ userSelect: 'none', fontFamily: FONT }}>
                       {node.type === 'parallelGateway' ? '+' : '×'}
                     </text>
-                    {cap && cap.lines.map((line, i) => (
-                      <text key={i} x={cx} y={y - 6 - (cap.lines.length - 1 - i) * (cap.fontSize + 1)}
-                        textAnchor="middle" fontSize={cap.fontSize} fill="#e8e8e8"
-                        style={{ userSelect: 'none', fontFamily: FONT }}>
-                        {line}
-                      </text>
-                    ))}
                   </g>
                 )
               }
@@ -777,7 +472,6 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               const innerW = Math.max(12, w - padL - padR)
               const innerH = Math.max(12, h - padT - padB)
               const fitted = fitBoxText(node.name, innerW, innerH, 4)
-              const sla = slaLabel(node.slaMinutes)
               const textAnchor = align === 'left' ? 'start' : align === 'right' ? 'end' : 'middle'
               const tx = align === 'left' ? x + padL : align === 'right' ? x + w - padR : cx
               const lineH = fitted.fontSize + 3
@@ -804,74 +498,35 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                       </text>
                     ))}
                   </g>
-                  {sla && (
-                    <text x={cx} y={y + h + 12} textAnchor="middle"
-                      fontSize="9" fill="#9a9a9a" style={{ userSelect: 'none', fontFamily: FONT }}>
-                      {sla}
-                    </text>
-                  )}
                 </g>
               )
             })}
 
-            {/* Лейблы рёбер — поверх узлов, с анти-коллизией */}
-            {(() => {
-              type Lbl = { id: string; lx: number; ly: number; lw: number; cap: { lines: string[]; fontSize: number } }
-              const labels: Lbl[] = []
-              for (const edge of process.edges) {
-                let src: ProcessNode | undefined = process.nodes.find(n => n.id === edge.sourceId)
-                let tgt: ProcessNode | undefined = process.nodes.find(n => n.id === edge.targetId)
-                if (!src) src = process.lanes.find(l => l.id === edge.sourceId) as ProcessNode | undefined
-                if (!tgt) tgt = process.lanes.find(l => l.id === edge.targetId) as ProcessNode | undefined
-                if (!src || !tgt) continue
-                if (activeFilter !== 'all' || searchQuery.trim()) {
-                  if (!visibleIds.has(edge.sourceId!) || !visibleIds.has(edge.targetId!)) {
-                    if (!process.lanes.find(l => l.id === edge.targetId) || !visibleIds.has(edge.sourceId!)) continue
-                  }
-                }
-                const raw = (edge.name || '').trim()
-                if (!raw) continue
-                const sb = nodeBoxes.get(src.id) || rawBox(src)
-                const tb = nodeBoxes.get(tgt.id) || rawBox(tgt)
-                const { lx, ly } = edgePath(src, tgt, sb, tb, edge)
-                const cap = fitCaption(raw, 90, 1)
-                if (!cap) continue
-                const lw = Math.min(96, Math.max(28, cap.lines[0].length * cap.fontSize * 0.58 + 10))
-                labels.push({ id: edge.id, lx, ly, lw, cap })
-              }
-              // Анти-коллизия: раздвигаем близкие лейблы и от узлов
-              const boxes: Box[] = []
-              for (const n of process.nodes) boxes.push(rawBox(n))
-              for (let i = 0; i < labels.length; i++) {
-                for (let j = i + 1; j < labels.length; j++) {
-                  const a = labels[i], b = labels[j]
-                  if (Math.abs(a.lx - b.lx) < 70 && Math.abs(a.ly - b.ly) < 16) {
-                    b.ly += 14
-                    b.lx += 6
-                  }
-                }
-                // Отталкиваем от узлов (если центр лейбла внутри узла — сдвигаем вверх)
-                const lb = labels[i]
-                for (const bx of boxes) {
-                  if (lb.lx > bx.x - lb.lw/2 && lb.lx < bx.x + bx.w + lb.lw/2 && lb.ly > bx.y - 10 && lb.ly < bx.y + bx.h + 14) {
-                    // сдвигаем выше узла
-                    if (lb.ly < bx.cy) lb.ly = bx.y - 10
-                    else lb.ly = bx.y + bx.h + 18
-                  }
-                }
-              }
-              return labels.map(lb => (
-                <g key={`lbl-${lb.id}`}>
-                  <rect x={lb.lx - lb.lw / 2} y={lb.ly - 7} width={lb.lw} height={14} rx={3}
-                    fill={C.labelBg} stroke="#3a3a3a" strokeWidth="0.7" />
-                  <text x={lb.lx} y={lb.ly + 3} textAnchor="middle"
-                    fontSize={lb.cap.fontSize} fill="#e8e8e8"
-                    style={{ userSelect: 'none', fontFamily: FONT }}>
-                    {lb.cap.lines[0]}
-                  </text>
+            {/* Подписи (шлюзы, SLA, события, рёбра) — расставлены без коллизий */}
+            {textLayout.map(p => {
+              const fill = p.fill === 'auto' ? '#e8e8e8' : p.fill
+              return (
+                <g key={p.id} pointerEvents="none">
+                  {p.pill && (
+                    <rect x={p.pill.x} y={p.pill.y} width={p.pill.w} height={p.pill.h} rx={3}
+                      fill={C.labelBg} stroke="#3a3a3a" strokeWidth="0.7" />
+                  )}
+                  {p.lines.map((line, i) => (
+                    <text key={i}
+                      x={line.x}
+                      y={line.y}
+                      textAnchor={p.anchor || 'middle'}
+                      dominantBaseline={p.pill ? 'middle' : undefined}
+                      fontSize={p.fontSize}
+                      fontWeight={p.bold ? '600' : undefined}
+                      fill={fill}
+                      style={{ userSelect: 'none', fontFamily: FONT }}>
+                      {line.text}
+                    </text>
+                  ))}
                 </g>
-              ))
-            })()}
+              )
+            })}
 
             {process.lanes.map((lane) => {
               const label = laneLabels.get(lane.id) || { lines: [lane.name], fontSize: 11 }

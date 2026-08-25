@@ -2,6 +2,7 @@ import base64
 import zlib
 import urllib.parse
 import xml.etree.ElementTree as ET
+import math
 import re
 import uuid
 from datetime import datetime
@@ -180,6 +181,13 @@ ARTIFACT_TAGS = {
     'asoslantirilgan xat', 'moliyaviy hisobotlar', 'skaner', 'kredit/garov/kafillik shartnomasi',
     'kredit/kafillik/sug\'urta shartnomasi', 'hukumat qarori', 'tegishli qaror', "ma'lumotnoma",
     'mijoz murojaati, ta`sischilar qarori', 'ta`sischilar qarori'
+}
+
+# Красные/алые цвета обводки помечают ветку отказа — она обязана рисоваться пунктиром
+RED_STROKES = {
+    '#ff6b6b', '#ef4444', '#dc2626', '#b91c1c', '#e11d48', '#be123c',
+    '#f87171', '#fca5a5', '#dc143c', '#991b1b', '#7f1d1d', '#c00000',
+    'red', 'rose', 'crimson', 'darkred',
 }
 
 CONDITION_TAGS = {
@@ -689,6 +697,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
     outgoing: Set[str] = {e.get('source', '') for e in raw_edges if e.get('source')}
 
     label_map: Dict[str, str] = {}
+    label_geo_map: Dict[str, Tuple[float, float]] = {}  # base_id -> абсолютный центр ячейки-подписи
     edge_label_geo: Dict[str, Tuple[Optional[float], Optional[float]]] = {}
     ignore_cell_ids: Set[str] = set()
     origin_cache: Dict[str, Tuple[float, float]] = {}
@@ -754,6 +763,17 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             base_id = re.sub(r'_label$', '', c_id)
             if base_id and cleaned:
                 label_map[base_id] = cleaned
+                # запоминаем позицию подписи: base_id не всегда совпадает с id узла
+                if geo is not None:
+                    try:
+                        gx = float(geo.get('x', '0') or 0)
+                        gy = float(geo.get('y', '0') or 0)
+                        gw = float(geo.get('width', '40') or 40)
+                        gh = float(geo.get('height', '20') or 20)
+                        ox, oy = _parent_origin(parent_id, cell_map, origin_cache)
+                        label_geo_map[base_id] = (gx + ox + gw / 2, gy + oy + gh / 2)
+                    except ValueError:
+                        pass
             if cleaned and cleaned.lower() in CONDITION_TAGS:
                 g2 = c.find('mxGeometry')
                 if g2 is not None:
@@ -851,6 +871,12 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         style = cell.get('style') or ''
         raw_val = cell.get('value')
         raw_cleaned = clean_label(raw_val) or label_map.get(node_id, '')
+
+        # Подпись из отдельной ячейки `_label` имеет приоритет, если в value
+        # только символ шлюза (×, +, ?) или value пусто (напр. gw_risk_label → «Риск допустим?»)
+        label_text = label_map.get(node_id)
+        if label_text and (not raw_cleaned or re.fullmatch(r'[×+?✕✗✓*]', raw_cleaned.strip())):
+            raw_cleaned = label_text
 
         parent_id = cell.get('parent')
 
@@ -965,6 +991,34 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
                 n.role = n.role or p_lane.name
         n.system = detect_system(n.name, n.laneName or '')
 
+    # Подписи вида node_reject_label / node_end_label: baseId не всегда совпадает с id узла
+    # (например baseId 'node_reject' при узле 'node_end_reject'). Привязываем по близости.
+    generic_names = {'Старт', 'Завершение', 'Условие'}
+
+    def fallback_name(name: str) -> bool:
+        return name in generic_names or name.startswith('Операция ')
+
+    for key, text in label_map.items():
+        if key in edge_id_set:
+            continue  # подпись ребра
+        if any(n.id == key for n in flow_nodes):
+            continue  # уже привязана по id
+        pos = label_geo_map.get(key)
+        if not pos or not text:
+            continue
+        best = None
+        best_dist = 200.0
+        for n in flow_nodes:
+            if n.type == 'lane':
+                continue
+            g = n.geometry
+            d = math.hypot(pos[0] - (g.x + g.width / 2), pos[1] - (g.y + g.height / 2))
+            if d < best_dist:
+                best_dist = d
+                best = n
+        if best is not None and fallback_name(best.name):
+            best.name = text
+
     valid_node_ids = {n.id for n in flow_nodes}
     valid_lane_ids = {l.id for l in lanes}
 
@@ -1013,6 +1067,13 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         edge_style = smap.get('edgestyle')
         stroke_col = smap.get('strokecolor')
         sw = _style_float(smap, 'strokewidth')
+
+        # Красная обводка (ветка отказа) всегда рисуется пунктиром,
+        # даже если в draw.io не проставлен флаг dashed=1
+        if not is_dashed and stroke_col and stroke_col.strip().lower() in RED_STROKES:
+            is_dashed = True
+            if not dash_pat:
+                dash_pat = '8 8'
 
         edges.append(ProcessEdge(
             id=edge_id,

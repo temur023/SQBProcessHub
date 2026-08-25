@@ -10,12 +10,13 @@ import type {
   PixRegistrySchema,
 } from '@/types/process'
 import { analyzeProcessConformance } from './conformance'
+import { isRedStrokeColor } from './visual-geometry'
 
 /** Decodes HTML entities and tags in draw.io labels without executing markup */
 function cleanLabel(raw: string | null): string {
   if (!raw) return ''
   const stripped = raw
-    .replace(/<br\s*[\/]?>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/gi, ' ')
   const textarea = document.createElement('textarea')
@@ -724,6 +725,8 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
 
   // 2. Classify and filter cells
   const labelMap = new Map<string, string>()
+  /** Позиции (абсолютные центры) подписей-ячеек: id-подписи → координаты */
+  const labelGeoMap = new Map<string, { x: number; y: number }>()
   const edgeLabelGeo = new Map<string, { x?: number; y?: number }>()
   const ignoreCellIds = new Set<string>()
   const originCache = new Map<string, { x: number; y: number }>()
@@ -778,6 +781,14 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       ignoreCellIds.add(id)
       const baseId = id.replace(/_label$/, '')
       if (baseId && cleaned) labelMap.set(baseId, cleaned)
+      // Запоминаем позицию подписи для привязки к ближайшему узлу (baseId может не совпадать с id узла)
+      if (baseId && cleaned && geo) {
+        const o = parentOrigin(parentId, cellMap, originCache)
+        labelGeoMap.set(baseId, {
+          x: Number(geo.getAttribute('x') ?? 0) + o.x + Number(geo.getAttribute('width') ?? 40) / 2,
+          y: Number(geo.getAttribute('y') ?? 0) + o.y + Number(geo.getAttribute('height') ?? 20) / 2,
+        })
+      }
       // Сохраняем условия Yo'q/Ha/To'liq как отдельные метки для привязки к ближайшему ребру
       if (CONDITION_TAGS.has(cleaned.toLowerCase()) && cleaned) {
         const geo2 = c.querySelector('mxGeometry')
@@ -880,8 +891,11 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     const rawValue = cell.getAttribute('value')
     let rawCleaned = cleanLabel(rawValue)
 
-    if (!rawCleaned && labelMap.has(id)) {
-      rawCleaned = labelMap.get(id)!
+    // Подпись из отдельной ячейки `_label` имеет приоритет, если в value
+    // только символ шлюза (×, +, ?) или value пусто (напр. gw_risk_label → «Риск допустим?»)
+    const labelText = labelMap.get(id)
+    if (labelText && (!rawCleaned || /^[×+?✕✗✓*]$/u.test(rawCleaned.trim()))) {
+      rawCleaned = labelText
     }
 
     const parentId = cell.getAttribute('parent') ?? undefined
@@ -1013,6 +1027,32 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     n.system = detectSystem(n.name, n.laneName || '')
   }
 
+  // Подписи вида node_reject_label / node_end_label: baseId не всегда совпадает с id узла
+  // (например baseId 'node_reject' при узле 'node_end_reject'). Привязываем по близости.
+  const genericNames = new Set(['Старт', 'Завершение', 'Условие'])
+  const fallbackName = (name: string) => genericNames.has(name) || name.startsWith('Операция ')
+  for (const [key, text] of labelMap) {
+    if (edgeIdSet.has(key)) continue // подпись ребра
+    const hasExactNode = flowNodes.some((n) => n.id === key)
+    if (hasExactNode) continue // уже привязана по id
+    const pos = labelGeoMap.get(key)
+    if (!pos || !text) continue
+    let best: ProcessNode | null = null
+    let bestDist = 200
+    for (const n of flowNodes) {
+      if (n.type === 'lane') continue
+      const g = n.geometry
+      const d = Math.hypot(pos.x - (g.x + g.width / 2), pos.y - (g.y + g.height / 2))
+      if (d < bestDist) {
+        bestDist = d
+        best = n
+      }
+    }
+    if (best && fallbackName(best.name)) {
+      best.name = text
+    }
+  }
+
   const validNodeIdSet = new Set(flowNodes.map((n) => n.id))
   const validLaneIdSet = new Set(lanes.map((l) => l.id))
 
@@ -1052,10 +1092,15 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       const labelY = stored?.y ?? (rawLY != null && rawLY !== '' ? Number(rawLY) : undefined)
 
       const lowerStyle = rawStyle.toLowerCase()
-      const dashed = lowerStyle.includes('dashed=1') || lowerStyle.includes('dashed = 1')
+      const strokeColor = smap['strokecolor']
+      const dashed =
+        lowerStyle.includes('dashed=1') ||
+        lowerStyle.includes('dashed = 1') ||
+        lowerStyle.includes('dashed=true') ||
+        // Красные ветки отказа рисуем пунктиром автоматически
+        isRedStrokeColor(strokeColor)
       const dashPattern = smap['dashpattern']
       const edgeStyle = smap['edgestyle']
-      const strokeColor = smap['strokecolor']
       const sw = styleFloat(smap, 'strokewidth')
 
       return {
@@ -1095,10 +1140,10 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
         // центр ребра (с учётом waypoints)
         let cx: number, cy: number
         if (e.points.length > 0) {
-          let sx = s.geometry.x + s.geometry.width / 2
-          let sy = s.geometry.y + s.geometry.height / 2
-          let ex = t.geometry.x + t.geometry.width / 2
-          let ey = t.geometry.y + t.geometry.height / 2
+          const sx = s.geometry.x + s.geometry.width / 2
+          const sy = s.geometry.y + s.geometry.height / 2
+          const ex = t.geometry.x + t.geometry.width / 2
+          const ey = t.geometry.y + t.geometry.height / 2
           const pts = [{ x: sx, y: sy }, ...e.points, { x: ex, y: ey }]
           let tx = 0, ty = 0
           for (const p of pts) { tx += p.x; ty += p.y }
