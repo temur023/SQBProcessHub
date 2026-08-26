@@ -145,7 +145,7 @@ export async function triggerExportDownload(
 
   if (type === 'bpmn') {
     endpoint = `${API_BASE}/import/${encodeURIComponent(process.id)}/export/bpmn`
-    defaultFilename = `${process.passport.code}_Processet.bpmn20.xml`
+    defaultFilename = `${process.passport.code}_PIX_Map.bpmn`
   } else if (type === 'event-log') {
     endpoint = `${API_BASE}/import/${encodeURIComponent(process.id)}/export/event-log`
     defaultFilename = `${process.passport.code}_EventLogs.csv`

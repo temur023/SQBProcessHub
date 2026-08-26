@@ -43,7 +43,7 @@ export const ProcessetAnalyticsView: React.FC<ProcessetAnalyticsViewProps> = ({
     const xml = generateBpmn2Xml(process)
     downloadFile(
       xml,
-      `${process.passport.code}_Processet_Model.bpmn20.xml`,
+      `${process.passport.code}_PIX_Map.bpmn`,
       'application/xml',
     )
   }

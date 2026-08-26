@@ -305,9 +305,37 @@ def classify_vertex(style: str, label: str, has_incoming: bool, has_outgoing: bo
     s = style.lower()
     l = label.lower()
     i = node_id.lower()
+    smap = _style_map(style)
+    shape = smap.get('shape', '').lower()
 
     if 'swimlane' in s or 'pool;' in s or 'shape=pool' in s:
         return 'lane'
+
+    if 'mxgraph.bpmn.gateway' in s or shape.endswith('gateway2') or 'gwtype' in smap:
+        gw = (smap.get('gwtype') or smap.get('symbol') or '').lower()
+        if gw in ('parallel', 'and', 'complex') or 'outline=plus' in s or 'parallel' in s:
+            return 'parallelGateway'
+        if gw in ('inclusive', 'or') or 'inclusive' in s or 'outline=circle' in s:
+            return 'inclusiveGateway'
+        return 'exclusiveGateway'
+
+    if 'mxgraph.bpmn.event' in s or shape.endswith('.event'):
+        outline = (smap.get('outline') or '').lower()
+        if outline in ('end', 'terminate') or 'outline=end' in s or 'outline=double' in s:
+            return 'endEvent'
+        if not has_incoming and has_outgoing:
+            return 'startEvent'
+        if has_incoming and not has_outgoing:
+            return 'endEvent'
+        return 'startEvent'
+
+    if 'mxgraph.bpmn.task' in s:
+        marker = (smap.get('taskmarker') or smap.get('symbol') or '').lower()
+        if marker in ('service', 'script', 'send', 'receive', 'businessrule') or any(
+            k in l for k in ('rpa', 'робот', 'авто-', 'avtomat', 'sms')
+        ):
+            return 'serviceTask'
+        return 'userTask'
 
     is_gateway_shape = (
         'rhombus' in s
@@ -567,11 +595,18 @@ def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
             continue
         if source_id not in node_ids or target_id not in node_ids:
             continue
+        cond_text = ''
+        for child in el:
+            if _local_tag(child.tag).lower() == 'conditionexpression':
+                cond_text = (child.text or '').strip()
+                break
+        edge_name = el.get('name') or cond_text or ''
         edges.append(ProcessEdge(
             id=el.get('id') or f"edge_{uuid.uuid4().hex[:8]}",
-            name=el.get('name') or '',
+            name=edge_name,
             sourceId=source_id,
             targetId=target_id,
+            condition=cond_text or edge_name or None,
             points=[],
         ))
 
@@ -1019,6 +1054,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             name=edge_name,
             sourceId=s_id,
             targetId=t_id,
+            condition=edge_name or None,
             points=pts,
             exitX=_style_float(smap, 'exitx'),
             exitY=_style_float(smap, 'exity'),
@@ -1066,6 +1102,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
                     best = e
             if best:
                 best.name = text
+                best.condition = text
 
     title = filename.replace('.drawio', '').replace('.xml', '')
     total_hours = round(sum(n.slaMinutes or 0 for n in flow_nodes) / 60, 1) or 8.0

@@ -359,9 +359,48 @@ function classifyVertex(
   const s = style.toLowerCase()
   const l = label.toLowerCase()
   const i = id.toLowerCase()
+  const smap = parseStyleMap(style)
+  const shape = (smap.shape || '').toLowerCase()
 
   if (s.includes('swimlane') || s.includes('pool;') || s.includes('shape=pool'))
     return 'lane'
+
+  if (s.includes('mxgraph.bpmn.gateway') || shape.endsWith('gateway2') || smap.gwtype) {
+    const gw = (smap.gwtype || smap.symbol || '').toLowerCase()
+    if (gw === 'parallel' || gw === 'and' || gw === 'complex' || s.includes('outline=plus') || s.includes('parallel'))
+      return 'parallelGateway'
+    if (gw === 'inclusive' || gw === 'or' || s.includes('inclusive') || s.includes('outline=circle'))
+      return 'inclusiveGateway'
+    return 'exclusiveGateway'
+  }
+
+  if (s.includes('mxgraph.bpmn.event') || shape.endsWith('.event')) {
+    const outline = (smap.outline || '').toLowerCase()
+    if (outline === 'end' || outline === 'terminate' || s.includes('outline=end') || s.includes('outline=double'))
+      return 'endEvent'
+    if (!hasIncoming && hasOutgoing) return 'startEvent'
+    if (hasIncoming && !hasOutgoing) return 'endEvent'
+    return 'startEvent'
+  }
+
+  if (s.includes('mxgraph.bpmn.task')) {
+    const marker = (smap.taskmarker || smap.symbol || '').toLowerCase()
+    if (
+      marker === 'service' ||
+      marker === 'script' ||
+      marker === 'send' ||
+      marker === 'receive' ||
+      marker === 'businessrule' ||
+      l.includes('rpa') ||
+      l.includes('робот') ||
+      l.includes('авто-') ||
+      l.includes('avtomat') ||
+      l.includes('sms')
+    ) {
+      return 'serviceTask'
+    }
+    return 'userTask'
+  }
 
   const isGatewayShape =
     s.includes('rhombus') ||
@@ -610,11 +649,15 @@ function parseBpmnXml(xmlText: string, fileName: string): BusinessProcess {
     const sourceId = f.getAttribute('sourceRef') ?? undefined
     const targetId = f.getAttribute('targetRef') ?? undefined
     if (!sourceId || !targetId || !nodeIdSet.has(sourceId) || !nodeIdSet.has(targetId)) return
+    const condEl = elementsByLocalName(f, ['conditionExpression'])[0]
+    const condText = (condEl?.textContent || '').trim()
+    const edgeName = f.getAttribute('name') || condText || ''
     edges.push({
       id: f.getAttribute('id') ?? `edge_${crypto.randomUUID()}`,
-      name: f.getAttribute('name') ?? '',
+      name: edgeName,
       sourceId,
       targetId,
+      condition: condText || edgeName || undefined,
       points: [],
     })
   })
@@ -1063,6 +1106,7 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
         name: edgeName,
         sourceId: cell.getAttribute('source') ?? undefined,
         targetId: cell.getAttribute('target') ?? undefined,
+        condition: edgeName || undefined,
         points,
         exitX: styleFloat(smap, 'exitx'),
         exitY: styleFloat(smap, 'exity'),
@@ -1116,6 +1160,7 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       }
       if (best) {
         best.name = lbl.text
+        best.condition = lbl.text
       }
     }
   }

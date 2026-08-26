@@ -264,5 +264,84 @@ class TestSQBProcessHubApi(unittest.TestCase):
         self.assertNotIn('name="Проверка ИНН & паспорт"', bpmn_res.text)
         self.assertIn("<bpmn:incoming>f1</bpmn:incoming>", bpmn_res.text)
 
+    def test_mxgraph_bpmn_stencil_classification(self):
+        from app.services.drawio_parser import classify_vertex
+        self.assertEqual(
+            classify_vertex('shape=mxgraph.bpmn.event;outline=standard;symbol=general;', 'Boshlanish', False, True, 'ev1'),
+            'startEvent',
+        )
+        self.assertEqual(
+            classify_vertex('shape=mxgraph.bpmn.event;outline=end;symbol=terminate;', 'Tugashi', True, False, 'ev2'),
+            'endEvent',
+        )
+        self.assertEqual(
+            classify_vertex('shape=mxgraph.bpmn.task2;whiteSpace=wrap;taskMarker=user;', 'Mijoz ehtiyojini aniqlash', True, True, 't1'),
+            'userTask',
+        )
+        self.assertEqual(
+            classify_vertex('shape=mxgraph.bpmn.task2;taskMarker=service;', 'Avto-skoring', True, True, 't2'),
+            'serviceTask',
+        )
+        self.assertEqual(
+            classify_vertex('shape=mxgraph.bpmn.gateway2;gwType=exclusive;', 'Risk?', True, True, 'g1'),
+            'exclusiveGateway',
+        )
+        self.assertEqual(
+            classify_vertex('shape=mxgraph.bpmn.gateway2;gwType=parallel;', '+', True, True, 'g2'),
+            'parallelGateway',
+        )
+
+    def test_bpmn_export_waypoints_conditions_and_collaboration(self):
+        drawio_xml = """<mxfile host="app.diagrams.net">
+          <diagram id="geo-2" name="Geo">
+            <mxGraphModel>
+              <root>
+                <mxCell id="0" />
+                <mxCell id="1" parent="0" />
+                <mxCell id="pool" value="Pool" style="swimlane;html=1;childLayout=stackLayout;horizontal=0;startSize=20;" vertex="1" parent="1">
+                  <mxGeometry x="10" y="20" width="600" height="200" as="geometry" />
+                </mxCell>
+                <mxCell id="lane_a" value="Lane A" style="swimlane;html=1;horizontal=0;startSize=26;" vertex="1" parent="pool">
+                  <mxGeometry x="0" y="20" width="600" height="180" as="geometry" />
+                </mxCell>
+                <mxCell id="task_a" value="Task A" style="rounded=1;" vertex="1" parent="lane_a">
+                  <mxGeometry x="40" y="40" width="120" height="60" as="geometry" />
+                </mxCell>
+                <mxCell id="task_b" value="Task B" style="rounded=1;" vertex="1" parent="lane_a">
+                  <mxGeometry x="260" y="40" width="120" height="60" as="geometry" />
+                </mxCell>
+                <mxCell id="e_ab" value="" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="lane_a" source="task_a" target="task_b">
+                  <mxGeometry relative="1" as="geometry">
+                    <Array as="points">
+                      <mxPoint x="200" y="70" />
+                    </Array>
+                  </mxGeometry>
+                </mxCell>
+                <mxCell id="e_ab_label" value="Ha" style="edgeLabel;html=1;" vertex="1" connectable="0" parent="e_ab">
+                  <mxGeometry x="0.5" y="-12" relative="1" as="geometry" />
+                </mxCell>
+              </root>
+            </mxGraphModel>
+          </diagram>
+        </mxfile>"""
+
+        import_res = self.client.post("/api/v1/import/xml", json={
+            "xml": drawio_xml,
+            "fileName": "geo_export.drawio",
+        })
+        self.assertEqual(import_res.status_code, 200, import_res.text)
+        proc_id = import_res.json()["id"]
+        bpmn_res = self.client.get(f"/api/v1/import/{proc_id}/export/bpmn")
+        self.assertEqual(bpmn_res.status_code, 200)
+        xml = bpmn_res.text
+        self.assertIn("bpmn:collaboration", xml)
+        self.assertIn("bpmn:participant", xml)
+        self.assertIn("Lane A", xml)
+        self.assertIn('<di:waypoint x="210" y="110" />', xml)
+        self.assertIn("conditionExpression", xml)
+        self.assertIn("Ha", xml)
+        disp = bpmn_res.headers.get("content-disposition", "") or bpmn_res.headers.get("Content-Disposition", "")
+        self.assertIn("PIX_Map.bpmn", disp)
+
 if __name__ == "__main__":
     unittest.main()

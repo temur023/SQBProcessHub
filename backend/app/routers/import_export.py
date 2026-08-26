@@ -110,7 +110,7 @@ def import_xml(body: XmlImportBody):
 
 @router.get(
     "/{process_id}/export/bpmn",
-    summary="Export process as BPMN 2.0 XML for Infomaximum Processet"
+    summary="Export process map as BPMN 2.0 XML for PIX Process Studio / Processet"
 )
 def export_bpmn(process_id: str):
     process = get_store().get(process_id)
@@ -118,9 +118,7 @@ def export_bpmn(process_id: str):
         raise HTTPException(404, f"Process '{process_id}' not found")
 
     xml = generate_bpmn_xml(process)
-    safe_code = _sanitize_filename(process.passport.code)
-    safe_name = _sanitize_filename(process.name.replace(' ', '_'))
-    filename = f"{safe_code}_{safe_name}.bpmn"
+    filename = f"{_sanitize_filename(process.passport.code)}_PIX_Map.bpmn"
     return Response(
         content=xml.encode('utf-8'),
         media_type='application/xml',

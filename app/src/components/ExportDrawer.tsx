@@ -49,7 +49,7 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
   const getCurrentContent = () => {
     switch (activeTab) {
       case 'bpmn':
-        return { content: bpmnXml, filename: `${process.passport.code}_Processet.bpmn20.xml`, mime: 'application/xml', exportType: 'bpmn' as const }
+        return { content: bpmnXml, filename: `${process.passport.code}_PIX_Map.bpmn`, mime: 'application/xml', exportType: 'bpmn' as const }
       case 'logs':
         return { content: logsCsv, filename: `${process.passport.code}_EventLogs.csv`, mime: 'text/csv', exportType: 'event-log' as const }
       case 'pix':
@@ -82,7 +82,7 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
             <div>
               <DialogTitle className="text-xl font-bold">Центр экспорта данных процесса</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                Выгрузка стандартизированных моделей для Infomaximum Processet, PIX BPM и отчетов в Excel
+                Карта процесса: BPMN 2.0 для импорта в PIX Процессную студию. Также Processet и Excel.
               </DialogDescription>
             </div>
           </div>
@@ -92,7 +92,7 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
           <TabsList className="grid grid-cols-4 w-full">
             <TabsTrigger value="bpmn" className="text-xs">
               <FileCode className="w-3.5 h-3.5 mr-1 text-indigo-500" />
-              1. BPMN 2.0 (Processet)
+              1. BPMN 2.0 (PIX)
             </TabsTrigger>
             <TabsTrigger value="logs" className="text-xs">
               <Sparkles className="w-3.5 h-3.5 mr-1 text-purple-500" />
@@ -112,7 +112,7 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
           <TabsContent value="bpmn" className="flex-1 flex flex-col overflow-hidden mt-3 space-y-2">
             <div className="p-2.5 rounded-lg bg-muted/60 text-xs flex items-center justify-between">
               <span>
-                Стандартный XML BPMN 2.0 с разметкой дорожек и DI координатами для импорта в <strong>Processet</strong> как Should-Be эталон.
+                Карта в OMG BPMN 2.0: пул/дорожки, якоря рёбер, условия шлюзов, BPMNDI. Официальный импорт <strong>PIX Процессной студии</strong> (.bpmn).
               </span>
               <Badge className="bg-indigo-600 text-white text-[10px]">BPMN 2.0 XML</Badge>
             </div>
