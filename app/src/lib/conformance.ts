@@ -1,4 +1,5 @@
 import type { BusinessProcess, ProcessetDeviation, ProcessetMiningMetrics } from '@/types/process'
+import { isTaskNode } from '@/types/process'
 
 /**
  * Evaluates the business process structure against typical execution patterns
@@ -7,7 +8,7 @@ import type { BusinessProcess, ProcessetDeviation, ProcessetMiningMetrics } from
  */
 export function analyzeProcessConformance(process: BusinessProcess): ProcessetMiningMetrics {
   const flowTasks = process.nodes.filter(
-    (n) => n.type === 'task' || n.type === 'userTask' || n.type === 'serviceTask',
+    (n) => isTaskNode(n.type),
   )
 
   const targetLeadTimeHours = process.passport.targetSlaHours || 24

@@ -15,6 +15,7 @@ import { analyzeProcessConformance } from '@/lib/conformance'
 import { Toaster, toast } from 'sonner'
 import { Database } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { isTaskNode } from '@/types/process'
 
 export default function Home() {
   const [currentProcess, setCurrentProcess] = useState<BusinessProcess>(() => cloneSampleProcess(sqbCreditProcess))
@@ -60,7 +61,7 @@ export default function Home() {
     )
     // Пересчитываем паспорт SLA и метрики conformance
     const totalSlaMin = updatedNodes
-      .filter((n) => n.type === 'userTask' || n.type === 'serviceTask' || n.type === 'task')
+      .filter((n) => isTaskNode(n.type))
       .reduce((acc, n) => acc + (n.slaMinutes || 0), 0)
     const newTargetHours = Math.max(1, Math.round((totalSlaMin / 60) * 10) / 10)
     const interim: BusinessProcess = {

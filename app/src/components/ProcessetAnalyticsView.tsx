@@ -23,6 +23,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { BusinessProcess, ProcessetDeviation } from '@/types/process'
+import { isTaskNode } from '@/types/process'
 import { generateBpmn2Xml } from '@/lib/bpmn-export'
 import {
   generateProcessetEventLogCsv,
@@ -59,7 +60,7 @@ export const ProcessetAnalyticsView: React.FC<ProcessetAnalyticsViewProps> = ({
 
   // Prepare chart data comparing Target SLA vs Actual Duration
   const chartData = process.nodes
-    .filter((n) => n.type === 'task' || n.type === 'userTask' || n.type === 'serviceTask')
+    .filter((n) => isTaskNode(n.type))
     .slice(0, 6)
     .map((node, idx) => {
       const targetHours = Math.round(((node.slaMinutes || 30) / 60) * 10) / 10
@@ -241,7 +242,7 @@ export const ProcessetAnalyticsView: React.FC<ProcessetAnalyticsViewProps> = ({
 
           <div className="space-y-2">
             {process.nodes
-              .filter((n) => n.type === 'task' || n.type === 'userTask' || n.type === 'serviceTask')
+              .filter((n) => isTaskNode(n.type))
               .map((task, idx) => (
                 <div
                   key={task.id}

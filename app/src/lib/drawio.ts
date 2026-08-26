@@ -1,5 +1,6 @@
 import type {
   BusinessProcess,
+  EdgeKind,
   NodeType,
   ProcessEdge,
   ProcessEdgePoint,
@@ -9,6 +10,7 @@ import type {
   ProcessPassport,
   PixRegistrySchema,
 } from '@/types/process'
+import { isArtifactNode, isTaskNode } from '@/types/process'
 import { analyzeProcessConformance } from './conformance'
 
 /** Decodes HTML entities and tags in draw.io labels without executing markup */
@@ -338,6 +340,186 @@ function isDecorationStyle(style: string): boolean {
   )
 }
 
+/** «5 min», «0.5 daq», «120 мин», «Kutish vaqti 30 min» — длительность в подписи фигуры. */
+const DURATION_RE = /(\d+(?:[.,]\d+)?)\s*(?:min|daq|мин)[a-zа-я]*/i
+/** Подпись, помечающая время ОЖИДАНИЯ (WT), а не выполнения (ST). */
+const WAIT_RE = /kutish\s+vaqti|время\s+ожидания|wait/i
+
+export function durationMinutes(text: string | null | undefined): number | null {
+  if (!text) return null
+  const m = text.match(DURATION_RE)
+  if (!m) return null
+  const value = parseFloat(m[1].replace(',', '.'))
+  return Number.isFinite(value) ? value : null
+}
+
+export function isWaitLabel(text: string | null | undefined): boolean {
+  return !!text && WAIT_RE.test(text)
+}
+
+/**
+ * Максимальное расстояние от бейджа длительности до центра шага, px.
+ * На картах SQB бейдж лежит в 56-90 px от своего шага, а до соседнего — не
+ * ближе ~190 px, поэтому порог однозначен.
+ */
+const BADGE_ATTACH_RADIUS = 130
+
+/** Точка в абсолютных координатах карты. */
+type Pt = { x: number; y: number }
+
+/** Насколько близко свободный конец линии должен подойти к фигуре, px. */
+const FREE_ENDPOINT_SNAP = 30
+
+function distanceToBox(px: number, py: number, node: ProcessNode): number {
+  const g = node.geometry
+  const dx = Math.max(g.x - px, 0, px - (g.x + g.width))
+  const dy = Math.max(g.y - py, 0, py - (g.y + g.height))
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
+/**
+ * Фигура под свободным концом линии draw.io.
+ *
+ * В draw.io конец связи может быть не привязан к фигуре, а задан точкой
+ * (`mxPoint as="sourcePoint"`). Редактор всё равно рисует линию, а мы раньше
+ * выбрасывали её целиком — на карте пропадали и потоки, и пунктирные
+ * ассоциации к хранилищам данных.
+ */
+function resolveFreeEndpoint(point: Pt | undefined, candidates: ProcessNode[]): string | undefined {
+  if (!point || candidates.length === 0) return undefined
+  let bestId: string | undefined
+  let bestDist = FREE_ENDPOINT_SNAP
+  let bestArea = Infinity
+  for (const node of candidates) {
+    const dist = distanceToBox(point.x, point.y, node)
+    if (dist > FREE_ENDPOINT_SNAP) continue
+    // При равном расстоянии выигрывает меньшая фигура: точка внутри шага
+    // лежит и внутри его дорожки, но связать её надо с шагом.
+    const area = node.geometry.width * node.geometry.height
+    if (dist < bestDist || (dist === bestDist && area < bestArea)) {
+      bestDist = dist
+      bestArea = area
+      bestId = node.id
+    }
+  }
+  return bestId
+}
+
+/** Вид соединения: связь с артефактом по BPMN не может быть потоком управления. */
+function edgeKind(
+  sourceType?: NodeType,
+  targetType?: NodeType,
+  dashed?: boolean,
+  touchesLane?: boolean,
+): EdgeKind {
+  // Линия, упирающаяся в дорожку, — оформление (разделитель этапов),
+  // а не поток управления: в BPMN дорожка не может быть концом связи.
+  if (touchesLane) return 'annotationLine'
+  if ((sourceType && isArtifactNode(sourceType)) || (targetType && isArtifactNode(targetType)))
+    return 'association'
+  if (dashed && (sourceType === 'intermediateMessageEvent' || targetType === 'intermediateMessageEvent'))
+    return 'messageFlow'
+  return 'sequenceFlow'
+}
+
+/**
+ * Убирает безымянные дорожки-баннеры и даёт позиционные имена остальным.
+ * Настоящая безымянная дорожка содержит шаги; пустая рамка без подписи —
+ * это оформление схемы, а не зона ответственности.
+ */
+function nameAndPruneLanes(lanes: ProcessNode[], flowNodes: ProcessNode[]): void {
+  const populated = new Set(flowNodes.map((n) => n.laneId).filter(Boolean) as string[])
+  const doomed = new Set(
+    lanes.filter((l) => !(l.name || '').trim() && !populated.has(l.id)).map((l) => l.id),
+  )
+  if (doomed.size > 0) {
+    const kept = lanes.filter((l) => !doomed.has(l.id))
+    lanes.length = 0
+    lanes.push(...kept)
+    for (const node of flowNodes) {
+      if (node.laneId && doomed.has(node.laneId)) {
+        node.laneId = undefined
+        node.laneName = undefined
+      }
+    }
+  }
+  const ordered = [...lanes].sort((a, b) => a.geometry.y - b.geometry.y || a.geometry.x - b.geometry.x)
+  ordered.forEach((lane, index) => {
+    if (!(lane.name || '').trim()) {
+      lane.name = `Дорожка ${index + 1}`
+      lane.role = lane.name
+    }
+  })
+}
+
+/** Переносит ST/WT из фигур-таймеров в ближайший шаг процесса (4-ILOVA). */
+function applyDurationBadges(
+  flowNodes: ProcessNode[],
+  badges: { x: number; y: number; minutes: number; isWait: boolean }[],
+): void {
+  const tasks = flowNodes.filter((n) => isTaskNode(n.type))
+  if (tasks.length === 0 || badges.length === 0) return
+  const stSeen = new Set<string>()
+  for (const badge of badges) {
+    let best: ProcessNode | null = null
+    let bestDist = BADGE_ATTACH_RADIUS
+    for (const t of tasks) {
+      const dx = badge.x - (t.geometry.x + t.geometry.width / 2)
+      const dy = badge.y - (t.geometry.y + t.geometry.height / 2)
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist < bestDist) {
+        bestDist = dist
+        best = t
+      }
+    }
+    if (!best) continue
+    const value = Math.max(1, Math.round(badge.minutes))
+    if (badge.isWait) {
+      best.waitMinutes = (best.waitMinutes || 0) + value
+    } else if (stSeen.has(best.id)) {
+      best.slaMinutes = (best.slaMinutes || 0) + value
+    } else {
+      best.slaMinutes = value
+      stSeen.add(best.id)
+    }
+    if (best.category !== 'rpa_bot') best.costPerExecution = (best.slaMinutes || 0) * 1932
+  }
+}
+
+/** Системы и документы шага — из реальных ассоциаций карты, а не из эвристик. */
+function resolveArtifactLinks(flowNodes: ProcessNode[], edges: ProcessEdge[]): void {
+  const byId = new Map(flowNodes.map((n) => [n.id, n]))
+  const systems = new Map<string, string[]>()
+  const inputs = new Map<string, string[]>()
+  const outputs = new Map<string, string[]>()
+
+  const add = (bucket: Map<string, string[]>, key: string, value: string) => {
+    if (!value) return
+    const items = bucket.get(key) ?? []
+    if (!items.includes(value)) items.push(value)
+    bucket.set(key, items)
+  }
+
+  for (const e of edges) {
+    if (e.kind !== 'association') continue
+    const src = byId.get(e.sourceId || '')
+    const tgt = byId.get(e.targetId || '')
+    if (!src || !tgt) continue
+    for (const [artifact, step, incomingDir] of [[src, tgt, true], [tgt, src, false]] as const) {
+      if (!isTaskNode(step.type)) continue
+      if (artifact.type === 'dataStore') add(systems, step.id, artifact.name)
+      else if (artifact.type === 'dataObject') add(incomingDir ? inputs : outputs, step.id, artifact.name)
+    }
+  }
+
+  for (const node of flowNodes) {
+    const linked = systems.get(node.id)
+    if (linked?.length) node.system = linked.join(', ')
+    if (inputs.get(node.id)?.length) node.inputArtifacts = inputs.get(node.id)
+    if (outputs.get(node.id)?.length) node.outputArtifacts = outputs.get(node.id)
+  }
+}
+
 function isNonTaskLabel(val: string): boolean {
   const v = val.toLowerCase().trim()
   if (v.length === 0) return true
@@ -365,6 +547,16 @@ function classifyVertex(
   if (s.includes('swimlane') || s.includes('pool;') || s.includes('shape=pool'))
     return 'lane'
 
+  // ── Артефакты (2-ILOVA: Artefaktlar) ──────────────────────────────────────
+  // Хранилище данных: IABS, EHA, EDO, Korporativ pochta.
+  if (s.includes('shape=datastore') || s.includes('mxgraph.bpmn.datastore') || s.includes('kind=datastore'))
+    return 'dataStore'
+  // Объект данных: Dalolatnoma, Yig'ma jild, Hujjatlar ro'yxati.
+  if (s.includes('mxgraph.bpmn.data2') || shape.endsWith('bpmn.data') || s.includes('shape=dataobject'))
+    return 'dataObject'
+  if (s.includes('shape=note') || s.includes('mxgraph.bpmn.annotation') || s.includes('shape=mxgraph.flowchart.annotation'))
+    return 'textAnnotation'
+
   if (s.includes('mxgraph.bpmn.gateway') || shape.endsWith('gateway2') || smap.gwtype) {
     const gw = (smap.gwtype || smap.symbol || '').toLowerCase()
     if (gw === 'parallel' || gw === 'and' || gw === 'complex' || s.includes('outline=plus') || s.includes('parallel'))
@@ -376,8 +568,16 @@ function classifyVertex(
 
   if (s.includes('mxgraph.bpmn.event') || shape.endsWith('.event')) {
     const outline = (smap.outline || '').toLowerCase()
+    const symbol = (smap.symbol || '').toLowerCase()
+    // Таймер внутри потока — «Kutish vaqti»: промежуточное событие-обработчик.
+    // Одиночные бейджи длительности сюда не доходят: их снимает
+    // collectDurationBadges() и переносит в ST/WT ближайшего шага.
+    if (symbol === 'timer' && hasIncoming && hasOutgoing) return 'intermediateTimerEvent'
+    if (symbol === 'message' && hasIncoming && hasOutgoing) return 'intermediateMessageEvent'
     if (outline === 'end' || outline === 'terminate' || s.includes('outline=end') || s.includes('outline=double'))
       return 'endEvent'
+    if (outline === 'catching' && hasIncoming && hasOutgoing)
+      return symbol === 'timer' ? 'intermediateTimerEvent' : 'intermediateMessageEvent'
     if (!hasIncoming && hasOutgoing) return 'startEvent'
     if (hasIncoming && !hasOutgoing) return 'endEvent'
     return 'startEvent'
@@ -385,6 +585,8 @@ function classifyVertex(
 
   if (s.includes('mxgraph.bpmn.task')) {
     const marker = (smap.taskmarker || smap.symbol || '').toLowerCase()
+    if (marker === 'sub' || marker === 'subprocess' || s.includes('issubprocess=1') || s.includes('mxgraph.bpmn.transaction'))
+      return 'subProcess'
     if (
       marker === 'service' ||
       marker === 'script' ||
@@ -493,7 +695,9 @@ function classifyVertex(
 
 function classifyCategory(type: NodeType, name: string, style: string): StepCategory {
   const lower = (name + ' ' + style).toLowerCase()
-  if (type === 'startEvent' || type === 'endEvent') return 'notification'
+  if (isArtifactNode(type)) return type === 'dataStore' ? 'api_service' : 'manual'
+  if (type === 'startEvent' || type === 'endEvent' || type === 'intermediateTimerEvent' || type === 'intermediateMessageEvent')
+    return 'notification'
   if (type === 'serviceTask' || lower.includes('rpa') || lower.includes('робот') || lower.includes('авто-') || lower.includes('avtomat') || lower.includes('генерация') || lower.includes('sms'))
     return 'rpa_bot'
   if (lower.includes('согласован') || lower.includes('комитет') || lower.includes('утвержд') || lower.includes('подпис') || lower.includes('голос') || lower.includes('imzo') || lower.includes('vizo') || lower.includes('tasdiq') || lower.includes('himoya'))
@@ -525,7 +729,14 @@ function detectSystem(name: string, laneName: string): string {
 }
 
 function extractSlaMinutes(rawText: string, category: StepCategory, type: NodeType): number {
+  if (isArtifactNode(type)) return 0
   if (type === 'startEvent' || type === 'endEvent') return 5
+
+  if (type === 'intermediateTimerEvent' || type === 'intermediateMessageEvent') {
+    // Событие ожидания: длительность — это и есть его подпись.
+    const minutes = durationMinutes(rawText)
+    return minutes ? Math.max(1, Math.round(minutes)) : 30
+  }
 
   const match = rawText.match(/(\d+(?:\.\d+)?)\s*(?:min|daq|минут|мин|m\b)/i)
   if (match) {
@@ -771,6 +982,35 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
   const ignoreCellIds = new Set<string>()
   const originCache = new Map<string, { x: number; y: number }>()
   const orphanConditionLabels: { text: string; x: number; y: number }[] = []
+  const durationBadges: { x: number; y: number; minutes: number; isWait: boolean }[] = []
+
+  // ── Бейджи ST/WT ─────────────────────────────────────────────────────────
+  // По Методике (4-ILOVA) время операции проставляется отдельной мелкой
+  // фигурой-таймером рядом с шагом, а не в подписи самого шага. Такие фигуры
+  // не соединены рёбрами: снимаем их с карты и переносим в ST/WT шага.
+  for (const c of cells) {
+    if (c.getAttribute('vertex') !== '1') continue
+    const id = c.getAttribute('id') ?? ''
+    if (!id || incoming.has(id) || outgoing.has(id)) continue
+    const styleLower = getStyle(c).toLowerCase()
+    if (styleLower.includes('swimlane')) continue
+    const text = cleanLabel(c.getAttribute('value'))
+    const minutes = durationMinutes(text)
+    if (minutes == null) continue
+    const residual = text.replace(DURATION_RE, '').replace(/^[\s.,:;-]+|[\s.,:;-]+$/g, '')
+    const isTimerShape = styleLower.includes('symbol=timer') || styleLower.includes('shape=mxgraph.bpmn.timer')
+    if (!isTimerShape && (styleLower.includes('mxgraph.bpmn') || residual.length > 32)) continue
+    const geoBadge = c.querySelector(':scope > mxGeometry') as Element | null
+    if (!geoBadge) continue
+    const originBadge = parentOrigin(c.getAttribute('parent') ?? undefined, cellMap, originCache)
+    durationBadges.push({
+      x: Number(geoBadge.getAttribute('x') ?? 0) + originBadge.x + Number(geoBadge.getAttribute('width') ?? 20) / 2,
+      y: Number(geoBadge.getAttribute('y') ?? 0) + originBadge.y + Number(geoBadge.getAttribute('height') ?? 20) / 2,
+      minutes,
+      isWait: isWaitLabel(text),
+    })
+    ignoreCellIds.add(id)
+  }
 
   const rememberLabelGeo = (edgeId: string, geo: Element | null) => {
     if (!geo || edgeLabelGeo.has(edgeId)) return
@@ -850,6 +1090,8 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     }
 
     // Condition 5: Non-task system tags, artifacts, conditions with no sequence connections
+    // Дорожки исключены: у безымянной дорожки подпись пустая, но это не мусор.
+    if (style.includes('swimlane') || style.includes('shape=pool')) return
     if (isNonTaskLabel(cleaned) && !incoming.has(id) && !outgoing.has(id)) {
       ignoreCellIds.add(id)
       if (CONDITION_TAGS.has(cleaned.toLowerCase()) && cleaned) {
@@ -923,7 +1165,9 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     const rawValue = cell.getAttribute('value')
     let rawCleaned = cleanLabel(rawValue)
 
-    if (!rawCleaned && labelMap.has(id)) {
+    // labelMap хранит подписи детей (условия «Ha»/«Yo'q») — для безымянной
+    // дорожки они бы стали её именем.
+    if (!rawCleaned && labelMap.has(id) && !style.toLowerCase().includes('swimlane')) {
       rawCleaned = labelMap.get(id)!
     }
 
@@ -971,7 +1215,9 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       .replace(/\b\d+(?:\.\d+)?\s*(?:min|daq|минут|мин)\b.*$/gi, '')
       .trim()
 
-    if (!cleanName) {
+    if (!cleanName && type === 'lane') {
+      // безымянная дорожка: имя присвоим позиционно после разбора
+    } else if (!cleanName) {
       cleanName =
         type === 'startEvent'
           ? 'Старт'
@@ -1028,6 +1274,8 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     if (n.laneId && !laneIds.has(n.laneId)) n.laneId = undefined
   }
 
+  nameAndPruneLanes(lanes, flowNodes)
+
   // Geometry-based lane assignment fallback — учитываем ширину заголовка дорожки (44px)
   const LANE_HEAD_WIDTH = 44
   for (const n of flowNodes) {
@@ -1058,17 +1306,48 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
 
   const validNodeIdSet = new Set(flowNodes.map((n) => n.id))
   const validLaneIdSet = new Set(lanes.map((l) => l.id))
+  const typeById = new Map<string, NodeType>(flowNodes.map((n) => [n.id, n.type]))
+
+  const snapTargets = [...flowNodes, ...lanes]
+  const isKnown = (id?: string | null): boolean =>
+    !!id && (validNodeIdSet.has(id) || validLaneIdSet.has(id))
+
+  /** Свободные концы связи в абсолютных координатах карты. */
+  const freeEndsOf = (cell: Element): { sourcePoint?: Pt; targetPoint?: Pt } => {
+    const geo = cell.querySelector(':scope > mxGeometry')
+    if (!geo) return {}
+    const origin = parentOrigin(cell.getAttribute('parent') ?? undefined, cellMap, originCache)
+    const out: { sourcePoint?: Pt; targetPoint?: Pt } = {}
+    for (const mx of Array.from(geo.querySelectorAll(':scope > mxPoint'))) {
+      const role = mx.getAttribute('as')
+      if (role !== 'sourcePoint' && role !== 'targetPoint') continue
+      out[role] = {
+        x: Number(mx.getAttribute('x') ?? 0) + origin.x,
+        y: Number(mx.getAttribute('y') ?? 0) + origin.y,
+      }
+    }
+    return out
+  }
+
+  const resolvedEnds = new Map<Element, { s?: string; t?: string; free: { sourcePoint?: Pt; targetPoint?: Pt } }>()
 
   const edges: ProcessEdge[] = rawEdges
     .filter((cell) => {
-      const s = cell.getAttribute('source')
-      const t = cell.getAttribute('target')
-      if (!s || !t) return false
-      const sOk = validNodeIdSet.has(s) || validLaneIdSet.has(s)
-      const tOk = validNodeIdSet.has(t) || validLaneIdSet.has(t)
-      return sOk && tOk
+      const free = freeEndsOf(cell)
+      let s: string | undefined = cell.getAttribute('source') ?? undefined
+      let t: string | undefined = cell.getAttribute('target') ?? undefined
+      if (!s) s = resolveFreeEndpoint(free.sourcePoint, snapTargets)
+      if (!t) t = resolveFreeEndpoint(free.targetPoint, snapTargets)
+      const sOk = isKnown(s)
+      const tOk = isKnown(t)
+      // Линия без единой опоры на фигуру — мусор; с одной опорой — оформление.
+      if (!sOk && !tOk) return false
+      if ((!sOk || !tOk) && !free.sourcePoint && !free.targetPoint) return false
+      resolvedEnds.set(cell, { s: sOk ? s : undefined, t: tOk ? t : undefined, free })
+      return true
     })
     .map((cell) => {
+      const ends = resolvedEnds.get(cell)!
       const edgeId = cell.getAttribute('id') ?? `edge_${crypto.randomUUID()}`
       const rawVal = cell.getAttribute('value')
       let edgeName = cleanLabel(rawVal)
@@ -1101,11 +1380,26 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       const strokeColor = smap['strokecolor']
       const sw = styleFloat(smap, 'strokewidth')
 
+      const srcId = ends.s
+      const tgtId = ends.t
+      const isAnnotationLine = !srcId || !tgtId
+      const touchesLane =
+        (!!srcId && validLaneIdSet.has(srcId)) || (!!tgtId && validLaneIdSet.has(tgtId))
+
       return {
         id: edgeId,
         name: edgeName,
-        sourceId: cell.getAttribute('source') ?? undefined,
-        targetId: cell.getAttribute('target') ?? undefined,
+        kind: isAnnotationLine
+          ? ('annotationLine' as EdgeKind)
+          : edgeKind(typeById.get(srcId ?? ''), typeById.get(tgtId ?? ''), dashed, touchesLane),
+        sourceId: srcId,
+        targetId: tgtId,
+        sourcePoint: ends.free.sourcePoint
+          ? { x: Math.round(ends.free.sourcePoint.x), y: Math.round(ends.free.sourcePoint.y) }
+          : undefined,
+        targetPoint: ends.free.targetPoint
+          ? { x: Math.round(ends.free.targetPoint.x), y: Math.round(ends.free.targetPoint.y) }
+          : undefined,
         condition: edgeName || undefined,
         points,
         exitX: styleFloat(smap, 'exitx'),
@@ -1178,8 +1472,13 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     // ignore
   }
 
+  applyDurationBadges(flowNodes, durationBadges)
+  resolveArtifactLinks(flowNodes, edges)
+
   const cleanTitle = diagramName || fileName.replace(/\.(drawio|xml)$/i, '')
-  const totalHours = roundHours(flowNodes.reduce((acc, n) => acc + (n.slaMinutes || 0), 0) / 60) || 8
+  const taskNodes = flowNodes.filter((n) => isTaskNode(n.type))
+  const totalHours =
+    roundHours(taskNodes.reduce((acc, n) => acc + (n.slaMinutes || 0) + (n.waitMinutes || 0), 0) / 60) || 8
 
   const passport: ProcessPassport = {
     code: `PRC-SQB-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,

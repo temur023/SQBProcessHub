@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Download,
   Copy,
@@ -26,7 +26,8 @@ import {
   generatePixJson,
   generateProcessRegulationCsv,
 } from '@/lib/processet-export'
-import { triggerExportDownload } from '@/lib/api'
+import { triggerExportDownload, fetchBpmnXml, ExportUnavailableError } from '@/lib/api'
+import { toast } from 'sonner'
 
 interface ExportDrawerProps {
   open: boolean
@@ -41,8 +42,22 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'bpmn' | 'pmm' | 'logs' | 'pix' | 'excel'>('bpmn')
   const [copied, setCopied] = useState(false)
+  // Предпросмотр обязан совпадать с тем, что реально скачается: берём BPMN с
+  // бэкенда, а клиентский генератор оставляем только для офлайн-режима.
+  const [serverBpmn, setServerBpmn] = useState<string | null>(null)
 
-  const bpmnXml = generateBpmn2Xml(process)
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    fetchBpmnXml(process.id).then((xml) => {
+      if (!cancelled) setServerBpmn(xml)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [open, process.id])
+
+  const bpmnXml = serverBpmn ?? generateBpmn2Xml(process)
   const logsCsv = generateProcessetEventLogCsv(process)
   const pixJson = generatePixJson(process)
   const excelCsv = generateProcessRegulationCsv(process)
@@ -81,8 +96,19 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
   }
 
   const handleDownload = async () => {
-    const { exportType } = getCurrentContent()
-    await triggerExportDownload(process, exportType)
+    const { exportType, filename } = getCurrentContent()
+    try {
+      await triggerExportDownload(process, exportType)
+      toast.success(`Файл «${filename}» выгружен`)
+    } catch (err) {
+      // Раньше отказ экспорта .pmm терялся в console.warn, и по кнопке просто
+      // ничего не происходило.
+      const message =
+        err instanceof ExportUnavailableError
+          ? err.message
+          : `Не удалось выгрузить «${filename}»: ${err instanceof Error ? err.message : String(err)}`
+      toast.error(message, { duration: 8000 })
+    }
   }
 
   return (

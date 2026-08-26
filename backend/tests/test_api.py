@@ -1,4 +1,14 @@
+import os
+import tempfile
 import unittest
+
+# Уводим персист процессов в временный файл ДО импорта приложения: иначе
+# каждый прогон дописывает свои фикстуры в app/data/process_store.json.
+os.environ.setdefault(
+    "SQB_PROCESS_STORE",
+    os.path.join(tempfile.gettempdir(), "sqb_process_store_test.json"),
+)
+
 from fastapi.testclient import TestClient
 from app.main import app
 
@@ -337,7 +347,11 @@ class TestSQBProcessHubApi(unittest.TestCase):
         self.assertIn("bpmn:collaboration", xml)
         self.assertIn("bpmn:participant", xml)
         self.assertIn("Lane A", xml)
-        self.assertIn('<di:waypoint x="210" y="110" />', xml)
+        # Ломаная выходит из правой грани task_a и входит в левую грань task_b.
+        # Излом draw.io на (210,110) лежит ровно на этом отрезке, поэтому
+        # трассировщик его убирает — геометрия линии от этого не меняется.
+        self.assertIn('<di:waypoint x="170" y="110" />', xml)
+        self.assertIn('<di:waypoint x="270" y="110" />', xml)
         self.assertIn("conditionExpression", xml)
         self.assertIn("Ha", xml)
         disp = bpmn_res.headers.get("content-disposition", "") or bpmn_res.headers.get("Content-Disposition", "")
@@ -468,15 +482,19 @@ class TestSQBProcessHubApi(unittest.TestCase):
         connectors = root.findall("connector")
         self.assertGreaterEqual(len(connectors), 5)
         self.assertTrue(all(c.get("type") == "step" for c in connectors))
-        self.assertTrue(all(c.get("targetPoint") == "6" for c in connectors))
+        # Якорь связи больше не захардкожен: PIX сама трассирует связь, если
+        # sourcePoint/targetPoint не заданы (в эталоне так у 30 связей из 50).
+        self.assertTrue(all(c.get("targetPoint") is None for c in connectors))
         self.assertTrue(any(c.get("lineStyle") == "dotted" for c in connectors))
         dotted = next(c for c in connectors if c.get("lineStyle") == "dotted")
         self.assertEqual(dotted.findtext("MarkerEnd"), "arrowLine")
         solid = next(c for c in connectors if c.get("lineStyle") == "solid")
         self.assertEqual(solid.findtext("MarkerStart"), "line")
         self.assertEqual(solid.findtext("MarkerEnd"), "arrowclosed")
-        labeled = next((c for c in connectors if c.get("label") == "Ha"), None)
+        # Подпись связи PIX читает из Text, а не из label.
+        labeled = next((c for c in connectors if c.get("Text") == "Ha"), None)
         self.assertIsNotNone(labeled)
+        self.assertTrue(all(c.get("label") is None for c in connectors))
         self.assertTrue(any(c.find("waypoint") is not None for c in connectors))
         for c in connectors:
             self.assertTrue(uuid_re.match(c.get("id") or ""), c.get("id"))

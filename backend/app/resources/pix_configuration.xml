@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <propertyTemplate id="4" name="system_description" displayName="Описание" visible="false" defaultProperty="true" group="main" typeId="1">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="5" name="system_technology" displayName="Технология" visible="false" defaultProperty="true" group="main" typeId="1">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="12" name="vladelets_protsessa" displayName="Владелец процесса" group="main" typeId="21">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="16" name="prioritet" displayName="Приоритет" group="main" typeId="26">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="9" name="vremya_ozhidaniya" displayName="Время ожидания" group="main" typeId="7">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="17" name="menezher_etapa" displayName="Менежер этапа" group="main" typeId="21">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="7" name="uroven_avtomatizatsii1" displayName="уровень автоматизации1" group="main" isRequired="true" typeId="22">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="1" name="attached_files" displayName="Прикрепленные файлы" group="main" isMulti="true" typeId="9">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="2" name="document" displayName="Документ" group="main" typeId="9">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="3" name="process_avtomatization_lvl" displayName="Уровень автоматизации" group="main" typeId="16">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="14" name="khranilishcha_failov" displayName="Хранилища файлов" group="main" isMulti="true" typeId="9">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="18" name="attached_files" displayName="Прикрепленные файлы" defaultProperty="true" group="main" typeId="9">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="13" name="informatsionnaya_sistema" displayName="Информационная система" group="main" typeId="25">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="19" name="document" displayName="Документ" defaultProperty="true" group="main" typeId="9">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="8" name="vremya_protsessa" displayName="Время процесса" group="main" typeId="7">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="20" name="system_probability" displayName="Вероятность" visible="false" defaultProperty="true" group="main" typeId="3">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="15" name="podtverzhdayushchie_dokumenti" displayName="Подтверждающие документы" group="main" isMulti="true" typeId="9">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="21" name="system_process_time" displayName="Время процесса" visible="false" defaultProperty="true" group="main" typeId="7">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="11" name="ispolnitel" displayName="Исполнитель" group="main" isRequired="true" typeId="21">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="10" name="zarplata" displayName="Зарплата" group="main" isRequired="true" typeId="21">
+    <column />
+  </propertyTemplate>
+  <propertyTemplate id="6" name="otvetsvennii" displayName="ответсвенный" group="main" isRequired="true" typeId="21">
+    <column />
+  </propertyTemplate>
+  <notation name="Workflow">
+    <element name="horizontalRoad" displayName="Горизонтальная дорожка" />
+    <element name="input" displayName="Текст" />
+    <element name="in_out" displayName="Вход/Выход" />
+    <element name="informationSystems" displayName="Информационные системы" />
+    <element name="superProcess" displayName="Процесс" canHaveChildren="true" />
+    <element name="ifElement" displayName="Условие" />
+    <element name="verticalRoad" displayName="Вертикальная дорожка" />
+    <element name="workflow_group" displayName="Группа" />
+  </notation>
+  <notation name="EPC">
+    <element name="cluster_information" displayName="Кластер" />
+    <element name="entity" displayName="Объект" />
+    <element name="person" displayName="Должность" />
+    <element name="interface" displayName="Интерфейс процесса" />
+    <element name="role" displayName="Роль" />
+    <element name="location" displayName="Локация" />
+    <element name="organizational_unit" displayName="Организационная единица" />
+    <element name="activity" displayName="Функция" canHaveChildren="true" />
+    <element name="xor" displayName="Исключающее ИЛИ" />
+    <element name="or" displayName="ИЛИ" />
+    <element name="event" displayName="Событие" />
+    <element name="and" displayName="И" />
+    <element name="document" displayName="Документ" />
+    <element name="risk" displayName="Риск" />
+    <element name="input" displayName="Текст" />
+    <element name="it_system" displayName="Информационная система" />
+    <element name="database" displayName="База данных" />
+    <element name="product" displayName="Продукт" />
+  </notation>
+  <notation name="VAD">
+    <element name="organization_unit" displayName="Организационная единица" />
+    <element name="value_added_chain" displayName="Цепочка создания добавленной стоимости" canHaveChildren="true" />
+    <element name="technical_term" displayName="Технический термин" />
+    <element name="input" displayName="Текст" />
+    <element name="cluster" displayName="Кластер" />
+    <element name="product_service" displayName="Продукт/Сервис" />
+    <element name="info_service" displayName="Информационный сервис" />
+  </notation>
+  <notation name="DFD">
+    <element name="dfd_process" displayName="Процесс" canHaveChildren="true" />
+    <element name="dfd_data_storage" displayName="Хранилище данных" />
+    <element name="dfd_external_entity" displayName="Внешняя сущность" />
+  </notation>
+  <notation name="uml_component">
+    <element name="uml_interface" displayName="Интерфейс" />
+    <element name="uml_port" displayName="Порт" />
+    <element name="uml_object" displayName="Объект" />
+    <element name="uml_required_interface" displayName="Требуемый интерфейс" />
+    <element name="uml_component" displayName="Компонент" />
+    <element name="uml_class" displayName="Класс" />
+    <element name="uml_provided_interface" displayName="Предоставляемый интерфейс" />
+  </notation>
+  <notation name="uml_deployment">
+    <element name="uml_artefact" displayName="Артефакт" />
+    <element name="uml_deployment_specification" displayName="Спецификация развертывания" />
+    <element name="uml_node" displayName="Узел" />
+    <element name="uml_interface" displayName="Интерфейс" />
+    <element name="uml_runtime" displayName="Среда выполнения" />
+    <element name="uml_device" displayName="Устройство" />
+    <element name="uml_component" displayName="Компонент" />
+  </notation>
+  <notation name="c4">
+    <element name="c4_external_software_system" displayName="Внешняя программная система" />
+    <element name="c4_component" displayName="Компонент" canHaveChildren="true" />
+    <element name="c4_container_database" displayName="Контейнер - База данных" />
+    <element name="c4_software_system" displayName="Программная система" canHaveChildren="true" />
+    <element name="c4_container" displayName="Контейнер" canHaveChildren="true" />
+    <element name="c4_person" displayName="Пользователь" />
+    <element name="c4_external_container_database" displayName="Внешний контейнер - База данных" />
+    <element name="c4_external_container" displayName="Внешний контейнер" />
+  </notation>
+  <notation name="BPMN">
+    <element name="input" displayName="Текст" />
+    <element name="dataStorage" displayName="Хранилище данных" type="Артефакты" />
+    <element name="end_event_signal" displayName="Конечное событие - сигнал" type="События" subType="Конечные события" />
+    <element name="intermediate_event_catch_parallel_complex" displayName="Промежуточное событие-обработчик - параллельное множественное" type="События" subType="Промежуточные события" />
+    <element name="intermediate_event_catch_signal" displayName="Промежуточное событие-обработчик - сигнал" type="События" subType="Промежуточные события" />
+    <element name="start_interrupting_event_escalation" displayName="Прерывающее стартовое событие - эскалация" type="События" subType="Стартовые события" />
+    <element name="receiving_message_activity" displayName="Получение сообщения" type="Задачи" />
+    <element name="start_non_interrupting_event_escalation" displayName="Непрерывающее стартовое событие - эскалация" type="События" subType="Стартовые события" />
+    <element name="boundary_event_none" displayName="Прерывающее граничное событие" type="События" subType="Граничные события" />
+    <element name="boundary_non_interrupting_event_parallel_complex" displayName="Непрерывающее граничное событие – параллельное множественное" type="События" subType="Граничные события" />
+    <element name="intermediate_event_throw_complex" displayName="Промежуточное событие-инициатор - множественное" type="События" subType="Промежуточные события" />
+    <element name="verticalRoad" displayName="Вертикальный пул" type="Участники" />
+    <element name="start_interrupting_event_parallel_complex" displayName="Прерывающее стартовое событие - параллельное множественное" type="События" subType="Стартовые события" />
+    <element name="intermediate_event_catch_message" displayName="Промежуточное событие-обработчик - сообщение" type="События" subType="Промежуточные события" />
+    <element name="start_event_timer" displayName="Стартовое событие - таймер" type="События" subType="Стартовые события" />
+    <element name="boundary_event_signal" displayName="Прерывающее граничное событие - сигнал" type="События" subType="Граничные события" />
+    <element name="sub_process" displayName="Подпроцесс - развернутый" type="Подпроцессы" />
+    <element name="boundary_event_escalation" displayName="Прерывающее граничное событие - эскалация" type="События" subType="Граничные события" />
+    <element name="event_sub_process" displayName="Событийный подпроцесс" type="Подпроцессы" />
+    <element name="gateway_eventbased" displayName="Событийный шлюз" type="Шлюзы" />
+    <element name="intermediate_event_catch_complex" displayName="Промежуточное событие-обработчик - множественное" type="События" subType="Промежуточные события" />
+    <element name="start_event_none" displayName="Стартовое событие" type="События" subType="Стартовые события" />
+    <element name="task" displayName="Задача" type="Задачи" />
+    <element name="gateway_xor" displayName="Эксклюзивный шлюз" type="Шлюзы" />
+    <element name="end_event_complex" displayName="Конечное событие - множественное" type="События" subType="Конечные события" />
+    <element name="gateway_complex" displayName="Комплексный шлюз" type="Шлюзы" />
+    <element name="gateway_parallel" displayName="Параллельный шлюз" type="Шлюзы" />
+    <element name="intermediate_event_throw_compensation" displayName="Промежуточное событие-инициатор - компенсация" type="События" subType="Промежуточные события" />
+    <element name="boundary_non_interrupting_event_complex" displayName="Непрерывающее граничное событие - множественное" type="События" subType="Граничные события" />
+    <element name="end_event_cancel" displayName="Конечное событие - отмена" type="События" subType="Конечные события" />
+    <element name="intermediate_event_catch_condition" displayName="Промежуточное событие-обработчик – условие" type="События" subType="Промежуточные события" />
+    <element name="start_non_interrupting_event_condition" displayName="Непрерывающее стартовое событие - условие" type="События" subType="Стартовые события" />
+    <element name="boundary_event_error" displayName="Прерывающее граничное событие - ошибка" type="События" subType="Граничные события" />
+    <element name="boundary_non_interrupting_event_escalation" displayName="Непрерывающее граничное событие - эскалация" type="События" subType="Граничные события" />
+    <element name="intermediate_event_throw_escalation" displayName="Промежуточное событие-инициатор - эскалация" type="События" subType="Промежуточные события" />
+    <element name="callActivity" displayName="Вызов" type="Подпроцессы" />
+    <element name="end_event_none" displayName="Конечное событие" type="События" subType="Конечные события" />
+    <element name="intermediate_event_throw_message" displayName="Промежуточное событие-инициатор - сообщение" type="События" subType="Промежуточные события" />
+    <element name="start_interrupting_event_error" displayName="Прерывающее стартовое событие - ошибка" type="События" subType="Стартовые события" />
+    <element name="start_non_interrupting_event_signal" displayName="Непрерывающее стартовое событие - сигнал" type="События" subType="Стартовые события" />
+    <element name="boundary_non_interrupting_event_condition" displayName="Непрерывающее граничное событие - условие" type="События" subType="Граничные события" />
+    <element name="userTask" displayName="Пользовательская задача" type="Задачи" />
+    <element name="start_event_message" displayName="Стартовое событие - сообщение" type="События" subType="Стартовые события" />
+    <element name="end_event_compensation" displayName="Конечное событие - компенсация" type="События" subType="Конечные события" />
+    <element name="businessRuleTask" displayName="Бизнес-правило" type="Задачи" />
+    <element name="start_non_interrupting_event_complex" displayName="Непрерывающее стартовое событие - множественное" type="События" subType="Стартовые события" />
+    <element name="intermediate_event_throw_link" displayName="Промежуточное событие-инициатор - ссылка" type="События" subType="Промежуточные события" />
+    <element name="inputData" displayName="Входные данные" type="Артефакты" />
+    <element name="boundary_event_parallel_complex" displayName="Прерывающее граничное событие – параллельное множественное" type="События" subType="Граничные события" />
+    <element name="intermediate_event_throw_signal" displayName="Промежуточное событие-инициатор - сигнал" type="События" subType="Промежуточные события" />
+    <element name="boundary_event_message" displayName="Прерывающее граничное событие - сообщение" type="События" subType="Граничные события" />
+    <element name="emptyPool" displayName="Пустой пул" type="Участники" />
+    <element name="sub_process_collapsed" displayName="Подпроцесс - свернутый" type="Подпроцессы" canHaveChildren="true" />
+    <element name="serviceTask" displayName="Сервисная задача" type="Задачи" />
+    <element name="end_event_error" displayName="Конечное событие - ошибка" type="События" subType="Конечные события" />
+    <element name="dataObject" displayName="Объект данных" type="Артефакты" />
+    <element name="start_event_complex" displayName="Стартовое событие - множественное" type="События" subType="Стартовые события" />
+    <element name="start_non_interrupting_event_message" displayName="Непрерывающее стартовое событие - сообщение" type="События" subType="Стартовые события" />
+    <element name="end_event_terminate" displayName="Конечное событие - завершение" type="События" subType="Конечные события" />
+    <element name="outputData" displayName="Выходные данные" type="Артефакты" />
+    <element name="start_non_interrupting_event_timer" displayName="Непрерывающее стартовое событие - таймер" type="События" subType="Стартовые события" />
+    <element name="end_event_escalation" displayName="Конечное событие - эскалация" type="События" subType="Конечные события" />
+    <element name="scriptTask" displayName="Сценарий" type="Задачи" />
+    <element name="boundary_event_timer" displayName="Прерывающее граничное событие - таймер" type="События" subType="Граничные события" />
+    <element name="sending_message_activity" displayName="Отправка сообщения" type="Задачи" />
+    <element name="start_interrupting_event_condition" displayName="Прерывающее стартовое событие - условие" type="События" subType="Стартовые события" />
+    <element name="start_interrupting_event_timer" displayName="Прерывающее стартовое событие - таймер" type="События" subType="Стартовые события" />
+    <element name="end_event_message" displayName="Конечное событие - сообщение" type="События" subType="Конечные события" />
+    <element name="boundary_non_interrupting_event_signal" displayName="Непрерывающее граничное событие - сигнал" type="События" subType="Граничные события" />
+    <element name="boundary_non_interrupting_event_message" displayName="Непрерывающее граничное событие - сообщение" type="События" subType="Граничные события" />
+    <element name="start_interrupting_event_signal" displayName="Прерывающее стартовое событие - сигнал" type="События" subType="Стартовые события" />
+    <element name="manualTask" displayName="Ручная задача" type="Задачи" />
+    <element name="start_interrupting_event_complex" displayName="Прерывающее стартовое событие - множественное" type="События" subType="Стартовые события" />
+    <element name="start_non_interrupting_event_parallel_complex" displayName="Непрерывающее стартовое событие - параллельное множественное" type="События" subType="Стартовые события" />
+    <element name="start_event_parallel_complex" displayName="Стартовое событие - параллельное множественное" type="События" subType="Стартовые события" />
+    <element name="boundary_event_cancel" displayName="Прерывающее граничное событие - отмена" type="События" subType="Граничные события" />
+    <element name="intermediate_event_catch_timer" displayName="Промежуточное событие-обработчик – таймер" type="События" subType="Промежуточные события" />
+    <element name="intermediate_event_catch_none" displayName="Промежуточное событие" type="События" subType="Промежуточные события" />
+    <element name="intermediate_event_catch_link" displayName="Промежуточное событие-обработчик - ссылка" type="События" subType="Промежуточные события" />
+    <element name="transaction" displayName="Транзакция" type="Подпроцессы" />
+    <element name="start_event_signal" displayName="Стартовое событие - сигнал" type="События" subType="Стартовые события" />
+    <element name="group_none" displayName="Группа" type="Артефакты" />
+    <element name="boundary_event_compensation" displayName="Прерывающее граничное событие - компенсация" type="События" subType="Граничные события" />
+    <element name="start_interrupting_event_compensation" displayName="Прерывающее стартовое событие - компенсация" type="События" subType="Стартовые события" />
+    <element name="boundary_non_interrupting_event_timer" displayName="Непрерывающее граничное событие - таймер" type="События" subType="Граничные события" />
+    <element name="start_interrupting_event_message" displayName="Прерывающее стартовое событие - сообщение" type="События" subType="Стартовые события" />
+    <element name="start_event_condition" displayName="Стартовое событие - условие" type="События" subType="Стартовые события" />
+    <element name="boundary_event_condition" displayName="Прерывающее граничное событие - условие" type="События" subType="Граничные события" />
+    <element name="boundary_event_complex" displayName="Прерывающее граничное событие - множественное" type="События" subType="Граничные события" />
+    <element name="gateway_or" displayName="Неэксклюзивный шлюз" type="Шлюзы" />
+    <element name="horizontalRoad" displayName="Горизонтальный пул" type="Участники" />
+  </notation>
+  <notation name="ArchiMate">
+    <element name="app_event" displayName="Событие приложения" type="Слой приложений" />
+    <element name="strategy_course_of_action" displayName="Направление действий" type="Стратегический слой" />
+    <element name="techno_interaction" displayName="Технологическое взаимодействие" type="Технологический слой" />
+    <element name="business_function" displayName="Бизнес-функция" type="Бизнес-слой" />
+    <element name="business_role" displayName="Бизнес-роль" type="Бизнес-слой" />
+    <element name="a_grouping" displayName="Группа" type="Композитные элементы" />
+    <element name="techno_device" displayName="Устройство" type="Технологический слой" />
+    <element name="impl_implementation_event" displayName="Событие реализации" type="Слой миграции и реализации" />
+    <element name="techno_equipment" displayName="Оборудование" type="Технологический слой" />
+    <element name="business_service" displayName="Бизнес-сервис" type="Бизнес-слой" />
+    <element name="motivation_goal" displayName="Цель" type="Мотивация" />
+    <element name="app_object" displayName="Объект данных" type="Слой приложений" />
+    <element name="techno_system_po" displayName="Системное ПО" type="Технологический слой" />
+    <element name="business_interface" displayName="Бизнес-интерфейс" type="Бизнес-слой" />
+    <element name="a_location" displayName="Локация" type="Композитные элементы" />
+    <element name="business_actor" displayName="Бизнес-актор" type="Бизнес-слой" />
+    <element name="techno_node" displayName="Узел" type="Технологический слой" />
+    <element name="techno_distribution_network" displayName="Распределительная сеть" type="Технологический слой" />
+    <element name="app_function" displayName="Функция приложения" type="Слой приложений" />
+    <element name="motivation_requirement" displayName="Требование" type="Мотивация" />
+    <element name="motivation_meaning" displayName="Значение" type="Мотивация" />
+    <element name="techno_material" displayName="Материал" type="Технологический слой" />
+    <element name="business_interaction" displayName="Бизнес-взаимодействие" type="Бизнес-слой" />
+    <element name="business_contract" displayName="Контракт" type="Бизнес-слой" />
+    <element name="techno_communication_network" displayName="Коммуникационная сеть" type="Технологический слой" />
+    <element name="techno_function" displayName="Технологическая функция" type="Технологический слой" />
+    <element name="business_representation" displayName="Носитель информации" type="Бизнес-слой" />
+    <element name="app_collaboration" displayName="Коллаборация приложений" type="Слой приложений" />
+    <element name="business_event" displayName="Бизнес-событие" type="Бизнес-слой" />
+    <element name="techno_interface" displayName="Технологический интерфейс" type="Технологический слой" />
+    <element name="motivation_principle" displayName="Принцип" type="Мотивация" />
+    <element name="motivation_stakeholder" displayName="Заинтересованная сторона" type="Мотивация" />
+    <element name="motivation_constraint" displayName="Ограничение" type="Мотивация" />
+    <element name="techno_service" displayName="Технологический сервис" type="Технологический слой" />
+    <element name="techno_collaboration" displayName="Технологическая коллаборация" type="Технологический слой" />
+    <element name="app_service" displayName="Сервис приложения" type="Слой приложений" />
+    <element name="techno_artifact" displayName="Артефакт" type="Технологический слой" />
+    <element name="motivation_driver" displayName="Драйвер" type="Мотивация" />
+    <element name="business_object" displayName="Бизнес-объект" type="Бизнес-слой" />
+    <element name="motivation_value" displayName="Ценность" type="Мотивация" />
+    <element name="strategy_resource" displayName="Ресурс" type="Стратегический слой" />
+    <element name="motivation_assessment" displayName="Оценка" type="Мотивация" />
+    <element name="impl_work_package" displayName="Пакет работ" type="Слой миграции и реализации" />
+    <element name="techno_path" displayName="Канал" type="Технологический слой" />
+    <element name="app_component" displayName="Компонент приложения" type="Слой приложений" />
+    <element name="techno_facility" displayName="Сооружение" type="Технологический слой" />
+    <element name="impl_gap" displayName="Разрыв" type="Слой миграции и реализации" />
+    <element name="impl_plateau" displayName="Плато" type="Слой миграции и реализации" />
+    <element name="techno_event" displayName="Технологическое событие" type="Технологический слой" />
+    <element name="business_product" displayName="Продукт" type="Бизнес-слой" />
+    <element name="strategy_capability" displayName="Способность" type="Стратегический слой" />
+    <element name="business_collaboration" displayName="Бизнес-коллаборация" type="Бизнес-слой" />
+    <element name="app_interaction" displayName="Взаимодействие приложений" type="Слой приложений" />
+    <element name="impl_deliverable" displayName="Поставляемый результат" type="Слой миграции и реализации" />
+    <element name="app_process" displayName="Процесс приложения" type="Слой приложений" />
+    <element name="business_process" displayName="Бизнес-процесс" type="Бизнес-слой" canHaveChildren="true" />
+    <element name="a_and" displayName="И" type="Дополнительные элементы" />
+    <element name="app_interface" displayName="Интерфейс приложения" type="Слой приложений" />
+    <element name="a_or" displayName="Или" type="Дополнительные элементы" />
+    <element name="strategy_value_stream" displayName="Поток создания ценности" type="Стратегический слой" />
+    <element name="motivation_outcome" displayName="Итог" type="Мотивация" />
+    <element name="techno_process" displayName="Технологический процесс" type="Технологический слой" />
+  </notation>
+</configuration>

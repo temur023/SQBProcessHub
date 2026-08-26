@@ -1,17 +1,56 @@
-"""PIX Process Studio native package (.pmm = ZIP of three XML parts)."""
+"""PIX Process Studio native package (.pmm = ZIP of three XML parts).
+
+Структура пакета воспроизводит выгрузку самой PIX Процессной студии:
+
+    main.xml               — манифест частей (<Types><Override .../></Types>)
+    pm/configuration.xml   — каталог свойств и нотаций студии
+    pm/maps/<slug>.xml     — сама карта (<Map> с <node> и <connector>)
+
+Ключевые соглашения формата, сверенные с эталонной выгрузкой PIX:
+
+* узлы внутри дорожки (`horizontalRoad`) позиционируются ОТНОСИТЕЛЬНО дорожки,
+  сама дорожка — в абсолютных координатах карты;
+* подпись связи хранится в атрибуте ``Text``, а не ``label``
+  (``label`` студия игнорирует — подписи шлюзов теряются);
+* список ``waypoint`` — это ПОЛНАЯ ломаная, включая точки на границе исходного
+  и целевого узла, а не только промежуточные изломы;
+* ``sourcePoint``/``targetPoint`` — необязательные индексы якорей; если их не
+  указывать, студия трассирует связь сама (в эталоне так у 30 связей из 50).
+
+В отличие от BPMN-выгрузки, здесь НЕ применяется нормализация степеней
+событий: ``.pmm`` — это рисунок карты, и узел должен выглядеть так, как его
+нарисовал аналитик. Валидную модель даёт экспорт в ``.bpmn``.
+"""
 from __future__ import annotations
 
 import io
 import re
+import unicodedata
 import uuid
 import zipfile
-from typing import Dict, List, Tuple
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
-from app.models.process import BusinessProcess, ProcessNode
+from app.models.process import BusinessProcess, ProcessEdge, ProcessNode
+from app.services.edge_routing import orthogonal_waypoints
 
 _NS_XSI = 'http://www.w3.org/2001/XMLSchema-instance'
 _NS_XSD = 'http://www.w3.org/2001/XMLSchema'
 _PIX_NS = uuid.UUID('8b2e0c5a-4d71-4f3a-9c1e-6a7f0d2b9e11')
+
+_CONFIGURATION_PATH = Path(__file__).resolve().parent.parent / 'resources' / 'pix_configuration.xml'
+
+#: Ширина заголовочной плашки карты; в эталоне PIX — 1988 px.
+_TITLE_POOL_WIDTH = 1988
+_TITLE_POOL_HEIGHT = 90
+
+_TRANSLIT = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e', 'ж': 'zh',
+    'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
+    'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'ts',
+    'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu',
+    'я': 'ya', 'ў': 'o', 'қ': 'q', 'ғ': 'g', 'ҳ': 'h', 'і': 'i', 'ї': 'i', 'є': 'e',
+}
 
 
 def escape_xml(value) -> str:
@@ -31,41 +70,90 @@ def _pix_id(raw: str) -> str:
     return str(uuid.uuid5(_PIX_NS, raw or 'node'))
 
 
-def _map_slug(process: BusinessProcess) -> str:
-    raw = process.passport.code or process.name or 'map'
-    slug = re.sub(r'[^A-Za-z0-9_-]+', '_', raw).strip('_')[:40]
-    return slug or 'map'
+def transliterate(text: str) -> str:
+    """Кириллица -> латиница, чтобы имя карты оставалось читаемым в студии.
+
+    Имена файлов из Telegram/macOS приходят в разложенном виде (NFD): «ў» —
+    это «у» + комбинирующая бреве. Без нормализации диакритика превращалась бы
+    в подчёркивание посреди слова.
+    """
+    text = unicodedata.normalize('NFC', text or '')
+    out: List[str] = []
+    for ch in text:
+        if unicodedata.combining(ch):
+            continue
+        lower = ch.lower()
+        if lower in _TRANSLIT:
+            mapped = _TRANSLIT[lower]
+            out.append(mapped.upper() if ch.isupper() and mapped else mapped)
+        else:
+            out.append(ch)
+    return ''.join(out)
 
 
-def _pix_type(node: ProcessNode) -> str:
-    if node.type == 'startEvent':
+def map_slug(process: BusinessProcess) -> str:
+    """Имя карты: человекочитаемое имя процесса, а не служебный код паспорта.
+
+    Имя части в ZIP и атрибут ``Map name`` совпадают — как в выгрузке PIX.
+    """
+    for candidate in (process.passport.name, process.name, process.passport.code):
+        slug = re.sub(r'[^A-Za-z0-9_-]+', '_', transliterate(candidate or '')).strip('_')
+        slug = re.sub(r'_{2,}', '_', slug)[:60].strip('_')
+        if len(slug) >= 3:
+            return slug
+    return 'map'
+
+
+def pix_type(node: ProcessNode) -> str:
+    """Тип узла в словаре нотации BPMN Процессной студии (pm/configuration.xml)."""
+    style = (node.style or '').lower()
+    kind = node.type
+
+    if kind == 'startEvent':
+        if 'symbol=timer' in style:
+            return 'start_event_timer'
+        if 'symbol=message' in style:
+            return 'start_event_message'
         return 'start_event_none'
-    if node.type == 'endEvent':
+    if kind == 'endEvent':
+        if 'terminate' in style:
+            return 'end_event_terminate'
+        if 'symbol=message' in style:
+            return 'end_event_message'
         return 'end_event_none'
-    if node.type == 'exclusiveGateway':
+    if kind == 'intermediateTimerEvent':
+        return 'intermediate_event_catch_timer'
+    if kind == 'intermediateMessageEvent':
+        return 'intermediate_event_catch_message'
+    if kind == 'exclusiveGateway':
         return 'gateway_xor'
-    if node.type == 'parallelGateway':
+    if kind == 'parallelGateway':
         return 'gateway_parallel'
-    if node.type == 'inclusiveGateway':
+    if kind == 'inclusiveGateway':
         return 'gateway_or'
-    if node.type == 'serviceTask' or node.category == 'rpa_bot':
+    if kind == 'subProcess':
+        return 'sub_process'
+    if kind == 'dataStore':
+        return 'dataStorage'
+    if kind == 'dataObject':
+        return 'dataObject'
+    if kind == 'textAnnotation':
+        return 'input'
+    if kind == 'serviceTask' or node.category == 'rpa_bot':
         return 'serviceTask'
-    if node.type == 'userTask':
+    if kind == 'userTask':
         return 'userTask'
     return 'task'
 
 
-def _attr(name: str, value, skip_empty: bool = True) -> str:
-    if value is None:
-        return ''
-    text = str(value)
-    if skip_empty and text == '':
-        return ''
-    return f' {name}="{escape_xml(text)}"'
+def _node_extra(node: ProcessNode) -> str:
+    if node.type in ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway'):
+        return ' labelPlacement="Left" font_size="16"'
+    return ''
 
 
 def _node_xml(
-    pix_type: str,
+    node_type: str,
     nid: str,
     label: str,
     x: int,
@@ -74,27 +162,81 @@ def _node_xml(
     h: int,
     extra: str = '',
     fill: str = 'var(--bg-accent-node)',
+    indent: str = '  ',
 ) -> str:
-    bits = (
-        f'    <node type="{escape_xml(pix_type)}" id="{escape_xml(nid)}"'
-        f'{_attr("label", label, skip_empty=False)} number="0"'
+    return (
+        f'{indent}<node type="{escape_xml(node_type)}" id="{escape_xml(nid)}"'
+        f' label="{escape_xml(label)}" number="0"'
         f' x="{int(x)}" y="{int(y)}" width="{int(max(w, 8))}" height="{int(max(h, 8))}"'
         f' fill_color="{escape_xml(fill)}"{extra} />'
     )
-    return bits
 
 
-def _rel(child: ProcessNode, parent: ProcessNode) -> Tuple[int, int]:
-    return (child.geometry.x - parent.geometry.x, child.geometry.y - parent.geometry.y)
+def clamp_into_lane(child: ProcessNode, lane: ProcessNode) -> Tuple[int, int]:
+    """Координаты узла относительно дорожки, зажатые в её границы.
+
+    Узел, отнесённый к дорожке по геометрии, может выступать за её край — в
+    студии он отрисовался бы поверх соседней дорожки.
+    """
+    lane_w = max(lane.geometry.width, 80)
+    lane_h = max(lane.geometry.height, 80)
+    rel_x = child.geometry.x - lane.geometry.x
+    rel_y = child.geometry.y - lane.geometry.y
+    rel_x = max(0, min(rel_x, lane_w - child.geometry.width))
+    rel_y = max(0, min(rel_y, lane_h - child.geometry.height))
+    return int(rel_x), int(rel_y)
+
+
+def _anchor_point(
+    node: Optional[ProcessNode],
+    frac_x: float,
+    frac_y: float,
+    placed: Optional[Dict[str, Tuple[int, int]]] = None,
+) -> Optional[Tuple[float, float]]:
+    if node is None:
+        return None
+    g = node.geometry
+    origin_x, origin_y = (placed or {}).get(node.id, (g.x, g.y))
+    return (origin_x + g.width * frac_x, origin_y + g.height * frac_y)
+
+
+def polyline(
+    edge: ProcessEdge,
+    src: Optional[ProcessNode],
+    tgt: Optional[ProcessNode],
+    placed: Optional[Dict[str, Tuple[int, int]]] = None,
+) -> List[Tuple[float, float]]:
+    """Полная ломаная связи в абсолютных координатах карты.
+
+    Возвращает пустой список, если автор диаграммы не задавал изломов: тогда
+    трассировку лучше оставить студии (так же поступает сама PIX — в эталоне
+    30 связей из 50 идут вообще без waypoint).
+
+    ``placed`` — фактические абсолютные координаты узлов после зажатия в
+    границы дорожки; концы ломаной обязаны лежать на них, а не на исходной
+    геометрии draw.io.
+
+    Ломаная строится ортогонально (`edge_routing`): связи в PIX имеют тип
+    ``step``, и диагональные изломы в них выглядели бы чужеродно.
+    """
+    if not edge.points:
+        return []
+    route = orthogonal_waypoints(edge, src, tgt, placed)
+    return route if len(route) >= 2 else []
+
+
+def _coord(value: float) -> str:
+    return str(int(round(value)))
 
 
 def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
-    slug = _map_slug(process)
+    slug = map_slug(process)
     id_map: Dict[str, str] = {}
     flow = [n for n in process.nodes if n.type != 'lane']
     lanes = list(process.lanes or [])
     for n in flow + lanes:
         id_map[n.id] = _pix_id(n.id)
+    node_by_id = {n.id: n for n in flow}
 
     lines: List[str] = [
         '<?xml version="1.0" encoding="utf-8"?>',
@@ -104,93 +246,97 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
         ),
     ]
 
+    # ── Заголовочная плашка карты ───────────────────────────────────────────
     title = process.passport.name or process.name or slug
     bounds_nodes = lanes or flow
     if bounds_nodes:
-        min_y = min(n.geometry.y for n in bounds_nodes)
         min_x = min(n.geometry.x for n in bounds_nodes)
-        max_x = max(n.geometry.x + n.geometry.width for n in bounds_nodes)
+        min_y = min(n.geometry.y for n in bounds_nodes)
     else:
-        min_x, min_y, max_x = 0, 120, 400
+        min_x, min_y = 0, 120
     lines.append(
         _node_xml(
             'emptyPool',
             _pix_id(f'title:{process.id}'),
             title,
             min_x,
-            min_y - 120,
-            max(max_x - min_x, 400),
-            90,
+            min_y - (_TITLE_POOL_HEIGHT + 40),
+            _TITLE_POOL_WIDTH,
+            _TITLE_POOL_HEIGHT,
             extra=' font_size="28"',
         )
     )
 
+    # ── Дорожки и их содержимое ─────────────────────────────────────────────
+    # Фактическое абсолютное положение узла после зажатия в границы дорожки:
+    # по нему строятся концы ломаных связей.
+    placed: Dict[str, Tuple[int, int]] = {}
     assigned = set()
     for lane in lanes:
-        lid = id_map[lane.id]
         children = [n for n in flow if n.laneId == lane.id]
         for n in children:
             assigned.add(n.id)
-        open_tag = (
-            f'  <node type="horizontalRoad" id="{escape_xml(lid)}"'
+        lines.append(
+            f'  <node type="horizontalRoad" id="{escape_xml(id_map[lane.id])}"'
             f' label="{escape_xml(lane.name)}" number="0"'
             f' x="{lane.geometry.x}" y="{lane.geometry.y}"'
             f' width="{max(lane.geometry.width, 80)}" height="{max(lane.geometry.height, 80)}"'
             f' fill_color="var(--bg-accent-road-node)">'
         )
-        lines.append(open_tag)
         for n in children:
-            rx, ry = _rel(n, lane)
-            extra = ''
-            if 'Gateway' in n.type:
-                extra = ' labelPlacement="Left" font_size="16"'
+            rel_x, rel_y = clamp_into_lane(n, lane)
+            placed[n.id] = (lane.geometry.x + rel_x, lane.geometry.y + rel_y)
             lines.append(
-                '  ' + _node_xml(_pix_type(n), id_map[n.id], n.name, rx, ry, n.geometry.width, n.geometry.height, extra)
+                _node_xml(
+                    pix_type(n), id_map[n.id], n.name, rel_x, rel_y,
+                    n.geometry.width, n.geometry.height, _node_extra(n), indent='    ',
+                )
             )
         lines.append('  </node>')
 
     for n in flow:
         if n.id in assigned:
             continue
-        extra = ' labelPlacement="Left" font_size="16"' if 'Gateway' in n.type else ''
         lines.append(
             _node_xml(
-                _pix_type(n),
-                id_map[n.id],
-                n.name,
-                n.geometry.x,
-                n.geometry.y,
-                n.geometry.width,
-                n.geometry.height,
-                extra,
+                pix_type(n), id_map[n.id], n.name, n.geometry.x, n.geometry.y,
+                n.geometry.width, n.geometry.height, _node_extra(n),
             )
         )
 
-    lane_ids = {l.id for l in lanes}
+    # ── Связи ───────────────────────────────────────────────────────────────
+    lane_ids = {lane.id for lane in lanes}
     for edge in process.edges:
+        # Оформительские линии draw.io (разделители этапов) в карту PIX не идут.
+        if edge.kind == 'annotationLine':
+            continue
         if not edge.sourceId or not edge.targetId:
             continue
         if edge.sourceId not in id_map or edge.targetId not in id_map:
             continue
         if edge.sourceId in lane_ids or edge.targetId in lane_ids:
             continue
-        dashed = bool(edge.dashed)
-        line_style = 'dotted' if dashed else 'solid'
-        marker_end = 'arrowLine' if dashed else 'arrowclosed'
-        cid = _pix_id(edge.id)
+
+        dotted = edge.kind in ('association', 'messageFlow') or bool(edge.dashed)
+        line_style = 'dotted' if dotted else 'solid'
+        marker_end = 'arrowLine' if dotted else 'arrowclosed'
         label = (edge.name or edge.condition or '').strip()
-        label_attr = _attr('label', label)
+        # Подпись связи в PIX — атрибут Text; label студия не читает.
+        text_attr = f' Text="{escape_xml(label)}"' if label else ''
+
         lines.append(
-            f'  <connector id="{escape_xml(cid)}" type="step" lineStyle="{line_style}"'
+            f'  <connector id="{escape_xml(_pix_id(edge.id))}" type="step"{text_attr}'
+            f' lineStyle="{line_style}"'
             f' sourceNodeId="{escape_xml(id_map[edge.sourceId])}"'
-            f' targetNodeId="{escape_xml(id_map[edge.targetId])}"'
-            f' targetPoint="6"{label_attr}>'
+            f' targetNodeId="{escape_xml(id_map[edge.targetId])}">'
         )
         lines.append('    <MarkerStart>line</MarkerStart>')
         lines.append('    <MarkerMiddle />')
         lines.append(f'    <MarkerEnd>{marker_end}</MarkerEnd>')
-        for i, pt in enumerate(edge.points or []):
-            lines.append(f'    <waypoint x="{pt.x}" y="{pt.y}" index="{i}" />')
+        for index, (px, py) in enumerate(
+            polyline(edge, node_by_id.get(edge.sourceId), node_by_id.get(edge.targetId), placed)
+        ):
+            lines.append(f'    <waypoint x="{_coord(px)}" y="{_coord(py)}" index="{index}" />')
         lines.append('    <labelPosition>50</labelPosition>')
         lines.append('    <color>var(--fg-gray-primary)</color>')
         lines.append('    <fontSize>12</fontSize>')
@@ -204,123 +350,22 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
     return slug, '\n'.join(lines) + '\n'
 
 
-def _el(name: str, display: str, extra: str = '') -> str:
-    return f'    <element name="{escape_xml(name)}" displayName="{escape_xml(display)}"{extra} />'
-
-
 def generate_configuration_xml() -> str:
-    """Property catalog + notation registry from a real PIX PMM sample."""
-    props = [
-        (4, 'system_description', 'Описание', ' visible="false" defaultProperty="true"', 1, False),
-        (5, 'system_technology', 'Технология', ' visible="false" defaultProperty="true"', 1, False),
-        (12, 'vladelets_protsessa', 'Владелец процесса', '', 21, False),
-        (16, 'prioritet', 'Приоритет', '', 26, False),
-        (9, 'vremya_ozhidaniya', 'Время ожидания', '', 7, False),
-        (17, 'menezher_etapa', 'Менеджер этапа', '', 21, False),
-        (7, 'uroven_avtomatizatsii1', 'уровень автоматизации1', ' isRequired="true"', 22, False),
-        (1, 'attached_files', 'Прикрепленные файлы', ' isMulti="true"', 9, False),
-        (2, 'document', 'Документ', '', 9, False),
-        (3, 'process_avtomatization_lvl', 'Уровень автоматизации', '', 16, False),
-        (14, 'khranilishcha_failov', 'Хранилища файлов', ' isMulti="true"', 9, False),
-        (18, 'attached_files', 'Прикрепленные файлы', ' defaultProperty="true"', 9, False),
-        (13, 'informatsionnaya_sistema', 'Информационная система', '', 25, False),
-        (19, 'document', 'Документ', ' defaultProperty="true"', 9, False),
-        (8, 'vremya_protsessa', 'Время процесса', '', 7, False),
-        (20, 'system_probability', 'Вероятность', ' visible="false" defaultProperty="true"', 3, False),
-        (15, 'podtverzhdayushchie_dokumenti', 'Подтверждающие документы', ' isMulti="true"', 9, False),
-        (21, 'system_process_time', 'Время процесса', ' visible="false" defaultProperty="true"', 7, False),
-        (11, 'ispolnitel', 'Исполнитель', ' isRequired="true"', 21, False),
-        (10, 'zarplata', 'Зарплата', ' isRequired="true"', 21, False),
-        (6, 'otvetsvennii', 'ответственный', ' isRequired="true"', 21, False),
-    ]
-    lines = [
-        '<?xml version="1.0" encoding="utf-8"?>',
-        f'<configuration xmlns:xsi="{_NS_XSI}" xmlns:xsd="{_NS_XSD}">',
-    ]
-    for pid, name, display, extra, type_id, _ in props:
-        lines.append(
-            f'  <propertyTemplate id="{pid}" name="{name}" displayName="{escape_xml(display)}"'
-            f'{extra} group="main" typeId="{type_id}">'
-        )
-        lines.append('    <column />')
-        lines.append('  </propertyTemplate>')
+    """Каталог свойств и нотаций студии.
 
-    bpmn = [
-        ('input', 'Текст', ''),
-        ('dataStorage', 'Хранилище данных', ' type="Артефакты"'),
-        ('verticalRoad', 'Вертикальный пул', ' type="Участники"'),
-        ('horizontalRoad', 'Горизонтальный пул', ' type="Участники"'),
-        ('emptyPool', 'Пустой пул', ' type="Участники"'),
-        ('task', 'Задача', ' type="Задачи"'),
-        ('userTask', 'Пользовательская задача', ' type="Задачи"'),
-        ('serviceTask', 'Сервисная задача', ' type="Задачи"'),
-        ('manualTask', 'Ручная задача', ' type="Задачи"'),
-        ('scriptTask', 'Сценарий', ' type="Задачи"'),
-        ('businessRuleTask', 'Бизнес-правило', ' type="Задачи"'),
-        ('receiving_message_activity', 'Получение сообщения', ' type="Задачи"'),
-        ('sending_message_activity', 'Отправка сообщения', ' type="Задачи"'),
-        ('gateway_xor', 'Эксклюзивный шлюз', ' type="Шлюзы"'),
-        ('gateway_parallel', 'Параллельный шлюз', ' type="Шлюзы"'),
-        ('gateway_or', 'Неэксклюзивный шлюз', ' type="Шлюзы"'),
-        ('gateway_complex', 'Комплексный шлюз', ' type="Шлюзы"'),
-        ('gateway_eventbased', 'Событийный шлюз', ' type="Шлюзы"'),
-        ('start_event_none', 'Стартовое событие', ' type="События" subType="Стартовые события"'),
-        ('start_event_timer', 'Стартовое событие - таймер', ' type="События" subType="Стартовые события"'),
-        ('end_event_none', 'Конечное событие', ' type="События" subType="Конечные события"'),
-        ('end_event_terminate', 'Конечное событие - завершение', ' type="События" subType="Конечные события"'),
-        ('intermediate_event_catch_timer', 'Промежуточное событие-обработчик – таймер', ' type="События" subType="Промежуточные события"'),
-        ('intermediate_event_catch_none', 'Промежуточное событие', ' type="События" subType="Промежуточные события"'),
-        ('sub_process', 'Подпроцесс - развернутый', ' type="Подпроцессы"'),
-        ('sub_process_collapsed', 'Подпроцесс - свернутый', ' type="Подпроцессы" canHaveChildren="true"'),
-        ('callActivity', 'Вызов', ' type="Подпроцессы"'),
-        ('dataObject', 'Объект данных', ' type="Артефакты"'),
-        ('inputData', 'Входные данные', ' type="Артефакты"'),
-        ('outputData', 'Выходные данные', ' type="Артефакты"'),
-        ('group_none', 'Группа', ' type="Артефакты"'),
-    ]
-    lines.append('  <notation name="BPMN">')
-    for name, display, extra in bpmn:
-        lines.append(_el(name, display, extra))
-    lines.append('  </notation>')
-
-    lines.append('  <notation name="Workflow">')
-    for name, display, extra in [
-        ('horizontalRoad', 'Горизонтальная дорожка', ''),
-        ('verticalRoad', 'Вертикальная дорожка', ''),
-        ('input', 'Текст', ''),
-        ('in_out', 'Вход/Выход', ''),
-        ('informationSystems', 'Информационные системы', ''),
-        ('superProcess', 'Процесс', ' canHaveChildren="true"'),
-        ('ifElement', 'Условие', ''),
-        ('workflow_group', 'Группа', ''),
-    ]:
-        lines.append(_el(name, display, extra))
-    lines.append('  </notation>')
-
-    for notation, elements in [
-        ('EPC', [('event', 'Событие'), ('function', 'Функция'), ('xor', 'XOR'), ('and', 'AND'), ('or', 'OR')]),
-        ('VAD', [('process', 'Процесс'), ('interface', 'Интерфейс'), ('input', 'Текст')]),
-        ('DFD', [('process', 'Процесс'), ('dataStore', 'Хранилище'), ('externalEntity', 'Внешняя сущность')]),
-        ('uml_component', [('component', 'Компонент'), ('interface', 'Интерфейс')]),
-        ('uml_deployment', [('node', 'Узел'), ('artifact', 'Артефакт')]),
-        ('c4', [('person', 'Person'), ('softwareSystem', 'Software System'), ('container', 'Container')]),
-        ('ArchiMate', [('business_process', 'Business Process'), ('application_component', 'Application Component')]),
-    ]:
-        lines.append(f'  <notation name="{escape_xml(notation)}">')
-        for name, display in elements:
-            lines.append(_el(name, display))
-        lines.append('  </notation>')
-
-    lines.append('</configuration>')
-    return '\n'.join(lines) + '\n'
+    Отдаётся эталонный файл PIX без изменений: имена элементов нотаций
+    (``dfd_process``, ``c4_person``, ``app_component`` и т.д.) заданы студией,
+    и собственная реконструкция каталога рискует не пройти её валидацию.
+    """
+    return _CONFIGURATION_PATH.read_text(encoding='utf-8')
 
 
-def generate_main_xml(map_slug: str) -> str:
+def generate_main_xml(slug: str) -> str:
     return (
         '<?xml version="1.0" encoding="utf-8"?>\n'
         f'<Types xmlns:xsi="{_NS_XSI}" xmlns:xsd="{_NS_XSD}">\n'
         '  <Override PartName="/pm/configuration.xml" ContentType="application/xml" />\n'
-        f'  <Override PartName="/pm/maps/{escape_xml(map_slug)}.xml" ContentType="application/xml" />\n'
+        f'  <Override PartName="/pm/maps/{escape_xml(slug)}.xml" ContentType="application/xml" />\n'
         '</Types>\n'
     )
 

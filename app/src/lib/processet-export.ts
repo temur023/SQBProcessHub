@@ -1,4 +1,5 @@
 import type { BusinessProcess } from '@/types/process'
+import { isTaskNode, isArtifactNode } from '@/types/process'
 
 /**
  * Generates Infomaximum Processet compatible Event Log in CSV format.
@@ -37,7 +38,7 @@ export function generateProcessetEventLogCsv(process: BusinessProcess): string {
     const hasSlaBreach = c % 5 === 0
 
     const flowTasks = process.nodes.filter(
-      (n) => n.type === 'task' || n.type === 'userTask' || n.type === 'serviceTask',
+      (n) => isTaskNode(n.type),
     )
 
     flowTasks.forEach((task, idx) => {
@@ -193,7 +194,9 @@ export function generateProcessRegulationCsv(process: BusinessProcess): string {
     'Подразделение / Дорожка',
     'Исполнитель / Роль',
     'ИТ-Система',
-    'Норматив SLA (мин)',
+    'ST — время операции (мин)',
+    'WT — время ожидания (мин)',
+    'TCT — итого (мин)',
     'Входящие документы / Данные',
     'Результат операции (Выход)',
     'Потенциал роботизации (PIX RPA)',
@@ -203,7 +206,9 @@ export function generateProcessRegulationCsv(process: BusinessProcess): string {
 
   let stepNum = 1
   process.nodes
-    .filter((n) => n.type !== 'lane' && n.type !== 'exclusiveGateway' && n.type !== 'parallelGateway' && n.type !== 'inclusiveGateway')
+    // В регламент идут только операции: дорожки, шлюзы и артефакты
+    // (хранилища данных, документы, примечания) шагами процесса не являются.
+    .filter((n) => n.type !== 'lane' && !n.type.includes('Gateway') && !isArtifactNode(n.type))
     .forEach((node) => {
       const num = stepNum++
       rows.push(
@@ -216,6 +221,8 @@ export function generateProcessRegulationCsv(process: BusinessProcess): string {
           `"${escapeCsv(node.role || 'Сотрудник банка')}"`,
           `"${escapeCsv(node.system || 'АБС ЦФТ')}"`,
           node.slaMinutes || 30,
+          node.waitMinutes || 0,
+          (node.slaMinutes || 30) + (node.waitMinutes || 0),
           `"${escapeCsv((node.inputArtifacts || []).join(', ') || 'Заявка')}"`,
           `"${escapeCsv((node.outputArtifacts || []).join(', ') || 'Статус/Документ')}"`,
           `${node.automationPotential || 0}%`,

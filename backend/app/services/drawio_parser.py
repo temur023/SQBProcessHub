@@ -19,7 +19,10 @@ from app.models.process import (
     ProcessValidation,
     Geometry,
     NodeType,
-    StepCategory
+    StepCategory,
+    EdgeKind,
+    ARTIFACT_NODE_TYPES,
+    TASK_NODE_TYPES,
 )
 from app.services.conformance_engine import analyze_process_conformance
 
@@ -218,6 +221,29 @@ def is_decoration_style(style: str) -> bool:
     )
 
 
+#: «5 min», «0.5 daq», «120 мин», «Kutish vaqti 30 min» — длительность в подписи фигуры.
+_DURATION_RE = re.compile(r'(\d+(?:[.,]\d+)?)\s*(?:min|daq|мин)[a-zа-я]*', re.IGNORECASE)
+#: Подпись, помечающая время ОЖИДАНИЯ (WT), а не выполнения (ST).
+_WAIT_RE = re.compile(r"kutish\s+vaqti|время\s+ожидания|wait", re.IGNORECASE)
+
+
+def duration_minutes(text: Optional[str]) -> Optional[float]:
+    """Минуты из подписи-бейджа длительности; None — если числа нет."""
+    if not text:
+        return None
+    m = _DURATION_RE.search(text)
+    if not m:
+        return None
+    try:
+        return float(m.group(1).replace(',', '.'))
+    except ValueError:
+        return None
+
+
+def is_wait_label(text: Optional[str]) -> bool:
+    return bool(text) and bool(_WAIT_RE.search(text))
+
+
 def is_non_task_label(val: str) -> bool:
     v = val.lower().strip()
     if not v:
@@ -311,6 +337,17 @@ def classify_vertex(style: str, label: str, has_incoming: bool, has_outgoing: bo
     if 'swimlane' in s or 'pool;' in s or 'shape=pool' in s:
         return 'lane'
 
+    # ── Артефакты (2-ILOVA: Artefaktlar) ────────────────────────────────────
+    # Хранилище данных: IABS, EHA, EDO, Korporativ pochta.
+    if 'shape=datastore' in s or 'mxgraph.bpmn.datastore' in s or 'kind=datastore' in s:
+        return 'dataStore'
+    # Объект данных: Dalolatnoma, Yig'ma jild, Hujjatlar ro'yxati.
+    if 'mxgraph.bpmn.data2' in s or shape.endswith('bpmn.data') or 'shape=dataobject' in s:
+        return 'dataObject'
+    # Текстовое примечание.
+    if 'shape=note' in s or 'mxgraph.bpmn.annotation' in s or 'shape=mxgraph.flowchart.annotation' in s:
+        return 'textAnnotation'
+
     if 'mxgraph.bpmn.gateway' in s or shape.endswith('gateway2') or 'gwtype' in smap:
         gw = (smap.get('gwtype') or smap.get('symbol') or '').lower()
         if gw in ('parallel', 'and', 'complex') or 'outline=plus' in s or 'parallel' in s:
@@ -321,8 +358,18 @@ def classify_vertex(style: str, label: str, has_incoming: bool, has_outgoing: bo
 
     if 'mxgraph.bpmn.event' in s or shape.endswith('.event'):
         outline = (smap.get('outline') or '').lower()
+        symbol = (smap.get('symbol') or '').lower()
+        # Таймер внутри потока — «Kutish vaqti»: промежуточное событие-обработчик.
+        # Одиночные таймеры-бейджи длительности сюда не доходят: их снимает
+        # _collect_duration_badges() и переносит в ST/WT ближайшего шага.
+        if symbol == 'timer' and has_incoming and has_outgoing:
+            return 'intermediateTimerEvent'
+        if symbol == 'message' and has_incoming and has_outgoing:
+            return 'intermediateMessageEvent'
         if outline in ('end', 'terminate') or 'outline=end' in s or 'outline=double' in s:
             return 'endEvent'
+        if outline == 'catching' and has_incoming and has_outgoing:
+            return 'intermediateTimerEvent' if symbol == 'timer' else 'intermediateMessageEvent'
         if not has_incoming and has_outgoing:
             return 'startEvent'
         if has_incoming and not has_outgoing:
@@ -331,6 +378,8 @@ def classify_vertex(style: str, label: str, has_incoming: bool, has_outgoing: bo
 
     if 'mxgraph.bpmn.task' in s:
         marker = (smap.get('taskmarker') or smap.get('symbol') or '').lower()
+        if marker in ('sub', 'subprocess') or 'issubprocess=1' in s or 'mxgraph.bpmn.transaction' in s:
+            return 'subProcess'
         if marker in ('service', 'script', 'send', 'receive', 'businessrule') or any(
             k in l for k in ('rpa', 'робот', 'авто-', 'avtomat', 'sms')
         ):
@@ -401,7 +450,9 @@ def classify_vertex(style: str, label: str, has_incoming: bool, has_outgoing: bo
 
 def classify_category(node_type: NodeType, name: str, style: str) -> StepCategory:
     lower = f"{name} {style}".lower()
-    if node_type in ('startEvent', 'endEvent'):
+    if node_type in ARTIFACT_NODE_TYPES:
+        return 'api_service' if node_type == 'dataStore' else 'manual'
+    if node_type in ('startEvent', 'endEvent', 'intermediateTimerEvent', 'intermediateMessageEvent'):
         return 'notification'
     if node_type == 'serviceTask' or any(k in lower for k in ('rpa', 'робот', 'авто-', 'avtomat', 'генерация', 'sms')):
         return 'rpa_bot'
@@ -444,8 +495,15 @@ def detect_system(name: str, lane_name: str) -> str:
     return 'SQB CRM / Core'
 
 def extract_sla_minutes(raw_text: str, category: StepCategory, node_type: NodeType) -> int:
+    if node_type in ARTIFACT_NODE_TYPES:
+        return 0
     if node_type in ('startEvent', 'endEvent'):
         return 5
+
+    if node_type in ('intermediateTimerEvent', 'intermediateMessageEvent'):
+        # Событие ожидания: длительность — это и есть его подпись.
+        minutes = duration_minutes(raw_text)
+        return max(1, int(round(minutes))) if minutes else 30
 
     match = re.search(r'(\d+(?:\.\d+)?)\s*(?:min|daq|минут|мин|m\b)', raw_text, re.IGNORECASE)
     if match:
@@ -691,8 +749,11 @@ def _collect_validations(flow_nodes: List[ProcessNode], edges: List[ProcessEdge]
     if not ends:
         validations.append(ProcessValidation(level='warning', message='Отсутствует событие успешного завершения'))
     for n in flow_nodes:
-        in_e = [e for e in edges if e.targetId == n.id]
-        out_e = [e for e in edges if e.sourceId == n.id]
+        if n.type in ARTIFACT_NODE_TYPES:
+            continue  # хранилища/документы соединяются ассоциациями, а не потоком
+        seq = [e for e in edges if e.kind == 'sequenceFlow']
+        in_e = [e for e in seq if e.targetId == n.id]
+        out_e = [e for e in seq if e.sourceId == n.id]
         if n.type not in ('startEvent', 'lane') and not in_e:
             validations.append(ProcessValidation(
                 level='error',
@@ -706,6 +767,144 @@ def _collect_validations(flow_nodes: List[ProcessNode], edges: List[ProcessEdge]
                 nodeId=n.id,
             ))
     return validations
+
+
+#: Максимальное расстояние от бейджа длительности до центра шага, px.
+#: На реальных картах SQB бейдж лежит в 56-90 px от центра своего шага,
+#: а до соседнего шага — не ближе ~190 px, поэтому порог однозначен.
+BADGE_ATTACH_RADIUS = 130.0
+
+
+def _name_and_prune_lanes(lanes: List[ProcessNode], flow_nodes: List[ProcessNode]) -> None:
+    """Убирает безымянные дорожки-баннеры и даёт позиционные имена остальным.
+
+    На картах SQB встречаются swimlane-рамки оформления (шапка схемы) — без
+    подписи и без шагов внутри. Настоящая безымянная дорожка содержит шаги,
+    поэтому её сохраняем и называем по вертикальной позиции.
+    """
+    populated = {n.laneId for n in flow_nodes if n.laneId}
+    doomed = {
+        lane.id for lane in lanes
+        if not (lane.name or '').strip() and lane.id not in populated
+    }
+    if doomed:
+        lanes[:] = [lane for lane in lanes if lane.id not in doomed]
+        for node in flow_nodes:
+            if node.laneId in doomed:
+                node.laneId = None
+                node.laneName = None
+
+    for index, lane in enumerate(sorted(lanes, key=lambda l: (l.geometry.y, l.geometry.x)), 1):
+        if not (lane.name or '').strip():
+            lane.name = f'Дорожка {index}'
+            lane.role = lane.name
+
+
+#: Насколько близко свободный конец линии должен подойти к фигуре, px.
+FREE_ENDPOINT_SNAP = 30.0
+
+
+def _distance_to_box(px: float, py: float, node: ProcessNode) -> float:
+    g = node.geometry
+    dx = max(g.x - px, 0.0, px - (g.x + g.width))
+    dy = max(g.y - py, 0.0, py - (g.y + g.height))
+    return (dx * dx + dy * dy) ** 0.5
+
+
+def _resolve_free_endpoint(
+    point: Optional[Tuple[float, float]],
+    candidates: List[ProcessNode],
+) -> Optional[str]:
+    """Фигура под свободным концом линии draw.io.
+
+    В draw.io конец связи может быть не привязан к фигуре, а задан точкой
+    (``mxPoint as="sourcePoint"``). Редактор всё равно рисует линию, а мы
+    раньше выбрасывали её целиком — на карте пропадали и потоки, и пунктирные
+    ассоциации к хранилищам данных.
+    """
+    if point is None or not candidates:
+        return None
+    best_id: Optional[str] = None
+    best_key = (FREE_ENDPOINT_SNAP, float('inf'))
+    for node in candidates:
+        dist = _distance_to_box(point[0], point[1], node)
+        # При равном расстоянии выигрывает меньшая фигура: точка внутри шага
+        # лежит и внутри его дорожки, но связать её надо с шагом.
+        key = (dist, float(node.geometry.width) * float(node.geometry.height))
+        if dist <= FREE_ENDPOINT_SNAP and key < best_key:
+            best_key, best_id = key, node.id
+    return best_id
+
+
+def _apply_duration_badges(
+    flow_nodes: List[ProcessNode],
+    badges: List[Tuple[float, float, float, bool]],
+) -> None:
+    """Переносит ST/WT из фигур-таймеров в ближайший шаг процесса (4-ILOVA)."""
+    tasks = [n for n in flow_nodes if n.type in TASK_NODE_TYPES]
+    if not tasks or not badges:
+        return
+    st_seen: Set[str] = set()
+    for cx, cy, minutes, is_wait in badges:
+        best: Optional[ProcessNode] = None
+        best_dist = BADGE_ATTACH_RADIUS
+        for t in tasks:
+            tx = t.geometry.x + t.geometry.width / 2
+            ty = t.geometry.y + t.geometry.height / 2
+            dist = ((cx - tx) ** 2 + (cy - ty) ** 2) ** 0.5
+            if dist < best_dist:
+                best_dist, best = dist, t
+        if best is None:
+            continue
+        value = max(1, int(round(minutes)))
+        if is_wait:
+            best.waitMinutes = (best.waitMinutes or 0) + value
+        elif best.id in st_seen:
+            best.slaMinutes = (best.slaMinutes or 0) + value
+        else:
+            best.slaMinutes = value
+            st_seen.add(best.id)
+        if best.category != 'rpa_bot':
+            best.costPerExecution = (best.slaMinutes or 0) * 1932
+
+
+def _resolve_artifact_links(flow_nodes: List[ProcessNode], edges: List[ProcessEdge]) -> None:
+    """Системы и документы шага — из реальных ассоциаций карты, а не из эвристик."""
+    by_id = {n.id: n for n in flow_nodes}
+    systems: Dict[str, List[str]] = {}
+    inputs: Dict[str, List[str]] = {}
+    outputs: Dict[str, List[str]] = {}
+
+    def _add(bucket: Dict[str, List[str]], key: str, value: str) -> None:
+        if not value:
+            return
+        items = bucket.setdefault(key, [])
+        if value not in items:
+            items.append(value)
+
+    for e in edges:
+        if e.kind != 'association':
+            continue
+        src = by_id.get(e.sourceId or '')
+        tgt = by_id.get(e.targetId or '')
+        if not src or not tgt:
+            continue
+        for artifact, step, incoming_dir in ((src, tgt, True), (tgt, src, False)):
+            if step.type not in TASK_NODE_TYPES:
+                continue
+            if artifact.type == 'dataStore':
+                _add(systems, step.id, artifact.name)
+            elif artifact.type == 'dataObject':
+                _add(inputs if incoming_dir else outputs, step.id, artifact.name)
+
+    for node in flow_nodes:
+        linked = systems.get(node.id)
+        if linked:
+            node.system = ', '.join(linked)
+        if inputs.get(node.id):
+            node.inputArtifacts = inputs[node.id]
+        if outputs.get(node.id):
+            node.outputArtifacts = outputs[node.id]
 
 
 def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
@@ -728,6 +927,44 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
     ignore_cell_ids: Set[str] = set()
     origin_cache: Dict[str, Tuple[float, float]] = {}
     orphan_condition_labels: List[Tuple[str, float, float]] = []  # text, x, y
+    # Бейджи длительности: (центр X, центр Y, минуты, это ожидание WT?)
+    duration_badges: List[Tuple[float, float, float, bool]] = []
+
+    # ── Бейджи ST/WT ────────────────────────────────────────────────────────
+    # По Методике (4-ILOVA) время операции проставляется отдельной мелкой
+    # фигурой-таймером рядом с шагом, а не в самой подписи шага. Такие фигуры
+    # не соединены рёбрами: снимаем их с карты и переносим в ST/WT шага.
+    for c in cells:
+        if c.get('vertex') != '1':
+            continue
+        c_id = c.get('id', '')
+        if not c_id or c_id in incoming or c_id in outgoing:
+            continue
+        style_l = (c.get('style') or '').lower()
+        if 'swimlane' in style_l:
+            continue
+        text = clean_label(c.get('value'))
+        minutes = duration_minutes(text)
+        if minutes is None:
+            continue
+        residual = _DURATION_RE.sub('', text).strip(' .,:;-')
+        is_timer_shape = 'symbol=timer' in style_l or 'shape=mxgraph.bpmn.timer' in style_l
+        if not is_timer_shape:
+            # Текстовая пометка «O'rtacha kutish vaqti 1440 min»: только текст,
+            # никогда не фигура BPMN, иначе можно съесть настоящий шаг.
+            if 'mxgraph.bpmn' in style_l or len(residual) > 32:
+                continue
+        geo_b = c.find('mxGeometry')
+        if geo_b is None:
+            continue
+        try:
+            bx, by = _parent_origin(c.get('parent'), cell_map, origin_cache)
+            cx = float(geo_b.get('x', '0') or 0) + bx + float(geo_b.get('width', '20') or 20) / 2
+            cy = float(geo_b.get('y', '0') or 0) + by + float(geo_b.get('height', '20') or 20) / 2
+        except ValueError:
+            continue
+        duration_badges.append((cx, cy, minutes, is_wait_label(text)))
+        ignore_cell_ids.add(c_id)
 
     def _remember_label_geo(edge_id: str, geo_el: Optional[ET.Element]) -> None:
         if geo_el is None or edge_id in edge_label_geo:
@@ -820,6 +1057,9 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             continue
 
         # 5. Non-task system tags, artifacts, conditions without connections
+        # Дорожки исключены: у безымянной дорожки подпись пустая, но это не мусор.
+        if 'swimlane' in style or 'shape=pool' in style:
+            continue
         if is_non_task_label(cleaned) and c_id not in incoming and c_id not in outgoing:
             ignore_cell_ids.add(c_id)
             if cleaned and cleaned.lower() in CONDITION_TAGS:
@@ -885,7 +1125,9 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         node_id = cell.get('id') or f"node_{uuid.uuid4().hex[:8]}"
         style = cell.get('style') or ''
         raw_val = cell.get('value')
-        raw_cleaned = clean_label(raw_val) or label_map.get(node_id, '')
+        raw_cleaned = clean_label(raw_val)
+        if not raw_cleaned and 'swimlane' not in (style or '').lower():
+            raw_cleaned = label_map.get(node_id, '')
 
         parent_id = cell.get('parent')
 
@@ -928,7 +1170,9 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         clean_name = re.sub(r'^[0-9]+[.)]\s*', '', clean_name)
         clean_name = re.sub(r'\b\d+(?:\.\d+)?\s*(?:min|daq|минут|мин)\b.*$', '', clean_name, flags=re.I).strip()
 
-        if not clean_name:
+        if not clean_name and node_type == 'lane':
+            pass  # безымянная дорожка: имя присвоим позиционно после разбора
+        elif not clean_name:
             if node_type == 'startEvent':
                 clean_name = 'Старт'
             elif node_type == 'endEvent':
@@ -978,6 +1222,8 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         if n.laneId and n.laneId not in lane_ids:
             n.laneId = None
 
+    _name_and_prune_lanes(lanes, flow_nodes)
+
     LANE_HEAD_WIDTH = 44
     for n in flow_nodes:
         if not n.laneId:
@@ -1002,14 +1248,66 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
 
     valid_node_ids = {n.id for n in flow_nodes}
     valid_lane_ids = {l.id for l in lanes}
+    type_by_id: Dict[str, str] = {n.id: n.type for n in flow_nodes}
+
+    def _edge_kind(src_id: str, tgt_id: str, dashed: bool) -> EdgeKind:
+        # Линия, упирающаяся в дорожку, — оформление (разделитель этапов),
+        # а не поток управления: в BPMN дорожка не может быть концом связи.
+        if src_id in valid_lane_ids or tgt_id in valid_lane_ids:
+            return 'annotationLine'
+        st, tt = type_by_id.get(src_id, ''), type_by_id.get(tgt_id, '')
+        # Связь с артефактом — всегда ассоциация (по BPMN sequenceFlow к
+        # хранилищу/документу недопустим).
+        if st in ARTIFACT_NODE_TYPES or tt in ARTIFACT_NODE_TYPES:
+            return 'association'
+        if dashed and 'intermediateMessageEvent' in (st, tt):
+            return 'messageFlow'
+        return 'sequenceFlow'
 
     edges: List[ProcessEdge] = []
+    snap_targets = flow_nodes + lanes
+
     for cell in raw_edges:
         s_id = cell.get('source')
         t_id = cell.get('target')
-        if not s_id or not t_id:
+
+        edge_geo = cell.find('mxGeometry')
+        edge_ox, edge_oy = _parent_origin(cell.get('parent'), cell_map, origin_cache)
+        free_ends: Dict[str, Tuple[float, float]] = {}
+        if edge_geo is not None:
+            for mx in edge_geo.findall('mxPoint'):
+                role = mx.get('as') or ''
+                if role not in ('sourcePoint', 'targetPoint'):
+                    continue
+                try:
+                    free_ends[role] = (
+                        float(mx.get('x', '0') or 0) + edge_ox,
+                        float(mx.get('y', '0') or 0) + edge_oy,
+                    )
+                except ValueError:
+                    continue
+
+        # Конец без привязки — притягиваем к ближайшей фигуре под ним.
+        if not s_id:
+            s_id = _resolve_free_endpoint(free_ends.get('sourcePoint'), snap_targets)
+        if not t_id:
+            t_id = _resolve_free_endpoint(free_ends.get('targetPoint'), snap_targets)
+
+        def _known(node_id: Optional[str]) -> bool:
+            return bool(node_id) and (node_id in valid_node_ids or node_id in valid_lane_ids)
+
+        s_known, t_known = _known(s_id), _known(t_id)
+        if not s_known:
+            s_id = None
+        if not t_known:
+            t_id = None
+        # Линия без единой опоры на фигуру — не связь и не оформление, а мусор.
+        if not s_known and not t_known:
             continue
-        if not ((s_id in valid_node_ids or s_id in valid_lane_ids) and (t_id in valid_node_ids or t_id in valid_lane_ids)):
+        # Оформительская линия: один конец висит в пустоте. Рисуем, но в
+        # выгрузку BPMN/PIX не отдаём — такой конструкции там нет.
+        is_annotation_line = not (s_known and t_known)
+        if is_annotation_line and not free_ends:
             continue
 
         edge_id = cell.get('id') or f"edge_{uuid.uuid4().hex[:8]}"
@@ -1052,10 +1350,19 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         edges.append(ProcessEdge(
             id=edge_id,
             name=edge_name,
+            kind='annotationLine' if is_annotation_line else _edge_kind(s_id, t_id, is_dashed),
             sourceId=s_id,
             targetId=t_id,
             condition=edge_name or None,
             points=pts,
+            sourcePoint=(
+                ProcessEdgePoint(x=int(round(free_ends['sourcePoint'][0])), y=int(round(free_ends['sourcePoint'][1])))
+                if 'sourcePoint' in free_ends else None
+            ),
+            targetPoint=(
+                ProcessEdgePoint(x=int(round(free_ends['targetPoint'][0])), y=int(round(free_ends['targetPoint'][1])))
+                if 'targetPoint' in free_ends else None
+            ),
             exitX=_style_float(smap, 'exitx'),
             exitY=_style_float(smap, 'exity'),
             entryX=_style_float(smap, 'entryx'),
@@ -1104,8 +1411,14 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
                 best.name = text
                 best.condition = text
 
+    _apply_duration_badges(flow_nodes, duration_badges)
+    _resolve_artifact_links(flow_nodes, edges)
+
     title = filename.replace('.drawio', '').replace('.xml', '')
-    total_hours = round(sum(n.slaMinutes or 0 for n in flow_nodes) / 60, 1) or 8.0
+    task_nodes = [n for n in flow_nodes if n.type in TASK_NODE_TYPES]
+    total_hours = round(
+        sum((n.slaMinutes or 0) + (n.waitMinutes or 0) for n in task_nodes) / 60, 1
+    ) or 8.0
 
     passport = ProcessPassport(
         code=f"PRC-SQB-{uuid.uuid4().hex[:6].upper()}",

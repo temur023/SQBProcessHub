@@ -6,6 +6,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { BusinessProcess, ProcessEdge, ProcessNode } from '@/types/process'
+import { orthogonalizePath } from '@/lib/edge-routing'
 
 interface ProcessVisualizerProps {
   process: BusinessProcess
@@ -19,6 +20,8 @@ const MIN_ZOOM = 0.08
 const MAX_ZOOM = 3.0
 const LANE_HEAD_DEFAULT = 44
 const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif'
+/** Допуск выравнивания линии по осям на холсте, px. */
+const CANVAS_SNAP = 7
 
 function laneHeaderWidth(lane: ProcessNode): number {
   const m = parseStyleMap(lane.style || '')
@@ -54,10 +57,32 @@ const C = {
   start: '#f3f3f3',
   endOk: '#5ee08a',
   endNo: '#ff6b6b',
+  // Артефакты и промежуточные события (2-ILOVA)
+  storeFill: '#10201c',
+  storeStroke: '#4fd1c5',
+  docFill: '#1b1a10',
+  docStroke: '#d7c56a',
+  timerStroke: '#c9a227',
+  noteStroke: '#9aa0a6',
 }
 
 type Box = { x: number; y: number; w: number; h: number; cx: number; cy: number }
 type Pt = { x: number; y: number }
+
+/**
+ * Невидимая нулевая «фигура» в заданной точке.
+ * Нужна для линий draw.io, у которых конец не привязан к фигуре: маршрут
+ * строится теми же функциями, что и для обычных связей.
+ */
+function anchorStub(id: string, at: { x: number; y: number }): ProcessNode {
+  return {
+    id,
+    name: '',
+    type: 'textAnnotation',
+    geometry: { x: at.x, y: at.y, width: 1, height: 1 },
+    style: '',
+  }
+}
 
 function rawBox(n: ProcessNode): Box {
   const w = Math.max(n.geometry.width || 8, 8)
@@ -73,7 +98,12 @@ function rawBox(n: ProcessNode): Box {
 }
 
 function isEventNode(n: ProcessNode): boolean {
-  return n.type === 'startEvent' || n.type === 'endEvent'
+  return (
+    n.type === 'startEvent' ||
+    n.type === 'endEvent' ||
+    n.type === 'intermediateTimerEvent' ||
+    n.type === 'intermediateMessageEvent'
+  )
 }
 
 function parseStyleMap(style: string): Record<string, string> {
@@ -266,7 +296,9 @@ function edgePath(
 
   let pts: Pt[]
   if (wp.length > 0) {
-    pts = [start, ...wp, end]
+    // Изломы из draw.io нельзя соединять напрямую: редактор ведёт линию между
+    // ними по осям, а прямое соединение даёт диагонали.
+    pts = orthogonalizePath([start, ...wp, end], edge, CANVAS_SNAP)
   } else if (isOrthogonalEdge(edge)) {
     pts = buildOrthogonalPts(start, end, wp, edge, src, tgt)
   } else {
@@ -275,6 +307,10 @@ function edgePath(
     if (Math.abs(dx) < 8 || Math.abs(dy) < 8) pts = [start, end]
     else pts = buildOrthogonalPts(start, end, wp, edge, src, tgt)
   }
+  // Концы линии лежат на границе фигуры (у событий — на окружности), поэтому
+  // финальное выравнивание по осям делаем с допуском в несколько пикселей.
+  pts = orthogonalizePath(pts, edge, CANVAS_SNAP)
+  if (pts.length < 2) pts = [start, end]
 
   // Скругление как в draw.io: вместо резких углов используем небольшие дуги через path
   const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
@@ -643,12 +679,16 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               let tgt: ProcessNode | undefined = process.nodes.find(n => n.id === edge.targetId)
               if (!src) src = process.lanes.find(l => l.id === edge.sourceId) as ProcessNode | undefined
               if (!tgt) tgt = process.lanes.find(l => l.id === edge.targetId) as ProcessNode | undefined
+              // Оформительская линия draw.io: конец не привязан к фигуре, а задан
+              // точкой. Без этого такие линии просто исчезали с холста.
+              if (!src && edge.sourcePoint) src = anchorStub(`${edge.id}-src`, edge.sourcePoint)
+              if (!tgt && edge.targetPoint) tgt = anchorStub(`${edge.id}-tgt`, edge.targetPoint)
               if (!src || !tgt) return null
               if (activeFilter !== 'all' || searchQuery.trim()) {
-                if (!visibleIds.has(edge.sourceId!) || !visibleIds.has(edge.targetId!)) {
-                  // lane-target dashed — проверяем видимость только source
-                  if (!process.lanes.find(l => l.id === edge.targetId) || !visibleIds.has(edge.sourceId!)) return null
-                }
+                // Свободный конец и дорожка «видимы» всегда: фильтр отсеивает шаги.
+                const endVisible = (id?: string) =>
+                  !id || visibleIds.has(id) || process.lanes.some(l => l.id === id)
+                if (!endVisible(edge.sourceId) || !endVisible(edge.targetId)) return null
               }
               const sb = nodeBoxes.get(src.id) || rawBox(src)
               const tb = nodeBoxes.get(tgt.id) || rawBox(tgt)
@@ -660,7 +700,18 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                 const cleaned = edge.dashPattern.replace(/;/g, ' ').trim()
                 dashArray = cleaned || '9 9'
               } else if (isDashed) dashArray = '9 9'
-              const baseColor = edge.strokeColor ? edge.strokeColor : (isDashed ? '#e8e8e8' : C.edge)
+              // Ассоциация к артефакту красится в цвет артефактов, а
+              // оформительские разделители этапов приглушаются — иначе они
+              // спорят с потоком управления за внимание.
+              const isDecoration = edge.kind === 'annotationLine'
+              const isAssociation = edge.kind === 'association'
+              const baseColor = edge.strokeColor
+                ? edge.strokeColor
+                : isAssociation
+                ? C.storeStroke
+                : isDashed
+                ? '#e8e8e8'
+                : C.edge
               const strokeColor = hi ? C.edgeHi : baseColor
               const sw = isDashed ? 1.7 : (edge.strokeWidth ? Math.max(1, Math.min(3.5, edge.strokeWidth)) : (hi ? 2 : 1.35))
               let markerId: string
@@ -676,7 +727,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                   strokeLinejoin="round"
                   strokeLinecap="round"
                   strokeDasharray={dashArray}
-                  opacity={isDashed ? 1 : 1}
+                  opacity={isDecoration ? 0.32 : 1}
                   markerEnd={markerId} />
               )
             })}
@@ -735,6 +786,107 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                         y={vpos === 'top' ? y - 6 - (cap.lines.length - 1 - i) * (cap.fontSize + 2) : y + h + 11 + i * (cap.fontSize + 2)}
                         textAnchor="middle"
                         fontSize={cap.fontSize} fill={isRej ? C.endNo : C.endOk}
+                        style={{ userSelect: 'none', fontFamily: FONT }}>
+                        {line}
+                      </text>
+                    ))}
+                  </g>
+                )
+              }
+
+              // Промежуточное событие (2-ILOVA: Oraliq hodisalar) — двойной круг
+              // с маркером: таймер «Kutish vaqti» или конверт сообщения.
+              if (node.type === 'intermediateTimerEvent' || node.type === 'intermediateMessageEvent') {
+                const r = Math.max(8, Math.min(w, h) / 2 - 1)
+                const isTimer = node.type === 'intermediateTimerEvent'
+                const cap = fitCaption(node.name, 90, 2)
+                return (
+                  <g key={node.id} opacity={faded ? 0.18 : 1}
+                    onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
+                    {sel && <circle cx={cx} cy={cy} r={r + 6} fill="none" stroke={C.edgeHi} strokeWidth="1.2" strokeDasharray="4 3" />}
+                    <circle cx={cx} cy={cy} r={r} fill={C.canvas} stroke={sel ? C.edgeHi : C.timerStroke} strokeWidth={1.6} />
+                    <circle cx={cx} cy={cy} r={Math.max(4, r - 3.5)} fill="none" stroke={sel ? C.edgeHi : C.timerStroke} strokeWidth={1.2} />
+                    {isTimer ? (
+                      <g stroke={C.timerStroke} strokeWidth={1.3} strokeLinecap="round" fill="none">
+                        <line x1={cx} y1={cy - r * 0.45} x2={cx} y2={cy} />
+                        <line x1={cx} y1={cy} x2={cx + r * 0.32} y2={cy + r * 0.22} />
+                      </g>
+                    ) : (
+                      <g stroke={C.timerStroke} strokeWidth={1.2} fill="none">
+                        <rect x={cx - r * 0.45} y={cy - r * 0.3} width={r * 0.9} height={r * 0.6} />
+                        <path d={`M${cx - r * 0.45},${cy - r * 0.3} L${cx},${cy + r * 0.05} L${cx + r * 0.45},${cy - r * 0.3}`} />
+                      </g>
+                    )}
+                    {cap.lines.map((line, i) => (
+                      <text key={i} x={cx} y={y + h + 11 + i * (cap.fontSize + 2)}
+                        textAnchor="middle" fontSize={cap.fontSize} fill={C.timerStroke}
+                        style={{ userSelect: 'none', fontFamily: FONT }}>
+                        {line}
+                      </text>
+                    ))}
+                  </g>
+                )
+              }
+
+              // Хранилище данных (IABS, EHA, EDO) — цилиндр, как в draw.io и PIX.
+              if (node.type === 'dataStore') {
+                const ry = Math.max(3, Math.min(8, h * 0.16))
+                const cap = fitCaption(node.name, 80, 2)
+                return (
+                  <g key={node.id} opacity={faded ? 0.18 : 1}
+                    onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
+                    <path
+                      d={`M${x},${y + ry} a${w / 2},${ry} 0 0 1 ${w},0 L${x + w},${y + h - ry} a${w / 2},${ry} 0 0 1 ${-w},0 Z`}
+                      fill={C.storeFill} stroke={sel ? C.edgeHi : C.storeStroke} strokeWidth={sel ? 2 : 1.4} />
+                    <path d={`M${x},${y + ry} a${w / 2},${ry} 0 0 0 ${w},0`}
+                      fill="none" stroke={sel ? C.edgeHi : C.storeStroke} strokeWidth={1.2} />
+                    {cap.lines.map((line, i) => (
+                      <text key={i} x={cx} y={cy + ry + i * (cap.fontSize + 1)}
+                        textAnchor="middle" dominantBaseline="central"
+                        fontSize={cap.fontSize} fill={C.storeStroke}
+                        style={{ userSelect: 'none', fontFamily: FONT }}>
+                        {line}
+                      </text>
+                    ))}
+                  </g>
+                )
+              }
+
+              // Объект данных (Dalolatnoma, Yig'ma jild) — лист с загнутым углом.
+              if (node.type === 'dataObject') {
+                const fold = Math.max(6, Math.min(14, w * 0.22))
+                const cap = fitCaption(node.name, 80, 3)
+                return (
+                  <g key={node.id} opacity={faded ? 0.18 : 1}
+                    onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
+                    <path
+                      d={`M${x},${y} L${x + w - fold},${y} L${x + w},${y + fold} L${x + w},${y + h} L${x},${y + h} Z`}
+                      fill={C.docFill} stroke={sel ? C.edgeHi : C.docStroke} strokeWidth={sel ? 2 : 1.4} />
+                    <path d={`M${x + w - fold},${y} L${x + w - fold},${y + fold} L${x + w},${y + fold}`}
+                      fill="none" stroke={sel ? C.edgeHi : C.docStroke} strokeWidth={1.2} />
+                    {cap.lines.map((line, i) => (
+                      <text key={i} x={cx} y={cy - (cap.lines.length - 1) * (cap.fontSize + 1) / 2 + i * (cap.fontSize + 1)}
+                        textAnchor="middle" dominantBaseline="central"
+                        fontSize={cap.fontSize} fill={C.docStroke}
+                        style={{ userSelect: 'none', fontFamily: FONT }}>
+                        {line}
+                      </text>
+                    ))}
+                  </g>
+                )
+              }
+
+              // Текстовое примечание — скобка слева, как в BPMN.
+              if (node.type === 'textAnnotation') {
+                const cap = fitCaption(node.name, 110, 4)
+                return (
+                  <g key={node.id} opacity={faded ? 0.18 : 1}
+                    onClick={() => onSelectNode(node)} style={{ cursor: 'pointer' }} className="nb">
+                    <path d={`M${x + 8},${y} L${x},${y} L${x},${y + h} L${x + 8},${y + h}`}
+                      fill="none" stroke={sel ? C.edgeHi : C.noteStroke} strokeWidth={1.4} />
+                    {cap.lines.map((line, i) => (
+                      <text key={i} x={x + 12} y={y + 10 + i * (cap.fontSize + 2)}
+                        textAnchor="start" fontSize={cap.fontSize} fill={C.noteStroke}
                         style={{ userSelect: 'none', fontFamily: FONT }}>
                         {line}
                       </text>

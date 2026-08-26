@@ -5,6 +5,14 @@ import { generateProcessetEventLogCsv, generateProcessRegulationCsv, generatePix
 
 const API_BASE = '/api/v1'
 
+/** Экспорт невозможен без бэкенда — вызывающий код обязан показать это пользователю. */
+export class ExportUnavailableError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ExportUnavailableError'
+  }
+}
+
 /** Load process from backend store */
 export async function loadProcessFromBackend(processId: string): Promise<BusinessProcess | null> {
   try {
@@ -135,6 +143,21 @@ export async function createRegistryCaseApi(
   return null
 }
 
+/**
+ * BPMN в том виде, в каком его отдаст скачивание.
+ * Клиентский генератор — двойник бэкендового, но источником истины остаётся
+ * бэкенд, поэтому предпросмотр берём оттуда, если он доступен.
+ */
+export async function fetchBpmnXml(processId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE}/import/${encodeURIComponent(processId)}/export/bpmn`)
+    if (res.ok) return await res.text()
+  } catch {
+    // офлайн-режим: вызывающий код покажет результат клиентского генератора
+  }
+  return null
+}
+
 /** Trigger direct backend file download with fallback */
 export async function triggerExportDownload(
   process: BusinessProcess,
@@ -172,14 +195,22 @@ export async function triggerExportDownload(
       URL.revokeObjectURL(url)
       return
     }
+    if (type === 'pmm') {
+      throw new ExportUnavailableError(
+        `Сервер вернул ${res.status}. Нативный пакет .pmm собирается только на бэкенде.`,
+      )
+    }
+    console.warn(`Backend download failed with ${res.status}, generating client-side file`)
   } catch (err) {
+    if (err instanceof ExportUnavailableError) throw err
+    if (type === 'pmm') {
+      // .pmm — это ZIP из XML-частей PIX; клиентского генератора нет, и молча
+      // «ничего не скачать» пользователю нельзя.
+      throw new ExportUnavailableError(
+        'Экспорт .pmm требует запущенного бэкенда FastAPI. Запустите backend/start.sh и повторите.',
+      )
+    }
     console.warn('Backend download failed, generating client-side file:', err)
-  }
-
-  // Native PMM is a ZIP of PIX XML parts — no client-side generator.
-  if (type === 'pmm') {
-    console.warn('PMM export requires the FastAPI backend')
-    return
   }
 
   // Fallback client-side download
