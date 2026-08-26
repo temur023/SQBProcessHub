@@ -7,6 +7,7 @@ import {
   FileSpreadsheet,
   Database,
   Sparkles,
+  Package,
 } from 'lucide-react'
 import {
   Dialog,
@@ -38,18 +39,30 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
   onOpenChange,
   process,
 }) => {
-  const [activeTab, setActiveTab] = useState<'bpmn' | 'logs' | 'pix' | 'excel'>('bpmn')
+  const [activeTab, setActiveTab] = useState<'bpmn' | 'pmm' | 'logs' | 'pix' | 'excel'>('bpmn')
   const [copied, setCopied] = useState(false)
 
   const bpmnXml = generateBpmn2Xml(process)
   const logsCsv = generateProcessetEventLogCsv(process)
   const pixJson = generatePixJson(process)
   const excelCsv = generateProcessRegulationCsv(process)
+  const pmmManifest = [
+    `${process.passport.code}_PIX_Map.pmm`,
+    '├── main.xml',
+    '├── pm/configuration.xml',
+    `└── pm/maps/{code}.xml`,
+    '',
+    'Нативный пакет PIX Процессной студии: Types + каталог нотаций + карта BPMN.',
+    'Дорожки — horizontalRoad, шаги вложены с относительными координатами,',
+    'переходы — connector type=step на уровне Map. Скачивается ZIP .pmm.',
+  ].join('\n')
 
   const getCurrentContent = () => {
     switch (activeTab) {
       case 'bpmn':
         return { content: bpmnXml, filename: `${process.passport.code}_PIX_Map.bpmn`, mime: 'application/xml', exportType: 'bpmn' as const }
+      case 'pmm':
+        return { content: pmmManifest, filename: `${process.passport.code}_PIX_Map.pmm`, mime: 'application/zip', exportType: 'pmm' as const }
       case 'logs':
         return { content: logsCsv, filename: `${process.passport.code}_EventLogs.csv`, mime: 'text/csv', exportType: 'event-log' as const }
       case 'pix':
@@ -60,6 +73,7 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
   }
 
   const handleCopy = () => {
+    if (activeTab === 'pmm') return
     const { content } = getCurrentContent()
     navigator.clipboard.writeText(content)
     setCopied(true)
@@ -82,29 +96,33 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
             <div>
               <DialogTitle className="text-xl font-bold">Центр экспорта данных процесса</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                Карта процесса: BPMN 2.0 для импорта в PIX Процессную студию. Также Processet и Excel.
+                Карта процесса: BPMN 2.0 и нативный .pmm для PIX Процессной студии. Также Processet и Excel.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid grid-cols-4 w-full">
-            <TabsTrigger value="bpmn" className="text-xs">
+          <TabsList className="grid grid-cols-5 w-full">
+            <TabsTrigger value="bpmn" className="text-[11px]">
               <FileCode className="w-3.5 h-3.5 mr-1 text-indigo-500" />
-              1. BPMN 2.0 (PIX)
+              BPMN 2.0
             </TabsTrigger>
-            <TabsTrigger value="logs" className="text-xs">
+            <TabsTrigger value="pmm" className="text-[11px]">
+              <Package className="w-3.5 h-3.5 mr-1 text-sky-500" />
+              PMM (PIX)
+            </TabsTrigger>
+            <TabsTrigger value="logs" className="text-[11px]">
               <Sparkles className="w-3.5 h-3.5 mr-1 text-purple-500" />
-              2. Event Logs (Processet)
+              Event Logs
             </TabsTrigger>
-            <TabsTrigger value="pix" className="text-xs">
+            <TabsTrigger value="pix" className="text-[11px]">
               <Database className="w-3.5 h-3.5 mr-1 text-emerald-500" />
-              3. PIX BPM Schema
+              PIX Schema
             </TabsTrigger>
-            <TabsTrigger value="excel" className="text-xs">
+            <TabsTrigger value="excel" className="text-[11px]">
               <FileSpreadsheet className="w-3.5 h-3.5 mr-1 text-green-500" />
-              4. Регламент Excel
+              Excel
             </TabsTrigger>
           </TabsList>
 
@@ -118,6 +136,19 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
             </div>
             <div className="flex-1 overflow-auto rounded-lg border bg-slate-950 p-3 text-slate-200 font-mono text-[11px] max-h-[360px]">
               <pre>{bpmnXml}</pre>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="pmm" className="flex-1 flex flex-col overflow-hidden mt-3 space-y-2">
+            <div className="p-2.5 rounded-lg bg-muted/60 text-xs flex items-center justify-between gap-2">
+              <span>
+                Нативный пакет <strong>PIX Процессной студии</strong> (.pmm = ZIP из main.xml, configuration.xml и карты BPMN).
+                Открывается как проект студии; официальный обмен по-прежнему .bpmn / .vsdx.
+              </span>
+              <Badge className="bg-sky-600 text-white text-[10px] shrink-0">PMM ZIP</Badge>
+            </div>
+            <div className="flex-1 overflow-auto rounded-lg border bg-slate-950 p-3 text-slate-200 font-mono text-[11px] max-h-[360px]">
+              <pre>{pmmManifest}</pre>
             </div>
           </TabsContent>
 
@@ -167,10 +198,12 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
             Файл: <strong className="text-foreground">{getCurrentContent().filename}</strong>
           </div>
           <div className="flex items-center gap-2">
+            {activeTab !== 'pmm' && (
             <Button variant="outline" size="sm" onClick={handleCopy} className="text-xs gap-1.5">
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copied ? 'Скопировано!' : 'Копировать код'}</span>
             </Button>
+            )}
             <Button
               size="sm"
               onClick={handleDownload}

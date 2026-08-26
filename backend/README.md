@@ -30,7 +30,8 @@ backend/
 │   │   └── analytics.py            # Process Mining аналитика и кандидаты PIX RPA
 │   └── services/
 │       ├── drawio_parser.py        # Декомпрессия base64/zlib и XML-парсер
-│       ├── bpmn_exporter.py        # Генератор OMG BPMN 2.0 XML с DI для Processet
+│       ├── bpmn_exporter.py        # Генератор OMG BPMN 2.0 XML с DI для Processet / PIX
+│       ├── pmm_exporter.py         # Нативный пакет PIX Process Studio (.pmm ZIP из 3 XML)
 │       ├── conformance_engine.py   # Движок сравнения Should-Be vs As-Is
 │       └── exporters.py            # Генераторы Event Logs CSV и регламентов Excel
 ├── tests/

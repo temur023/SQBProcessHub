@@ -138,7 +138,7 @@ export async function createRegistryCaseApi(
 /** Trigger direct backend file download with fallback */
 export async function triggerExportDownload(
   process: BusinessProcess,
-  type: 'bpmn' | 'event-log' | 'regulation' | 'pix-json'
+  type: 'bpmn' | 'pmm' | 'event-log' | 'regulation' | 'pix-json'
 ): Promise<void> {
   let endpoint = ''
   let defaultFilename = ''
@@ -146,6 +146,9 @@ export async function triggerExportDownload(
   if (type === 'bpmn') {
     endpoint = `${API_BASE}/import/${encodeURIComponent(process.id)}/export/bpmn`
     defaultFilename = `${process.passport.code}_PIX_Map.bpmn`
+  } else if (type === 'pmm') {
+    endpoint = `${API_BASE}/import/${encodeURIComponent(process.id)}/export/pmm`
+    defaultFilename = `${process.passport.code}_PIX_Map.pmm`
   } else if (type === 'event-log') {
     endpoint = `${API_BASE}/import/${encodeURIComponent(process.id)}/export/event-log`
     defaultFilename = `${process.passport.code}_EventLogs.csv`
@@ -171,6 +174,12 @@ export async function triggerExportDownload(
     }
   } catch (err) {
     console.warn('Backend download failed, generating client-side file:', err)
+  }
+
+  // Native PMM is a ZIP of PIX XML parts — no client-side generator.
+  if (type === 'pmm') {
+    console.warn('PMM export requires the FastAPI backend')
+    return
   }
 
   // Fallback client-side download

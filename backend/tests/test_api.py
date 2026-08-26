@@ -343,5 +343,145 @@ class TestSQBProcessHubApi(unittest.TestCase):
         disp = bpmn_res.headers.get("content-disposition", "") or bpmn_res.headers.get("Content-Disposition", "")
         self.assertIn("PIX_Map.bpmn", disp)
 
+    def test_pmm_export_three_xml_package(self):
+        import io
+        import re
+        import zipfile
+        import xml.etree.ElementTree as ET
+
+        drawio_xml = """<mxfile host="app.diagrams.net">
+          <diagram id="pmm-1" name="PMM">
+            <mxGraphModel>
+              <root>
+                <mxCell id="0" />
+                <mxCell id="1" parent="0" />
+                <mxCell id="pool" value="Pool" style="swimlane;html=1;childLayout=stackLayout;horizontal=0;startSize=20;" vertex="1" parent="1">
+                  <mxGeometry x="10" y="20" width="700" height="220" as="geometry" />
+                </mxCell>
+                <mxCell id="lane_a" value="Lane A" style="swimlane;html=1;horizontal=0;startSize=26;" vertex="1" parent="pool">
+                  <mxGeometry x="0" y="20" width="700" height="200" as="geometry" />
+                </mxCell>
+                <mxCell id="start_1" value="Старт" style="ellipse;fillColor=#10b981;" vertex="1" parent="lane_a">
+                  <mxGeometry x="30" y="70" width="48" height="48" as="geometry" />
+                </mxCell>
+                <mxCell id="task_a" value="Task A" style="rounded=1;" vertex="1" parent="lane_a">
+                  <mxGeometry x="120" y="60" width="120" height="60" as="geometry" />
+                </mxCell>
+                <mxCell id="gw_1" value="Risk?" style="shape=mxgraph.bpmn.gateway2;gwType=exclusive;" vertex="1" parent="lane_a">
+                  <mxGeometry x="280" y="62" width="50" height="50" as="geometry" />
+                </mxCell>
+                <mxCell id="step_rpa" value="[PIX RPA] Авто-скоринг" style="rounded=1;fillColor=#dcfce7;" vertex="1" parent="lane_a">
+                  <mxGeometry x="370" y="60" width="160" height="60" as="geometry" />
+                </mxCell>
+                <mxCell id="end_1" value="Готово" style="ellipse;fillColor=#059669;" vertex="1" parent="lane_a">
+                  <mxGeometry x="580" y="70" width="48" height="48" as="geometry" />
+                </mxCell>
+                <mxCell id="e_st" edge="1" source="start_1" target="task_a" parent="lane_a" />
+                <mxCell id="e_tg" edge="1" source="task_a" target="gw_1" parent="lane_a" />
+                <mxCell id="e_yes" value="" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="lane_a" source="gw_1" target="step_rpa">
+                  <mxGeometry relative="1" as="geometry">
+                    <Array as="points">
+                      <mxPoint x="345" y="87" />
+                    </Array>
+                  </mxGeometry>
+                </mxCell>
+                <mxCell id="e_yes_label" value="Ha" style="edgeLabel;html=1;" vertex="1" connectable="0" parent="e_yes">
+                  <mxGeometry x="0.5" y="-12" relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e_rpa_end" edge="1" source="step_rpa" target="end_1" parent="lane_a" />
+                <mxCell id="e_no" value="Yo'q" style="dashed=1;dashPattern=8 8;" edge="1" parent="lane_a" source="gw_1" target="end_1" />
+              </root>
+            </mxGraphModel>
+          </diagram>
+        </mxfile>"""
+
+        import_res = self.client.post("/api/v1/import/xml", json={
+            "xml": drawio_xml,
+            "fileName": "pmm_export.drawio",
+        })
+        self.assertEqual(import_res.status_code, 200, import_res.text)
+        proc = import_res.json()
+        proc_id = proc["id"]
+
+        missing = self.client.get("/api/v1/import/does-not-exist/export/pmm")
+        self.assertEqual(missing.status_code, 404)
+
+        pmm_res = self.client.get(f"/api/v1/import/{proc_id}/export/pmm")
+        self.assertEqual(pmm_res.status_code, 200)
+        disp = pmm_res.headers.get("content-disposition", "") or pmm_res.headers.get("Content-Disposition", "")
+        self.assertIn("PIX_Map.pmm", disp)
+
+        zf = zipfile.ZipFile(io.BytesIO(pmm_res.content))
+        names = set(zf.namelist())
+        self.assertIn("main.xml", names)
+        self.assertIn("pm/configuration.xml", names)
+        map_names = [n for n in names if n.startswith("pm/maps/") and n.endswith(".xml")]
+        self.assertEqual(len(map_names), 1)
+        self.assertEqual(len(names), 3)
+
+        main_xml = zf.read("main.xml").decode("utf-8")
+        conf_xml = zf.read("pm/configuration.xml").decode("utf-8")
+        map_xml = zf.read(map_names[0]).decode("utf-8")
+
+        self.assertIn('PartName="/pm/configuration.xml"', main_xml)
+        self.assertIn(f'PartName="/{map_names[0]}"', main_xml)
+        ET.fromstring(main_xml)
+
+        conf = ET.fromstring(conf_xml)
+        self.assertEqual(conf.tag, "configuration")
+        self.assertTrue(any(el.get("name") == "BPMN" for el in conf.findall("notation")))
+        bpmn = next(el for el in conf.findall("notation") if el.get("name") == "BPMN")
+        bpmn_els = {el.get("name") for el in bpmn.findall("element")}
+        for needed in ("horizontalRoad", "emptyPool", "task", "userTask", "serviceTask", "gateway_xor", "start_event_none", "end_event_none"):
+            self.assertIn(needed, bpmn_els)
+        self.assertIn("Горизонтальный пул", conf_xml)
+        self.assertTrue(len(conf.findall("propertyTemplate")) >= 10)
+
+        root = ET.fromstring(map_xml)
+        self.assertEqual(root.tag, "Map")
+        self.assertEqual(root.get("notation"), "bpmn")
+        nodes = root.findall("node")
+        types = {n.get("type") for n in nodes}
+        self.assertIn("horizontalRoad", types)
+        self.assertIn("emptyPool", types)
+
+        road = next(n for n in nodes if n.get("type") == "horizontalRoad")
+        self.assertEqual(road.get("label"), "Lane A")
+        self.assertEqual(road.get("fill_color"), "var(--bg-accent-road-node)")
+        children = list(road)
+        child_types = {c.get("type") for c in children}
+        self.assertIn("start_event_none", child_types)
+        self.assertIn("userTask", child_types)
+        self.assertIn("gateway_xor", child_types)
+        self.assertIn("serviceTask", child_types)
+        self.assertIn("end_event_none", child_types)
+
+        uuid_re = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+        for n in nodes + children:
+            self.assertTrue(uuid_re.match(n.get("id") or ""), n.get("id"))
+
+        # Nested coords are relative to the road origin (lane abs = pool 10,20 + lane 0,20 => 10,40)
+        task = next(c for c in children if c.get("type") == "userTask")
+        self.assertEqual(int(task.get("x")), 120)
+        self.assertEqual(int(task.get("y")), 60)
+
+        connectors = root.findall("connector")
+        self.assertGreaterEqual(len(connectors), 5)
+        self.assertTrue(all(c.get("type") == "step" for c in connectors))
+        self.assertTrue(all(c.get("targetPoint") == "6" for c in connectors))
+        self.assertTrue(any(c.get("lineStyle") == "dotted" for c in connectors))
+        dotted = next(c for c in connectors if c.get("lineStyle") == "dotted")
+        self.assertEqual(dotted.findtext("MarkerEnd"), "arrowLine")
+        solid = next(c for c in connectors if c.get("lineStyle") == "solid")
+        self.assertEqual(solid.findtext("MarkerStart"), "line")
+        self.assertEqual(solid.findtext("MarkerEnd"), "arrowclosed")
+        labeled = next((c for c in connectors if c.get("label") == "Ha"), None)
+        self.assertIsNotNone(labeled)
+        self.assertTrue(any(c.find("waypoint") is not None for c in connectors))
+        for c in connectors:
+            self.assertTrue(uuid_re.match(c.get("id") or ""), c.get("id"))
+            self.assertTrue(uuid_re.match(c.get("sourceNodeId") or ""))
+            self.assertTrue(uuid_re.match(c.get("targetNodeId") or ""))
+
 if __name__ == "__main__":
     unittest.main()
