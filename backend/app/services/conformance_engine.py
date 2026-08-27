@@ -1,5 +1,11 @@
 from typing import List
-from app.models.process import ProcessetMiningMetrics, ProcessetDeviation, ProcessNode, ProcessPassport
+from app.models.process import (
+    ProcessetMiningMetrics,
+    ProcessetDeviation,
+    ProcessNode,
+    ProcessPassport,
+    TASK_NODE_TYPES,
+)
 
 
 def analyze_process_conformance(
@@ -12,7 +18,7 @@ def analyze_process_conformance(
     to produce Process Mining metrics for Infomaximum Processet.
     Deviations are derived from the actual steps of the loaded process.
     """
-    flow_tasks = [n for n in nodes if n.type in ('task', 'userTask', 'serviceTask')]
+    flow_tasks = [n for n in nodes if n.type in TASK_NODE_TYPES]
     target_lead_time = passport.targetSlaHours or 24.0
 
     manual_tasks = [t for t in flow_tasks if t.category != 'rpa_bot']

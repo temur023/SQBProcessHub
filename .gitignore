@@ -1,4 +1,6 @@
 backend/venv/
 __pycache__/
 *.pyc
-.env
+.env__pycache__/
+*.pyc
+backend/app/data/process_store.json

@@ -1,0 +1,20 @@
+# Единая политика переводов строк: в репозитории всегда LF, в рабочем дереве —
+# родные для ОС (на Windows CRLF). Без этого файла поведение зависит от
+# core.autocrlf на машине разработчика, и git ругается на каждый файл,
+# записанный с «чужими» окончаниями строк.
+* text=auto
+
+# Скрипты запускаются в bash — им CRLF противопоказан:
+# с '#!/usr/bin/env bash\r' шелл падает с "bad interpreter".
+*.sh text eol=lf
+
+# Форматы, которые нельзя трогать построчно
+*.pmm binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary

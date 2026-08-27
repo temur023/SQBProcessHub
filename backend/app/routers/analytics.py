@@ -3,7 +3,7 @@ SQB Process Hub — Analytics API Router
 Process Mining metrics and conformance analysis
 """
 from fastapi import APIRouter, HTTPException
-from app.models.process import ProcessetMiningMetrics
+from app.models.process import ProcessetMiningMetrics, TASK_NODE_TYPES
 from app.routers.processes import get_store
 from app.services.conformance_engine import analyze_process_conformance
 
@@ -77,7 +77,7 @@ def get_sla_report(process_id: str):
         raise HTTPException(404, f"Process '{process_id}' not found")
 
     # Суммируем только исполняемые задачи (без lane/start/end/gateway)
-    task_nodes = [n for n in process.nodes if n.type in ('task', 'userTask', 'serviceTask')]
+    task_nodes = [n for n in process.nodes if n.type in TASK_NODE_TYPES]
     total_sla = sum(n.slaMinutes or 0 for n in task_nodes)
     target_minutes = process.passport.targetSlaHours * 60
     # Фактический SLA = сумма по задачам, целевой = из паспорта
@@ -105,7 +105,7 @@ def get_sla_report(process_id: str):
                 "breachRisk": "high" if (n.slaMinutes or 0) >= 180 else "medium" if (n.slaMinutes or 0) >= 60 else "low"
             }
             for n in process.nodes
-            if n.type in ('task', 'userTask', 'serviceTask')
+            if n.type in TASK_NODE_TYPES
             and (n.slaMinutes or 0) >= 45
         ]
     }

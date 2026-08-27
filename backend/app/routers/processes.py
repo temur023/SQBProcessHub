@@ -1,3 +1,4 @@
+import os
 import uuid
 from typing import List, Optional
 from datetime import datetime
@@ -18,7 +19,13 @@ router = APIRouter(prefix="/processes", tags=["processes"])
 # In-memory store с file-persistence (replace with DB in production)
 _process_store: dict[str, BusinessProcess] = {}
 _store_lock = threading.Lock()
-_store_file = Path(__file__).resolve().parent.parent / "data" / "process_store.json"
+# SQB_PROCESS_STORE позволяет увести персист в сторону от боевого файла —
+# тесты обязаны им пользоваться, иначе каждый прогон дописывает свои фикстуры
+# в app/data/process_store.json и файл попадает в коммит.
+_store_file = Path(
+    os.environ.get("SQB_PROCESS_STORE")
+    or Path(__file__).resolve().parent.parent / "data" / "process_store.json"
+)
 
 
 def _load_store():

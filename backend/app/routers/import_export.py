@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from app.services.drawio_parser import parse_drawio_xml
 from app.services.bpmn_exporter import generate_bpmn_xml
+from app.services.pmm_exporter import generate_pmm_zip
 from app.services.exporters import generate_event_log_csv, generate_regulation_csv
 from app.models.process import BusinessProcess
 from app.routers.processes import get_store, _persist_store, _store_lock
@@ -110,7 +111,7 @@ def import_xml(body: XmlImportBody):
 
 @router.get(
     "/{process_id}/export/bpmn",
-    summary="Export process as BPMN 2.0 XML for Infomaximum Processet"
+    summary="Export process map as BPMN 2.0 XML for PIX Process Studio / Processet"
 )
 def export_bpmn(process_id: str):
     process = get_store().get(process_id)
@@ -118,12 +119,28 @@ def export_bpmn(process_id: str):
         raise HTTPException(404, f"Process '{process_id}' not found")
 
     xml = generate_bpmn_xml(process)
-    safe_code = _sanitize_filename(process.passport.code)
-    safe_name = _sanitize_filename(process.name.replace(' ', '_'))
-    filename = f"{safe_code}_{safe_name}.bpmn"
+    filename = f"{_sanitize_filename(process.passport.code)}_PIX_Map.bpmn"
     return Response(
         content=xml.encode('utf-8'),
         media_type='application/xml',
+        headers=attachment_headers(filename)
+    )
+
+
+@router.get(
+    "/{process_id}/export/pmm",
+    summary="Export process map as PIX Process Studio native .pmm package"
+)
+def export_pmm(process_id: str):
+    process = get_store().get(process_id)
+    if not process:
+        raise HTTPException(404, f"Process '{process_id}' not found")
+
+    payload = generate_pmm_zip(process)
+    filename = f"{_sanitize_filename(process.passport.code)}_PIX_Map.pmm"
+    return Response(
+        content=payload,
+        media_type='application/zip',
         headers=attachment_headers(filename)
     )
 

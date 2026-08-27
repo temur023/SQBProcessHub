@@ -1,6 +1,32 @@
-import re
+"""OMG BPMN 2.0 + BPMNDI для PIX Процессной студии / Processet / Camunda.
 
-from app.models.process import BusinessProcess
+Экспортёр держит инвариант валидности схемы, а не просто перекладывает узлы:
+
+* стартовое событие не может иметь входящих переходов, конечное — исходящих;
+  узлы, нарушающие это, понижаются до промежуточных событий (нормализация);
+* хранилища данных и документы (2-ILOVA: Artefaktlar) выгружаются как
+  ``dataStoreReference`` / ``dataObjectReference`` и соединяются
+  ``association``, а не ``sequenceFlow`` — по спецификации поток управления
+  к артефакту вести нельзя;
+* порядок элементов внутри ``bpmn:process`` соблюдает XSD-последовательность
+  ``laneSet* , flowElement* , artifact*``;
+* ``flowNodeRef`` дорожки перечисляет только узлы потока: артефакты
+  элементами потока не являются.
+"""
+import re
+from typing import Dict, Iterable, List, Optional, Set, Tuple
+
+from app.models.process import (
+    ARTIFACT_NODE_TYPES,
+    BusinessProcess,
+    ProcessEdge,
+    ProcessNode,
+)
+from app.services.edge_routing import orthogonal_waypoints
+
+_NCNAME = re.compile(r'^[A-Za-z_][A-Za-z0-9._-]*$')
+
+_GATEWAY_TYPES = ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway')
 
 
 def escape_xml(value) -> str:
@@ -16,177 +42,392 @@ def escape_xml(value) -> str:
     )
 
 
-def _sanitize_bpmn_id(raw: str, prefix: str = "id") -> str:
-    """Делает строку валидным BPMN NCName: [A-Za-z_][A-Za-z0-9_.-]*"""
-    s = re.sub(r'[^A-Za-z0-9_.-]+', '_', (raw or '').strip())
-    if not s:
-        s = f"{prefix}_1"
-    if not re.match(r'^[A-Za-z_]', s):
-        s = f"{prefix}_{s}"
-    # BPMN ID не должен содержать двойной дефис в комментариях, но в ID допустим
-    return s[:120]
+def _safe_id(raw: str, prefix: str, used: Dict[str, str], taken: set) -> str:
+    original = raw or ''
+    if original in used:
+        return used[original]
+    candidate = original if _NCNAME.match(original) else ''
+    if not candidate:
+        cleaned = re.sub(r'[^A-Za-z0-9._-]', '_', original)
+        if not cleaned or not re.match(r'^[A-Za-z_]', cleaned):
+            cleaned = f'{prefix}_{cleaned}' if cleaned else prefix
+        candidate = cleaned
+    base = candidate
+    n = 2
+    while candidate in taken:
+        candidate = f'{base}_{n}'
+        n += 1
+    used[original] = candidate
+    taken.add(candidate)
+    return candidate
+
+
+def iso_duration(minutes: Optional[int]) -> str:
+    """Минуты -> ISO-8601 длительность для timerEventDefinition."""
+    value = max(1, int(minutes or 0) or 1)
+    if value >= 1440 and value % 1440 == 0:
+        return f'P{value // 1440}D'
+    if value >= 60 and value % 60 == 0:
+        return f'PT{value // 60}H'
+    return f'PT{value}M'
+
+
+def _edge_waypoints(
+    edge: ProcessEdge,
+    src: Optional[ProcessNode],
+    tgt: Optional[ProcessNode],
+) -> List[Tuple[int, int]]:
+    """Ортогональная ломаная — та же, что рисует draw.io.
+
+    Раньше сюда шла только пара «точка выхода — точка входа», и в bpmn.io
+    схема выглядела диагональной паутиной.
+    """
+    route = orthogonal_waypoints(edge, src, tgt)
+    if len(route) < 2:
+        return [(100, 100), (250, 100)]
+    return [(int(round(x)), int(round(y))) for x, y in route]
+
+
+def normalize_event_types(
+    flow_nodes: List[ProcessNode],
+    edges: List[ProcessEdge],
+) -> Dict[str, str]:
+    """Приводит степени событий к требованиям BPMN 2.0.
+
+    Возвращает карту ``id -> эффективный тип``. Исходная модель не меняется:
+    понижение типа нужно только для выгрузки.
+
+    * startEvent с входящим переходом -> intermediateThrowEvent;
+    * endEvent с исходящим переходом  -> intermediateThrowEvent.
+    """
+    incoming: Set[str] = set()
+    outgoing: Set[str] = set()
+    for e in edges:
+        if e.kind != 'sequenceFlow':
+            continue
+        if e.targetId:
+            incoming.add(e.targetId)
+        if e.sourceId:
+            outgoing.add(e.sourceId)
+
+    effective: Dict[str, str] = {}
+    for node in flow_nodes:
+        kind = node.type
+        if kind == 'startEvent' and node.id in incoming:
+            kind = 'intermediateThrowEvent'
+        elif kind == 'endEvent' and node.id in outgoing:
+            kind = 'intermediateThrowEvent'
+        effective[node.id] = kind
+    return effective
+
+
+def _node_tag(node: ProcessNode, effective_type: str) -> str:
+    if effective_type == 'startEvent':
+        return 'bpmn:startEvent'
+    if effective_type == 'endEvent':
+        return 'bpmn:endEvent'
+    if effective_type == 'intermediateThrowEvent':
+        return 'bpmn:intermediateThrowEvent'
+    if effective_type in ('intermediateTimerEvent', 'intermediateMessageEvent'):
+        return 'bpmn:intermediateCatchEvent'
+    if effective_type == 'exclusiveGateway':
+        return 'bpmn:exclusiveGateway'
+    if effective_type == 'parallelGateway':
+        return 'bpmn:parallelGateway'
+    if effective_type == 'inclusiveGateway':
+        return 'bpmn:inclusiveGateway'
+    if effective_type == 'subProcess':
+        return 'bpmn:subProcess'
+    if effective_type == 'dataStore':
+        return 'bpmn:dataStoreReference'
+    if effective_type == 'dataObject':
+        return 'bpmn:dataObjectReference'
+    if effective_type == 'textAnnotation':
+        return 'bpmn:textAnnotation'
+    if effective_type == 'serviceTask' or node.category == 'rpa_bot':
+        return 'bpmn:serviceTask'
+    if effective_type == 'task':
+        return 'bpmn:task'
+    return 'bpmn:userTask'
+
+
+def _node_documentation(node: ProcessNode) -> str:
+    bits: List[str] = []
+    if node.code:
+        bits.append(f'Code: {node.code}')
+    if node.role:
+        bits.append(f'Role: {node.role}')
+    if node.laneName and node.laneName != node.role:
+        bits.append(f'Lane: {node.laneName}')
+    if node.system:
+        bits.append(f'System: {node.system}')
+    if node.slaMinutes:
+        bits.append(f'ST: {node.slaMinutes} min')
+    if node.waitMinutes:
+        bits.append(f'WT: {node.waitMinutes} min')
+    if node.inputArtifacts:
+        bits.append(f"In: {', '.join(node.inputArtifacts)}")
+    if node.outputArtifacts:
+        bits.append(f"Out: {', '.join(node.outputArtifacts)}")
+    if node.category:
+        bits.append(f'Category: {node.category}')
+    if node.automationPotential:
+        bits.append(f'RPA potential: {node.automationPotential}%')
+    return '; '.join(bits)
+
+
+def _union_bounds(nodes: Iterable[ProcessNode], header: int = 30) -> Tuple[int, int, int, int]:
+    items = list(nodes)
+    if not items:
+        return (40, 40, 800, 200)
+    min_x = min(n.geometry.x for n in items)
+    min_y = min(n.geometry.y for n in items)
+    max_x = max(n.geometry.x + n.geometry.width for n in items)
+    max_y = max(n.geometry.y + n.geometry.height for n in items)
+    x = min_x - header
+    y = min_y
+    return (x, y, max(max_x - x, 80), max(max_y - y, 80))
 
 
 def generate_bpmn_xml(process: BusinessProcess) -> str:
-    """
-    Generates standard OMG BPMN 2.0 XML with BPMNDiagram elements
-    for direct import into Infomaximum Processet.
-    """
-    proc_id = _sanitize_bpmn_id(f"Process_{process.passport.code}", "Process")
-    diag_id = _sanitize_bpmn_id(f"Diagram_{proc_id}", "Diagram")
-    plane_id = _sanitize_bpmn_id(f"Plane_{proc_id}", "Plane")
-    definitions_id = _sanitize_bpmn_id(f"Definitions_{process.id}", "Definitions")
+    used: Dict[str, str] = {}
+    taken: set = set()
 
-    flow_nodes = [n for n in process.nodes if n.type != 'lane']
-    lanes = process.lanes
-    safe_name = escape_xml(process.name)
-    safe_comment = escape_xml(process.name).replace('--', '—')
+    proc_id = _safe_id(
+        f"Process_{re.sub(r'[^A-Za-z0-9_]', '_', process.passport.code or 'SQB')}",
+        'Process',
+        used,
+        taken,
+    )
+    def_id = _safe_id(f"Definitions_{process.id}", 'Definitions', used, taken)
+    diag_id = _safe_id(f'Diagram_{proc_id}', 'Diagram', used, taken)
+    plane_id = _safe_id(f'Plane_{proc_id}', 'Plane', used, taken)
+    collab_id = _safe_id(f'Collaboration_{proc_id}', 'Collaboration', used, taken)
+    participant_id = _safe_id(f'Participant_{proc_id}', 'Participant', used, taken)
+    lane_set_id = _safe_id(f'LaneSet_{proc_id}', 'LaneSet', used, taken)
 
-    incoming_by_node: dict[str, list[str]] = {n.id: [] for n in flow_nodes}
-    outgoing_by_node: dict[str, list[str]] = {n.id: [] for n in flow_nodes}
-    for edge in process.edges:
-        if edge.targetId and edge.targetId in incoming_by_node:
+    all_nodes = [n for n in process.nodes if n.type != 'lane']
+    flow_nodes = [n for n in all_nodes if n.type not in ARTIFACT_NODE_TYPES]
+    artifact_nodes = [n for n in all_nodes if n.type in ARTIFACT_NODE_TYPES]
+    lanes = list(process.lanes or [])
+    node_by_id = {n.id: n for n in all_nodes}
+    valid_ids = set(node_by_id)
+
+    # Висячие связи и оформительские линии draw.io в схему не идут: у
+    # annotationLine хотя бы один конец не опирается на шаг процесса.
+    edges = [
+        e for e in process.edges
+        if e.kind != 'annotationLine' and e.sourceId in valid_ids and e.targetId in valid_ids
+    ]
+    # messageFlow допустим только между пулами; карта SQB — один пул, поэтому
+    # такие связи выгружаются как обычный поток управления.
+    sequence_edges = [e for e in edges if e.kind != 'association']
+    association_edges = [e for e in edges if e.kind == 'association']
+
+    effective_type = normalize_event_types(flow_nodes, sequence_edges)
+
+    id_of: Dict[str, str] = {}
+    for n in flow_nodes:
+        id_of[n.id] = _safe_id(n.id, 'Node', used, taken)
+    for n in artifact_nodes:
+        id_of[n.id] = _safe_id(n.id, 'Artifact', used, taken)
+    for lane in lanes:
+        id_of[lane.id] = _safe_id(lane.id, 'Lane', used, taken)
+    for edge in edges:
+        id_of[edge.id] = _safe_id(edge.id, 'Flow', used, taken)
+
+    incoming_by_node: Dict[str, List[str]] = {n.id: [] for n in flow_nodes}
+    outgoing_by_node: Dict[str, List[str]] = {n.id: [] for n in flow_nodes}
+    for edge in sequence_edges:
+        if edge.targetId in incoming_by_node:
             incoming_by_node[edge.targetId].append(edge.id)
-        if edge.sourceId and edge.sourceId in outgoing_by_node:
+        if edge.sourceId in outgoing_by_node:
             outgoing_by_node[edge.sourceId].append(edge.id)
 
-    xml_lines = [
+    use_collab = bool(lanes)
+    plane_ref = collab_id if use_collab else proc_id
+    process_name = escape_xml(process.passport.name or process.name or 'Business process')
+    comment = process_name.replace('--', '—')
+
+    xml: List[str] = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',
         '  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"',
         '  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"',
         '  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"',
         '  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"',
-        '  xmlns:sqb="http://sqb.uz/schema/bpmn"',
-        f'  id="{escape_xml(definitions_id)}"',
-        '  targetNamespace="http://bpmn.io/schema/bpmn">',
+        f'  id="{escape_xml(def_id)}"',
+        '  targetNamespace="http://bpmn.io/schema/bpmn"',
+        '  exporter="SQB Process Hub"',
+        '  exporterVersion="2.0">',
         '',
-        f'  <!-- Process Definition: {safe_comment} -->',
-        f'  <bpmn:process id="{escape_xml(proc_id)}" name="{safe_name}" isExecutable="true">',
+        f'  <!-- Process map: {comment} -->',
     ]
 
+    if use_collab:
+        pool_name = escape_xml(process.passport.name or process.name or 'Pool')
+        xml.append(f'  <bpmn:collaboration id="{escape_xml(collab_id)}">')
+        xml.append(
+            f'    <bpmn:participant id="{escape_xml(participant_id)}" '
+            f'name="{pool_name}" processRef="{escape_xml(proc_id)}" />'
+        )
+        xml.append('  </bpmn:collaboration>')
+        xml.append('')
+
+    xml.append(
+        f'  <bpmn:process id="{escape_xml(proc_id)}" name="{process_name}" isExecutable="true">'
+    )
+
+    # ── 1. laneSet (только узлы потока) ─────────────────────────────────────
     if lanes:
-        xml_lines.append('    <bpmn:laneSet id="LaneSet_1">')
+        xml.append(f'    <bpmn:laneSet id="{escape_xml(lane_set_id)}">')
         for lane in lanes:
-            xml_lines.append(
-                f'      <bpmn:lane id="{escape_xml(lane.id)}" name="{escape_xml(lane.name)}">'
+            xml.append(
+                f'      <bpmn:lane id="{escape_xml(id_of[lane.id])}" name="{escape_xml(lane.name)}">'
             )
-            lane_child_nodes = [n for n in flow_nodes if n.laneId == lane.id]
-            for child in lane_child_nodes:
-                xml_lines.append(
-                    f'        <bpmn:flowNodeRef>{escape_xml(child.id)}</bpmn:flowNodeRef>'
-                )
-            xml_lines.append('      </bpmn:lane>')
-        xml_lines.append('    </bpmn:laneSet>')
+            for child in flow_nodes:
+                if child.laneId == lane.id:
+                    xml.append(
+                        f'        <bpmn:flowNodeRef>{escape_xml(id_of[child.id])}</bpmn:flowNodeRef>'
+                    )
+            xml.append('      </bpmn:lane>')
+        xml.append('    </bpmn:laneSet>')
 
-    def _io_children(node_id: str) -> str:
-        parts = []
-        for edge_id in incoming_by_node.get(node_id, []):
-            parts.append(f'      <bpmn:incoming>{escape_xml(edge_id)}</bpmn:incoming>')
-        for edge_id in outgoing_by_node.get(node_id, []):
-            parts.append(f'      <bpmn:outgoing>{escape_xml(edge_id)}</bpmn:outgoing>')
-        return '\n'.join(parts)
-
+    # ── 2. Узлы потока ──────────────────────────────────────────────────────
     for node in flow_nodes:
-        nid = escape_xml(node.id)
-        name_attr = f'name="{escape_xml(node.name)}"'
-        ext_props = (
-            f' sqb:role="{escape_xml(node.role or "")}"'
-            f' sqb:system="{escape_xml(node.system or "")}"'
-            f' sqb:slaMinutes="{node.slaMinutes or 0}"'
-            f' sqb:automationPotential="{node.automationPotential or 0}"'
-        )
-        children = _io_children(node.id)
+        nid = escape_xml(id_of[node.id])
+        kind = effective_type[node.id]
+        tag = _node_tag(node, kind)
+        name_attr = f' name="{escape_xml(node.name)}"'
+        extras: List[str] = []
+        if kind in _GATEWAY_TYPES:
+            if len(outgoing_by_node.get(node.id, [])) > 1:
+                extras.append(' gatewayDirection="Diverging"')
+            elif len(incoming_by_node.get(node.id, [])) > 1:
+                extras.append(' gatewayDirection="Converging"')
 
-        if node.type == 'startEvent':
-            tag, extra = 'bpmn:startEvent', ext_props
-        elif node.type == 'endEvent':
-            tag, extra = 'bpmn:endEvent', ext_props
-        elif node.type == 'serviceTask' or node.category == 'rpa_bot':
-            tag, extra = 'bpmn:serviceTask', ext_props + ' implementation="PIX_RPA"'
-        elif node.type == 'exclusiveGateway':
-            tag, extra = 'bpmn:exclusiveGateway', ''
-        elif node.type == 'parallelGateway':
-            tag, extra = 'bpmn:parallelGateway', ''
-        elif node.type == 'inclusiveGateway':
-            tag, extra = 'bpmn:inclusiveGateway', ''
-        else:
-            tag, extra = 'bpmn:userTask', ext_props
+        children: List[str] = []
+        doc = _node_documentation(node)
+        if doc:
+            children.append(f'      <bpmn:documentation>{escape_xml(doc)}</bpmn:documentation>')
+        for edge_id in incoming_by_node.get(node.id, []):
+            children.append(f'      <bpmn:incoming>{escape_xml(id_of[edge_id])}</bpmn:incoming>')
+        for edge_id in outgoing_by_node.get(node.id, []):
+            children.append(f'      <bpmn:outgoing>{escape_xml(id_of[edge_id])}</bpmn:outgoing>')
+        if kind == 'intermediateTimerEvent':
+            children.append('      <bpmn:timerEventDefinition>')
+            children.append(
+                '        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">'
+                f'{iso_duration(node.slaMinutes)}</bpmn:timeDuration>'
+            )
+            children.append('      </bpmn:timerEventDefinition>')
+        elif kind == 'intermediateMessageEvent':
+            children.append('      <bpmn:messageEventDefinition />')
 
+        extra = ''.join(extras)
         if children:
-            xml_lines.append(f'    <{tag} id="{nid}" {name_attr}{extra}>')
-            xml_lines.append(children)
-            xml_lines.append(f'    </{tag}>')
+            xml.append(f'    <{tag} id="{nid}"{name_attr}{extra}>')
+            xml.extend(children)
+            xml.append(f'    </{tag}>')
         else:
-            xml_lines.append(f'    <{tag} id="{nid}" {name_attr}{extra} />')
+            xml.append(f'    <{tag} id="{nid}"{name_attr}{extra} />')
 
-    # Фильтруем невалидные sequenceFlow (без source/target) — иначе BPMN невалиден
-    valid_edges = [e for e in process.edges if e.sourceId and e.targetId]
-    for edge in valid_edges:
-        # Собираем атрибуты без лишних пробелов
-        attrs = [f'id="{escape_xml(edge.id)}"']
-        if edge.name:
-            attrs.append(f'name="{escape_xml(edge.name)}"')
-        attrs.append(f'sourceRef="{escape_xml(edge.sourceId)}"')
-        attrs.append(f'targetRef="{escape_xml(edge.targetId)}"')
-        xml_lines.append(
-            f'    <bpmn:sequenceFlow {" ".join(attrs)} />'
+    # ── 3. Артефакты-элементы потока: хранилища и документы ─────────────────
+    for node in artifact_nodes:
+        if node.type == 'textAnnotation':
+            continue
+        tag = _node_tag(node, node.type)
+        xml.append(
+            f'    <{tag} id="{escape_xml(id_of[node.id])}" name="{escape_xml(node.name)}" />'
         )
 
-    xml_lines.append('  </bpmn:process>')
-    xml_lines.append('')
-    xml_lines.append('  <!-- BPMN 2.0 Diagram Layout for Processet -->')
-    xml_lines.append(f'  <bpmndi:BPMNDiagram id="{escape_xml(diag_id)}">')
-    xml_lines.append(f'    <bpmndi:BPMNPlane id="{escape_xml(plane_id)}" bpmnElement="{escape_xml(proc_id)}">')
+    # ── 4. Переходы ─────────────────────────────────────────────────────────
+    for edge in sequence_edges:
+        eid = escape_xml(id_of[edge.id])
+        name = edge.name or edge.condition or ''
+        name_attr = f' name="{escape_xml(name)}"' if name else ''
+        src_attr = f' sourceRef="{escape_xml(id_of[edge.sourceId])}"'
+        tgt_attr = f' targetRef="{escape_xml(id_of[edge.targetId])}"'
+        expr = (edge.condition or edge.name or '').strip()
+        if expr:
+            xml.append(f'    <bpmn:sequenceFlow id="{eid}"{name_attr}{src_attr}{tgt_attr}>')
+            xml.append(
+                '      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">'
+                f'{escape_xml(expr)}</bpmn:conditionExpression>'
+            )
+            xml.append('    </bpmn:sequenceFlow>')
+        else:
+            xml.append(f'    <bpmn:sequenceFlow id="{eid}"{name_attr}{src_attr}{tgt_attr} />')
+
+    # ── 5. Артефакты по XSD идут последними: примечания и ассоциации ────────
+    for node in artifact_nodes:
+        if node.type != 'textAnnotation':
+            continue
+        xml.append(f'    <bpmn:textAnnotation id="{escape_xml(id_of[node.id])}">')
+        xml.append(f'      <bpmn:text>{escape_xml(node.name)}</bpmn:text>')
+        xml.append('    </bpmn:textAnnotation>')
+
+    for edge in association_edges:
+        xml.append(
+            f'    <bpmn:association id="{escape_xml(id_of[edge.id])}"'
+            f' sourceRef="{escape_xml(id_of[edge.sourceId])}"'
+            f' targetRef="{escape_xml(id_of[edge.targetId])}"'
+            ' associationDirection="One" />'
+        )
+
+    xml.append('  </bpmn:process>')
+    xml.append('')
+
+    # ── Диаграмма ───────────────────────────────────────────────────────────
+    xml.append(f'  <bpmndi:BPMNDiagram id="{escape_xml(diag_id)}">')
+    xml.append(
+        f'    <bpmndi:BPMNPlane id="{escape_xml(plane_id)}" bpmnElement="{escape_xml(plane_ref)}">'
+    )
+
+    if use_collab:
+        # Пул охватывает и дорожки, и узлы: иначе часть карты окажется вне пула.
+        px, py, pw, ph = _union_bounds(lanes + all_nodes)
+        xml.append(
+            f'      <bpmndi:BPMNShape id="{escape_xml(participant_id)}_di" '
+            f'bpmnElement="{escape_xml(participant_id)}" isHorizontal="true">'
+        )
+        xml.append(f'        <dc:Bounds x="{px}" y="{py}" width="{pw}" height="{ph}" />')
+        xml.append('      </bpmndi:BPMNShape>')
 
     for lane in lanes:
-        xml_lines.append(
-            f'      <bpmndi:BPMNShape id="{escape_xml(lane.id)}_di" bpmnElement="{escape_xml(lane.id)}" isHorizontal="true">'
+        xml.append(
+            f'      <bpmndi:BPMNShape id="{escape_xml(id_of[lane.id])}_di" '
+            f'bpmnElement="{escape_xml(id_of[lane.id])}" isHorizontal="true">'
         )
-        xml_lines.append(
-            f'        <dc:Bounds x="{lane.geometry.x}" y="{lane.geometry.y}" width="{lane.geometry.width}" height="{lane.geometry.height}" />'
+        xml.append(
+            f'        <dc:Bounds x="{lane.geometry.x}" y="{lane.geometry.y}" '
+            f'width="{lane.geometry.width}" height="{lane.geometry.height}" />'
         )
-        xml_lines.append('      </bpmndi:BPMNShape>')
+        xml.append('      </bpmndi:BPMNShape>')
 
-    for node in flow_nodes:
-        xml_lines.append(
-            f'      <bpmndi:BPMNShape id="{escape_xml(node.id)}_di" bpmnElement="{escape_xml(node.id)}">'
+    for node in all_nodes:
+        xml.append(
+            f'      <bpmndi:BPMNShape id="{escape_xml(id_of[node.id])}_di" '
+            f'bpmnElement="{escape_xml(id_of[node.id])}">'
         )
-        xml_lines.append(
-            f'        <dc:Bounds x="{node.geometry.x}" y="{node.geometry.y}" width="{node.geometry.width}" height="{node.geometry.height}" />'
+        xml.append(
+            f'        <dc:Bounds x="{node.geometry.x}" y="{node.geometry.y}" '
+            f'width="{node.geometry.width}" height="{node.geometry.height}" />'
         )
-        xml_lines.append('      </bpmndi:BPMNShape>')
+        xml.append('      </bpmndi:BPMNShape>')
 
-    for edge in valid_edges:
-        xml_lines.append(
-            f'      <bpmndi:BPMNEdge id="{escape_xml(edge.id)}_di" bpmnElement="{escape_xml(edge.id)}">'
+    for edge in edges:
+        src = node_by_id.get(edge.sourceId or '')
+        tgt = node_by_id.get(edge.targetId or '')
+        xml.append(
+            f'      <bpmndi:BPMNEdge id="{escape_xml(id_of[edge.id])}_di" '
+            f'bpmnElement="{escape_xml(id_of[edge.id])}">'
         )
-        src = next((n for n in flow_nodes if n.id == edge.sourceId), None)
-        tgt = next((n for n in flow_nodes if n.id == edge.targetId), None)
-        if src and tgt:
-            # Учитываем exitX/entryY и промежуточные точки edge.points
-            def _constraint_point(node, fx, fy):
-                if fx is not None and fy is not None:
-                    return (node.geometry.x + fx * node.geometry.width,
-                            node.geometry.y + fy * node.geometry.height)
-                return None
-            start = _constraint_point(src, edge.exitX, edge.exitY)
-            end = _constraint_point(tgt, edge.entryX, edge.entryY)
-            if start is None:
-                start = (src.geometry.x + src.geometry.width, src.geometry.y + src.geometry.height // 2)
-            if end is None:
-                end = (tgt.geometry.x, tgt.geometry.y + tgt.geometry.height // 2)
-            waypoints = [start]
-            # промежуточные точки из draw.io
-            for pt in (edge.points or []):
-                waypoints.append((pt.x, pt.y))
-            waypoints.append(end)
-            for (x, y) in waypoints:
-                xml_lines.append(f'        <di:waypoint x="{int(round(x))}" y="{int(round(y))}" />')
-        xml_lines.append('      </bpmndi:BPMNEdge>')
+        for x, y in _edge_waypoints(edge, src, tgt):
+            xml.append(f'        <di:waypoint x="{x}" y="{y}" />')
+        xml.append('      </bpmndi:BPMNEdge>')
 
-    xml_lines.append('    </bpmndi:BPMNPlane>')
-    xml_lines.append('  </bpmndi:BPMNDiagram>')
-    xml_lines.append('</bpmn:definitions>')
-
-    return '\n'.join(xml_lines)
+    xml.append('    </bpmndi:BPMNPlane>')
+    xml.append('  </bpmndi:BPMNDiagram>')
+    xml.append('</bpmn:definitions>')
+    return '\n'.join(xml)

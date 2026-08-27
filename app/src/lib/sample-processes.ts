@@ -294,6 +294,9 @@ export const sqbCreditProcess: BusinessProcess = {
       sourceId: 'node-gw-risk',
       targetId: 'node-reject',
       points: [],
+      dashed: true,
+      strokeColor: '#ff6b6b',
+      style: 'edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#ff6b6b;',
     },
     {
       id: 'edge-6',
@@ -316,6 +319,9 @@ export const sqbCreditProcess: BusinessProcess = {
       sourceId: 'node-gw-comm',
       targetId: 'node-reject',
       points: [],
+      dashed: true,
+      strokeColor: '#ff6b6b',
+      style: 'edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#ff6b6b;',
     },
     {
       id: 'edge-8',

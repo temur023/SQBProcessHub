@@ -1,7 +1,7 @@
 import csv
 import io
 from datetime import datetime, timedelta
-from app.models.process import BusinessProcess
+from app.models.process import ARTIFACT_NODE_TYPES, BusinessProcess, TASK_NODE_TYPES
 
 
 def generate_event_log_csv(process: BusinessProcess) -> str:
@@ -17,7 +17,7 @@ def generate_event_log_csv(process: BusinessProcess) -> str:
     def _esc(v: str) -> str:
         return (v or '').replace('"', '""')
 
-    flow_tasks = [n for n in process.nodes if n.type in ('task', 'userTask', 'serviceTask')]
+    flow_tasks = [n for n in process.nodes if n.type in TASK_NODE_TYPES]
     # Синтетические кейсы как во фронтенде: минимум 30 для репрезентативности
     case_count = max(len(process.registry.records), 30)
     base = datetime(2026, 8, 1, 9, 0, 0)
@@ -103,17 +103,21 @@ def generate_regulation_csv(process: BusinessProcess) -> str:
     # Используем ; как разделитель для Excel RU и QUOTE_MINIMAL
     writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL, delimiter=';', lineterminator='\n')
 
+    # Колонки соответствуют таблице анализа AS-IS Методики (4-ILOVA).
     writer.writerow([
         '№ Шага', 'Код', 'Наименование операции', 'Тип операции',
         'Подразделение / Дорожка', 'Исполнитель / Роль', 'ИТ-Система',
-        'Норматив SLA (мин)', 'Входящие документы / Данные', 'Результат операции (Выход)',
+        'ST — время операции (мин)', 'WT — время ожидания (мин)', 'TCT — итого (мин)',
+        'Входящие документы / Данные', 'Результат операции (Выход)',
         'Потенциал роботизации (PIX RPA)'
     ])
 
     idx = 1
-    # Исключаем lane и gateway — как во фронтенде (после фикса)
+    # В регламент идут только операции: дорожки, шлюзы и артефакты
+    # (хранилища данных, документы, примечания) шагами процесса не являются.
+    skip = ('lane', 'exclusiveGateway', 'parallelGateway', 'inclusiveGateway') + ARTIFACT_NODE_TYPES
     for node in process.nodes:
-        if node.type in ('lane', 'exclusiveGateway', 'parallelGateway', 'inclusiveGateway'):
+        if node.type in skip:
             continue
         # Экранируем кавычки для csv
         writer.writerow([
@@ -125,6 +129,8 @@ def generate_regulation_csv(process: BusinessProcess) -> str:
             node.role or 'Сотрудник банка',
             node.system or 'АБС ЦФТ',
             node.slaMinutes or 30,
+            node.waitMinutes or 0,
+            (node.slaMinutes or 30) + (node.waitMinutes or 0),
             ', '.join(node.inputArtifacts or []) or 'Заявка',
             ', '.join(node.outputArtifacts or []) or 'Статус/Документ',
             f"{node.automationPotential or 0}%"
