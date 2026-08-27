@@ -393,7 +393,8 @@ class PmmExportTest(unittest.TestCase):
         dotted = [c for c in self.root.findall("connector") if c.get("lineStyle") == "dotted"]
         self.assertEqual(len(dotted), 3, "оформительская линия e11 в карту не идёт, ассоциации идут")
         for c in dotted:
-            self.assertEqual(c.findtext("MarkerEnd"), "arrowLine")
+            self.assertEqual(c.findtext("MarkerEnd"), "arrow")
+            self.assertEqual(c.findtext("lineStyle"), "dotted")
 
     def test_nodes_are_clamped_into_their_lane(self):
         for road in self.roads:
@@ -448,6 +449,212 @@ class PmmExportTest(unittest.TestCase):
                     x - 1 <= px <= x + w + 1 and y - 1 <= py <= y + h + 1,
                     f"конец ломаной {px},{py} не лежит на узле {x},{y},{w},{h}",
                 )
+
+
+#: Карта банка так, как её рисует аналитик: полоса клиента без единого шага,
+#: пунктир от шагов банка к ней, врезка с перечнем документов, таймер ожидания
+#: без подписи (вся подпись — длительность) и вторая страница в том же файле.
+CLIENT_TOUCHPOINT_MAP = """<mxfile host="test" pages="2">
+  <diagram name="AS IS" id="p1">
+    <mxGraphModel>
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="client" value="Mijoz" style="swimlane;html=1;horizontal=0;startSize=40;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="800" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="bank" value="Bank" style="swimlane;html=1;horizontal=0;startSize=40;" vertex="1" parent="1">
+          <mxGeometry x="40" y="160" width="800" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="start_1" value="Boshlanish" style="shape=mxgraph.bpmn.event;ellipse;html=1;symbol=general;outline=standard;" vertex="1" parent="bank">
+          <mxGeometry x="60" y="60" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="task_1" value="Hujjatlarni qabul qilish" style="shape=mxgraph.bpmn.task2;html=1;" vertex="1" parent="bank">
+          <mxGeometry x="160" y="50" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wait_1" value="10 min" style="shape=mxgraph.bpmn.event;ellipse;html=1;symbol=timer;outline=catching;" vertex="1" parent="bank">
+          <mxGeometry x="330" y="65" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="end_1" value="Tugadi" style="shape=mxgraph.bpmn.event;ellipse;html=1;symbol=terminate2;outline=end;" vertex="1" parent="bank">
+          <mxGeometry x="430" y="60" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="note_1" value="Ustav; Tasischilar qarori; Rahbar pasporti" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;dashed=1;" vertex="1" parent="bank">
+          <mxGeometry x="160" y="150" width="200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="banner" value="Jarayon xaritasi (AS IS)" style="text;html=1;strokeColor=none;fillColor=none;fontSize=26;" vertex="1" parent="1">
+          <mxGeometry x="300" y="0" width="400" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="f1" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="bank" source="start_1" target="task_1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f2" value="Ha" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="bank" source="task_1" target="wait_1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f3" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="bank" source="wait_1" target="end_1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="touch_1" style="edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=0;dashed=1;dashPattern=8 8;" edge="1" parent="bank" source="task_1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="220" y="-40" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="TO BE" id="p2">
+    <mxGraphModel>
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tobe_task" value="Boshqa sahifadagi qadam" style="shape=mxgraph.bpmn.task2;html=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="120" height="80" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>"""
+
+
+class ClientTouchpointTest(unittest.TestCase):
+    """Полоса клиента, её пунктир и подписи фигур обязаны дожить до выгрузок."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.process = parse_drawio_xml(CLIENT_TOUCHPOINT_MAP, "touchpoints.drawio")
+        cls.by_id = {n.id: n for n in cls.process.nodes}
+        cls.xml = generate_bpmn_xml(cls.process)
+        cls.root = ET.fromstring(cls.xml)
+        payload = generate_pmm_zip(cls.process)
+        zf = zipfile.ZipFile(io.BytesIO(payload))
+        map_part = [n for n in zf.namelist() if n.startswith("pm/maps/")][0]
+        cls.map = ET.fromstring(zf.read(map_part).decode("utf-8"))
+
+    # ── импорт ──────────────────────────────────────────────────────────────
+    def test_only_the_first_page_is_imported(self):
+        # Страницы файла — варианты одного процесса (AS-IS / TO-BE). Склейка
+        # накладывала их друг на друга; берём первую, как и сам draw.io.
+        self.assertNotIn("tobe_task", self.by_id)
+        self.assertIn("task_1", self.by_id)
+
+    def test_timer_without_a_caption_gets_a_readable_name(self):
+        timer = self.by_id["wait_1"]
+        self.assertEqual(timer.type, "intermediateTimerEvent")
+        self.assertEqual(timer.name, "Ожидание 10 мин")
+
+    def test_bordered_text_box_survives_as_an_annotation(self):
+        note = self.by_id["note_1"]
+        self.assertEqual(note.type, "textAnnotation")
+        self.assertIn("Ustav", note.name)
+
+    def test_diagram_banner_is_still_decoration(self):
+        self.assertNotIn("banner", self.by_id)
+
+    def test_dashed_line_to_the_client_lane_is_a_message_flow(self):
+        edge = next(e for e in self.process.edges if e.id == "touch_1")
+        self.assertEqual(edge.kind, "messageFlow")
+        self.assertEqual(edge.targetId, "client")
+
+    # ── BPMN ────────────────────────────────────────────────────────────────
+    def test_empty_lane_becomes_its_own_named_participant(self):
+        collab = self.root.find("bpmn:collaboration", BPMN_NS)
+        self.assertIsNotNone(collab)
+        parts = collab.findall("bpmn:participant", BPMN_NS)
+        self.assertIn("Mijoz", {p.get("name") for p in parts})
+        client = next(p for p in parts if p.get("name") == "Mijoz")
+
+        # Пул без processRef импортёр считает свёрнутым и печатает имя по
+        # центру полосы — на карте в 4620 px подпись уезжает за экран, и строка
+        # выглядит безымянной. Раскрытый пул держит имя в шапке слева.
+        ref = client.get("processRef")
+        self.assertIsNotNone(ref, "у полосы участника должен быть собственный процесс")
+        own = [
+            p for p in self.root.findall("bpmn:process", BPMN_NS) if p.get("id") == ref
+        ]
+        self.assertEqual(len(own), 1, "процесс участника не объявлен")
+        self.assertEqual(len(list(own[0])), 0, "процесс внешнего участника пуст")
+
+        lane_names = {l.get("name") for l in self.root.iter("{%s}lane" % BPMN_NS["bpmn"])}
+        self.assertNotIn("Mijoz", lane_names, "полоса клиента не должна остаться дорожкой пула")
+        self.assertIn("Bank", lane_names)
+
+    def test_touchpoint_is_exported_as_a_message_flow_with_geometry(self):
+        collab = self.root.find("bpmn:collaboration", BPMN_NS)
+        flows = collab.findall("bpmn:messageFlow", BPMN_NS)
+        self.assertEqual(len(flows), 1)
+        client_id = next(
+            p.get("id") for p in collab.findall("bpmn:participant", BPMN_NS)
+            if p.get("name") == "Mijoz"
+        )
+        self.assertEqual(flows[0].get("targetRef"), client_id)
+        plane = self.root.find(".//bpmndi:BPMNPlane", BPMN_NS)
+        di = {e.get("bpmnElement") for e in plane.findall("bpmndi:BPMNEdge", BPMN_NS)}
+        shapes = {s.get("bpmnElement") for s in plane.findall("bpmndi:BPMNShape", BPMN_NS)}
+        self.assertIn(flows[0].get("id"), di)
+        self.assertIn(client_id, shapes)
+
+    def test_pool_lanes_tile_without_gaps(self):
+        plane = self.root.find(".//bpmndi:BPMNPlane", BPMN_NS)
+        bounds = {}
+        for shape in plane.findall("bpmndi:BPMNShape", BPMN_NS):
+            b = shape.find("{http://www.omg.org/spec/DD/20100524/DC}Bounds")
+            bounds[shape.get("bpmnElement")] = tuple(
+                float(b.get(k)) for k in ("x", "y", "width", "height")
+            )
+        lane_ids = [l.get("id") for l in self.root.iter("{%s}lane" % BPMN_NS["bpmn"])]
+        pool_id = next(
+            p.get("id") for p in self.root.iter("{%s}participant" % BPMN_NS["bpmn"])
+            if p.get("processRef")
+        )
+        px, py, pw, ph = bounds[pool_id]
+        boxes = sorted((bounds[i] for i in lane_ids), key=lambda b: b[1])
+        self.assertAlmostEqual(boxes[0][1], py)
+        self.assertAlmostEqual(boxes[-1][1] + boxes[-1][3], py + ph)
+        for a, b in zip(boxes, boxes[1:]):
+            self.assertAlmostEqual(a[1] + a[3], b[1], msg="разрыв между дорожками пула")
+        self.assertEqual({(b[0], b[2]) for b in boxes}, {(px + 30, pw - 30)})
+
+    def test_named_flows_carry_a_label_box(self):
+        plane = self.root.find(".//bpmndi:BPMNPlane", BPMN_NS)
+        named = [f for f in self.root.iter("{%s}sequenceFlow" % BPMN_NS["bpmn"]) if f.get("name")]
+        self.assertTrue(named, "фикстура должна содержать подписанный переход")
+        for flow in named:
+            di = next(
+                e for e in plane.findall("bpmndi:BPMNEdge", BPMN_NS)
+                if e.get("bpmnElement") == flow.get("id")
+            )
+            self.assertIsNotNone(di.find("bpmndi:BPMNLabel", BPMN_NS))
+
+    # ── .pmm ────────────────────────────────────────────────────────────────
+    def test_client_row_and_its_touchpoint_stay_on_the_pix_map(self):
+        roads = [n for n in self.map.findall("node") if n.get("type") == "horizontalRoad"]
+        self.assertEqual({r.get("label") for r in roads}, {"Mijoz", "Bank"})
+        client = next(r for r in roads if r.get("label") == "Mijoz")
+        touching = [
+            c for c in self.map.findall("connector")
+            if client.get("id") in (c.get("sourceNodeId"), c.get("targetNodeId"))
+        ]
+        self.assertEqual(len(touching), 1, "пунктир к полосе клиента потерян")
+        self.assertEqual(touching[0].get("lineStyle"), "dotted")
+        self.assertIsNotNone(touching[0].find("waypoint"))
+
+    def test_every_connector_carries_its_own_polyline(self):
+        # Без waypoint студия трассирует связь сама и кладёт линии друг на друга.
+        cons = self.map.findall("connector")
+        self.assertTrue(cons)
+        for c in cons:
+            points = c.findall("waypoint")
+            self.assertGreaterEqual(len(points), 2, c.get("id"))
+            self.assertEqual([int(p.get("index")) for p in points], list(range(len(points))))
+            coords = [(float(p.get("x")), float(p.get("y"))) for p in points]
+            for (x1, y1), (x2, y2) in zip(coords, coords[1:]):
+                self.assertTrue(abs(x1 - x2) < 0.5 or abs(y1 - y2) < 0.5, c.get("id"))
+
+    def test_map_labels_never_fall_back_to_cell_ids(self):
+        for node in self.map.iter("node"):
+            label = node.get("label") or ""
+            self.assertTrue(label.strip(), node.get("id"))
+            self.assertNotRegex(label, r"Операция [A-Za-z0-9_-]{8,}")
 
 
 if __name__ == "__main__":

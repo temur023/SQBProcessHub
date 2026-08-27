@@ -25,6 +25,8 @@ from app.models.process import (
     TASK_NODE_TYPES,
 )
 from app.services.conformance_engine import analyze_process_conformance
+from app.services.diagnostics import collect_import_diagnostics
+from app.services.layout import normalize_layout
 
 def clean_label(raw: Optional[str]) -> str:
     if not raw:
@@ -64,11 +66,99 @@ def inflate_diagram(data: str) -> str:
     except Exception:
         return decoded_str
 
+def _model_vertex_count(model_xml: str) -> int:
+    """Сколько фигур на странице draw.io: пустые страницы пропускаем."""
+    try:
+        root = ET.fromstring(model_xml)
+    except ET.ParseError:
+        return 0
+    return sum(
+        1 for c in root.iter('mxCell')
+        if c.get('vertex') == '1' and c.get('id') not in ('0', '1')
+    )
+
+
+def _diagram_models(root: ET.Element) -> List[str]:
+    """XML каждой страницы <diagram> в порядке следования в файле."""
+    models: List[str] = []
+    for diag in root.findall('.//diagram'):
+        m = diag.find('.//mxGraphModel')
+        if m is not None:
+            models.append(ET.tostring(m, encoding='unicode'))
+            continue
+        r = diag.find('.//root')
+        if r is not None:
+            models.append(f"<mxGraphModel>{ET.tostring(r, encoding='unicode')}</mxGraphModel>")
+            continue
+        inner = (diag.text or '').strip()
+        if not inner:
+            continue
+        if '<mxGraphModel' in inner:
+            models.append(inner)
+            continue
+        try:
+            models.append(inflate_diagram(inner))
+        except Exception:
+            continue
+    return models
+
+
+def page_report(content: str) -> Tuple[str, List[str]]:
+    """Имя импортированной страницы и имена пропущенных.
+
+    Нужно, чтобы сотрудник увидел: файл многостраничный, а в работу взята одна
+    страница. Молча брать первую и не сказать об этом нельзя — на второй
+    странице обычно лежит TO-BE, и её отсутствие выглядит как потеря данных.
+    """
+    trimmed = (content or '').strip()
+    if '<mxfile' not in trimmed and '<diagram' not in trimmed:
+        return '', []
+    try:
+        root = ET.fromstring(trimmed)
+    except ET.ParseError:
+        return '', []
+    diagrams = root.findall('.//diagram')
+    if len(diagrams) < 2:
+        return (diagrams[0].get('name') or 'Страница 1') if diagrams else '', []
+
+    names = [d.get('name') or f'Страница {i + 1}' for i, d in enumerate(diagrams)]
+    models = _diagram_models(root)
+    used = 0
+    for index, model in enumerate(models):
+        if _model_vertex_count(model) > 0:
+            used = index
+            break
+    return names[used], [n for i, n in enumerate(names) if i != used]
+
+
 def extract_graph_xml(content: str) -> Tuple[str, bool]:
+    """XML одной карты процесса + признак «это BPMN 2.0, а не draw.io».
+
+    Порядок проверок важен: файл ``.drawio`` — это ``<mxfile>`` со страницами,
+    и внутри него тоже встречается подстрока ``<mxGraphModel``. Если сначала
+    искать модель, многостраничный файл разбирается как его первая страница
+    случайно, а сжатый — попадает в другую ветку и разбирается иначе.
+
+    Страницы НЕ объединяются: в картах банка это варианты одного процесса
+    (AS-IS, AS-IS с изменениями, TO-BE). Склейка накладывала их друг на друга —
+    получалась одна нечитаемая схема с дублями шагов и пересечениями связей.
+    Берём первую непустую страницу — ту же, что draw.io открывает по умолчанию.
+    """
     trimmed = content.strip()
 
     if any(k in trimmed for k in ('<definitions', '<bpmn:definitions', '<bpmn2:definitions', '<bpmn:process')):
         return trimmed, True
+
+    if '<mxfile' in trimmed or '<diagram' in trimmed:
+        root = ET.fromstring(trimmed)
+        if root.findall('.//diagram'):
+            models = _diagram_models(root)
+            if not models:
+                raise ValueError('Не удалось извлечь ни одной диаграммы из mxfile')
+            for model in models:
+                if _model_vertex_count(model) > 0:
+                    return model, False
+            return models[0], False
 
     if '<mxGraphModel' in trimmed:
         root = ET.fromstring(trimmed)
@@ -77,90 +167,6 @@ def extract_graph_xml(content: str) -> Tuple[str, bool]:
         model = root.find('.//mxGraphModel')
         if model is not None:
             return ET.tostring(model, encoding='unicode'), False
-
-    if '<mxfile' in trimmed or '<diagram' in trimmed:
-        root = ET.fromstring(trimmed)
-        diagrams = root.findall('.//diagram')
-        if not diagrams:
-            raise ValueError('В файле draw.io не найдено ни одной диаграммы (<diagram>)')
-
-        # Собираем все диаграммы — если их несколько, объединяем с вертикальным смещением
-        models = []
-        for diag in diagrams:
-            m = diag.find('.//mxGraphModel')
-            if m is not None:
-                models.append(ET.tostring(m, encoding='unicode'))
-                continue
-            r = diag.find('.//root')
-            if r is not None:
-                models.append(f"<mxGraphModel>{ET.tostring(r, encoding='unicode')}</mxGraphModel>")
-                continue
-            inner = (diag.text or '').strip()
-            if inner:
-                if '<mxGraphModel' in inner:
-                    models.append(inner)
-                else:
-                    try:
-                        models.append(inflate_diagram(inner))
-                    except Exception:
-                        continue
-        if not models:
-            raise ValueError('Не удалось извлечь ни одной диаграммы из mxfile')
-        if len(models) == 1:
-            return models[0], False
-        # Объединяем несколько диаграмм: собираем все mxCell в один root
-        # Для избежания наложения добавляем вертикальный offset по высоте каждой диаграммы
-        try:
-            combined_root = ET.Element('root')
-            # базовые ячейки 0 и 1
-            ET.SubElement(combined_root, 'mxCell', {'id': '0'})
-            ET.SubElement(combined_root, 'mxCell', {'id': '1', 'parent': '0'})
-            y_offset = 0
-            for mx in models:
-                try:
-                    m_root = ET.fromstring(mx)
-                    r = m_root.find('.//root')
-                    if r is None:
-                        continue
-                    # вычисляем высоту этой диаграммы для offset
-                    max_y = 0
-                    for c in r.findall('mxCell'):
-                        geo = c.find('mxGeometry')
-                        if geo is not None:
-                            try:
-                                y = float(geo.get('y', '0') or 0)
-                                h = float(geo.get('height', '0') or 0)
-                                max_y = max(max_y, y + h)
-                            except ValueError:
-                                pass
-                    for c in r.findall('mxCell'):
-                        cid = c.get('id')
-                        if cid in ('0', '1'):
-                            continue
-                        # клонируем ячейку
-                        new_c = ET.SubElement(combined_root, 'mxCell', dict(c.attrib))
-                        # копируем геометрию с y_offset для pool-совместимости
-                        geo = c.find('mxGeometry')
-                        if geo is not None:
-                            ng = ET.SubElement(new_c, 'mxGeometry', dict(geo.attrib))
-                            if y_offset != 0 and geo.get('relative') != '1':
-                                try:
-                                    orig_y = float(geo.get('y', '0') or 0)
-                                    ng.set('y', str(orig_y + y_offset))
-                                except ValueError:
-                                    pass
-                            for child in geo:
-                                ET.SubElement(ng, child.tag, dict(child.attrib))
-                        for child in c:
-                            if child.tag != 'mxGeometry':
-                                ET.SubElement(new_c, child.tag, dict(child.attrib))
-                    y_offset += max_y + 100
-                except Exception:
-                    continue
-            return f"<mxGraphModel>{ET.tostring(combined_root, encoding='unicode')}</mxGraphModel>", False
-        except Exception:
-            # fallback — первая диаграмма
-            return models[0], False
 
     raise ValueError('Файл не распознан как диаграмма draw.io или BPMN 2.0 XML')
 
@@ -256,6 +262,31 @@ def is_non_task_label(val: str) -> bool:
         return True
     return False
 
+#: Короткая подпись рядом с фигурой — это бейдж, а не примечание к процессу.
+TEXT_NOTE_MIN_LEN = 12
+
+
+def is_text_note(style: str, label: str) -> bool:
+    """Обрамлённая текстовая врезка draw.io — примечание к процессу.
+
+    На картах SQB перечень требуемых документов оформлен как ``text``-фигура с
+    рамкой (``strokeColor`` задан). Такие врезки раньше отбрасывались вместе с
+    подписями-накладками, и содержательный текст пропадал из выгрузки. Заголовок
+    схемы и подписи связей рамки не имеют (``strokeColor=none``) — они по-прежнему
+    остаются оформлением.
+    """
+    s = (style or '').lower()
+    if 'text;' not in s or 'swimlane' in s or 'edgelabel' in s:
+        return False
+    text = (label or '').strip()
+    if len(text) < TEXT_NOTE_MIN_LEN or is_non_task_label(text):
+        return False
+    if duration_minutes(text) is not None:
+        return False
+    stroke = _style_map(s).get('strokecolor', 'none')
+    return stroke not in ('none', '')
+
+
 def _id_has_token(node_id: str, token: str) -> bool:
     i = (node_id or '').lower()
     token = token.lower()
@@ -344,8 +375,10 @@ def classify_vertex(style: str, label: str, has_incoming: bool, has_outgoing: bo
     # Объект данных: Dalolatnoma, Yig'ma jild, Hujjatlar ro'yxati.
     if 'mxgraph.bpmn.data2' in s or shape.endswith('bpmn.data') or 'shape=dataobject' in s:
         return 'dataObject'
-    # Текстовое примечание.
+    # Текстовое примечание: фигура-заметка или обрамлённая текстовая врезка.
     if 'shape=note' in s or 'mxgraph.bpmn.annotation' in s or 'shape=mxgraph.flowchart.annotation' in s:
+        return 'textAnnotation'
+    if is_text_note(style, label):
         return 'textAnnotation'
 
     if 'mxgraph.bpmn.gateway' in s or shape.endswith('gateway2') or 'gwtype' in smap:
@@ -520,6 +553,40 @@ def extract_sla_minutes(raw_text: str, category: StepCategory, node_type: NodeTy
         return 180
     return 60
 
+def _format_minutes(minutes: float) -> str:
+    return str(int(minutes)) if float(minutes).is_integer() else f'{minutes:g}'
+
+
+def fallback_node_name(node_type: NodeType, code: Optional[str], raw_text: str = '') -> str:
+    """Осмысленное имя фигуры без подписи — никогда не идентификатор ячейки.
+
+    Раньше на карту и в выгрузку попадали заголовки вида «Операция
+    G9DXMv3N_W9X6-3aXuzq-1»: у промежуточного таймера вся подпись — это
+    длительность («10 min»), а её снимает нормализация имени шага. Возвращаем
+    длительность в имя события и подписываем остальные фигуры по их роли.
+    """
+    if node_type == 'intermediateTimerEvent':
+        minutes = duration_minutes(raw_text)
+        return f'Ожидание {_format_minutes(minutes)} мин' if minutes is not None else 'Ожидание'
+    if node_type == 'intermediateMessageEvent':
+        return 'Событие-сообщение'
+    if node_type == 'startEvent':
+        return 'Старт'
+    if node_type == 'endEvent':
+        return 'Завершение'
+    if node_type in ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway'):
+        return 'Условие'
+    if node_type == 'dataStore':
+        return 'Информационная система'
+    if node_type == 'dataObject':
+        return 'Документ'
+    if node_type == 'textAnnotation':
+        return 'Примечание'
+    if node_type == 'subProcess':
+        return f'Подпроцесс {code}' if code else 'Подпроцесс'
+    return f'Операция {code}' if code else 'Операция'
+
+
 def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
     """Parse OMG BPMN 2.0 XML (any namespace prefix) into a BusinessProcess."""
     root = ET.fromstring(xml_str)
@@ -587,11 +654,7 @@ def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
         geo = bounds_map.get(node_id) or Geometry(
             x=100 + (step_index * 150), y=100, width=140, height=70
         )
-        name = raw_name or (
-            'Старт' if node_type == 'startEvent'
-            else 'Завершение' if node_type == 'endEvent'
-            else f'Шаг {code or node_id}'
-        )
+        name = raw_name or fallback_node_name(node_type, code, raw_name)
         nodes.append(ProcessNode(
             id=node_id,
             name=name,
@@ -721,7 +784,7 @@ def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
         ]
     )
 
-    validations = _collect_validations(nodes, edges)
+    validations = collect_import_diagnostics(nodes, lanes, edges)
     metrics = analyze_process_conformance(nodes, passport, len(registry.records))
 
     return BusinessProcess(
@@ -736,37 +799,6 @@ def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
         registry=registry,
         miningMetrics=metrics
     )
-
-
-def _collect_validations(flow_nodes: List[ProcessNode], edges: List[ProcessEdge]) -> List[ProcessValidation]:
-    validations: List[ProcessValidation] = []
-    starts = [n for n in flow_nodes if n.type == 'startEvent']
-    ends = [n for n in flow_nodes if n.type == 'endEvent']
-    if not starts:
-        validations.append(ProcessValidation(level='error', message='Отсутствует стартовое событие процесса'))
-    if len(starts) > 1:
-        validations.append(ProcessValidation(level='warning', message=f'Найдено {len(starts)} стартовых событий'))
-    if not ends:
-        validations.append(ProcessValidation(level='warning', message='Отсутствует событие успешного завершения'))
-    for n in flow_nodes:
-        if n.type in ARTIFACT_NODE_TYPES:
-            continue  # хранилища/документы соединяются ассоциациями, а не потоком
-        seq = [e for e in edges if e.kind == 'sequenceFlow']
-        in_e = [e for e in seq if e.targetId == n.id]
-        out_e = [e for e in seq if e.sourceId == n.id]
-        if n.type not in ('startEvent', 'lane') and not in_e:
-            validations.append(ProcessValidation(
-                level='error',
-                message=f'Шаг «{n.name or n.id}» не имеет входящих переходов (тупик)',
-                nodeId=n.id,
-            ))
-        if n.type not in ('endEvent', 'lane') and not out_e:
-            validations.append(ProcessValidation(
-                level='warning',
-                message=f'Шаг «{n.name or n.id}» не имеет исходящих переходов',
-                nodeId=n.id,
-            ))
-    return validations
 
 
 #: Максимальное расстояние от бейджа длительности до центра шага, px.
@@ -839,11 +871,15 @@ def _resolve_free_endpoint(
 def _apply_duration_badges(
     flow_nodes: List[ProcessNode],
     badges: List[Tuple[float, float, float, bool]],
-) -> None:
-    """Переносит ST/WT из фигур-таймеров в ближайший шаг процесса (4-ILOVA)."""
+) -> Set[str]:
+    """Переносит ST/WT из фигур-таймеров в ближайший шаг процесса (4-ILOVA).
+
+    Возвращает шаги, которым время проставил реальный бейдж с карты: остальным
+    оно досталось от эвристики по категории, и об этом надо сказать аналитику.
+    """
     tasks = [n for n in flow_nodes if n.type in TASK_NODE_TYPES]
     if not tasks or not badges:
-        return
+        return set()
     st_seen: Set[str] = set()
     for cx, cy, minutes, is_wait in badges:
         best: Optional[ProcessNode] = None
@@ -866,6 +902,7 @@ def _apply_duration_badges(
             st_seen.add(best.id)
         if best.category != 'rpa_bot':
             best.costPerExecution = (best.slaMinutes or 0) * 1932
+    return st_seen
 
 
 def _resolve_artifact_links(flow_nodes: List[ProcessNode], edges: List[ProcessEdge]) -> None:
@@ -1020,6 +1057,10 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
                 label_map[parent_id] = cleaned
             continue
 
+        # 2.5. Обрамлённая текстовая врезка — примечание, а не оформление.
+        if is_text_note(style, cleaned):
+            continue
+
         # 3. Text label overlay
         if c_id.endswith('_label') or ('text;' in style and 'swimlane' not in style and ('strokecolor=none' in style or 'fillcolor=none' in style or is_non_task_label(cleaned) or len(cleaned) < 2)):
             ignore_cell_ids.add(c_id)
@@ -1120,6 +1161,8 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
 
     nodes: List[ProcessNode] = []
     step_index = 1
+    #: Шаги, чьё время взято с карты, а не из эвристики по категории.
+    timed_step_ids: Set[str] = set()
 
     for cell in raw_vertices:
         node_id = cell.get('id') or f"node_{uuid.uuid4().hex[:8]}"
@@ -1162,7 +1205,10 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             code = f"STEP-{step_index:02d}"
             step_index += 1
 
-        sla_min = extract_sla_minutes(f"{raw_val or ''} {raw_cleaned}", category, node_type)
+        raw_text = f"{raw_val or ''} {raw_cleaned}"
+        sla_min = extract_sla_minutes(raw_text, category, node_type)
+        if duration_minutes(raw_text) is not None:
+            timed_step_ids.add(node_id)
 
         clean_name = raw_cleaned
         clean_name = re.sub(r'^\[.*?\]\s*', '', clean_name, flags=re.I)
@@ -1173,14 +1219,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         if not clean_name and node_type == 'lane':
             pass  # безымянная дорожка: имя присвоим позиционно после разбора
         elif not clean_name:
-            if node_type == 'startEvent':
-                clean_name = 'Старт'
-            elif node_type == 'endEvent':
-                clean_name = 'Завершение'
-            elif 'Gateway' in node_type:
-                clean_name = 'Условие'
-            else:
-                clean_name = f"Операция {code or node_id}"
+            clean_name = fallback_node_name(node_type, code, f"{raw_val or ''} {raw_cleaned}")
 
         # Guard against zero/negative and invisible boxes (8px не читаемо)
         if node_type == 'lane':
@@ -1224,36 +1263,62 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
 
     _name_and_prune_lanes(lanes, flow_nodes)
 
-    LANE_HEAD_WIDTH = 44
-    for n in flow_nodes:
-        if not n.laneId:
-            hit = next((
-                l for l in lanes
-                if (n.geometry.x >= l.geometry.x + LANE_HEAD_WIDTH - 10 and
-                    n.geometry.x <= l.geometry.x + l.geometry.width + 50 and
-                    n.geometry.y >= l.geometry.y and
-                    n.geometry.y < l.geometry.y + l.geometry.height)
-            ), None)
-            if hit:
-                n.laneId = hit.id
-                n.laneName = hit.name
-                n.role = hit.name
+    lane_by_id = {l.id: l for l in lanes}
 
-        if n.laneId:
-            p_lane = next((l for l in lanes if l.id == n.laneId), None)
-            if p_lane:
-                n.laneName = p_lane.name
-                n.role = n.role or p_lane.name
+    def _lane_under(node: ProcessNode) -> Optional[ProcessNode]:
+        """Дорожка, внутри которой лежит центр фигуры."""
+        cx = node.geometry.x + node.geometry.width / 2
+        cy = node.geometry.y + node.geometry.height / 2
+        for lane in lanes:
+            g = lane.geometry
+            if g.x <= cx <= g.x + g.width and g.y <= cy < g.y + g.height:
+                return lane
+        return None
+
+    for n in flow_nodes:
+        # Родитель ячейки в draw.io — не то же самое, что дорожка на рисунке:
+        # фигуру можно утащить из дорожки, и редактор сохранит прежнего родителя.
+        # Исполнителя шага определяем по тому, где фигура лежит на самом деле,
+        # иначе роль в регламенте берётся от чужого подразделения.
+        declared = lane_by_id.get(n.laneId or '')
+        actual = _lane_under(n)
+        if actual is not None and actual.id != (declared.id if declared else None):
+            n.laneId = actual.id
+            n.role = None
+        elif declared is not None and actual is None:
+            n.laneId = None
+            n.laneName = None
+            n.role = None
+
+        p_lane = lane_by_id.get(n.laneId or '')
+        if p_lane:
+            n.laneName = p_lane.name
+            n.role = n.role or p_lane.name
         n.system = detect_system(n.name, n.laneName or '')
 
     valid_node_ids = {n.id for n in flow_nodes}
     valid_lane_ids = {l.id for l in lanes}
     type_by_id: Dict[str, str] = {n.id: n.type for n in flow_nodes}
+    # Дорожка без единого шага — это внешний участник (клиент, госорган):
+    # аналитик отводит ему полосу и тянет к ней пунктир от шагов банка.
+    external_lane_ids = valid_lane_ids - {n.laneId for n in flow_nodes if n.laneId}
+    #: Типы, которым BPMN разрешает быть концом messageFlow (InteractionNode).
+    _INTERACTION_TYPES = (
+        'task', 'userTask', 'serviceTask', 'subProcess',
+        'startEvent', 'endEvent', 'intermediateTimerEvent', 'intermediateMessageEvent',
+    )
 
     def _edge_kind(src_id: str, tgt_id: str, dashed: bool) -> EdgeKind:
-        # Линия, упирающаяся в дорожку, — оформление (разделитель этапов),
-        # а не поток управления: в BPMN дорожка не может быть концом связи.
         if src_id in valid_lane_ids or tgt_id in valid_lane_ids:
+            lane_id, other_id = (
+                (src_id, tgt_id) if src_id in valid_lane_ids else (tgt_id, src_id)
+            )
+            # Пунктир «шаг банка ↔ полоса клиента» — это обмен сообщениями с
+            # внешним участником, а не оформление: в выгрузке он обязан
+            # остаться, иначе с карты пропадают точки контакта с клиентом.
+            if lane_id in external_lane_ids and type_by_id.get(other_id, '') in _INTERACTION_TYPES:
+                return 'messageFlow'
+            # Линия, упирающаяся в дорожку с шагами, — разделитель этапов.
             return 'annotationLine'
         st, tt = type_by_id.get(src_id, ''), type_by_id.get(tgt_id, '')
         # Связь с артефактом — всегда ассоциация (по BPMN sequenceFlow к
@@ -1266,6 +1331,8 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
 
     edges: List[ProcessEdge] = []
     snap_targets = flow_nodes + lanes
+    #: Связи, у которых конец висел в пустоте и был притянут к фигуре.
+    snapped_edge_ids: List[str] = []
 
     for cell in raw_edges:
         s_id = cell.get('source')
@@ -1290,8 +1357,12 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         # Конец без привязки — притягиваем к ближайшей фигуре под ним.
         if not s_id:
             s_id = _resolve_free_endpoint(free_ends.get('sourcePoint'), snap_targets)
+            if s_id:
+                snapped_edge_ids.append(cell.get('id') or '')
         if not t_id:
             t_id = _resolve_free_endpoint(free_ends.get('targetPoint'), snap_targets)
+            if t_id and (cell.get('id') or '') not in snapped_edge_ids:
+                snapped_edge_ids.append(cell.get('id') or '')
 
         def _known(node_id: Optional[str]) -> bool:
             return bool(node_id) and (node_id in valid_node_ids or node_id in valid_lane_ids)
@@ -1411,8 +1482,11 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
                 best.name = text
                 best.condition = text
 
-    _apply_duration_badges(flow_nodes, duration_badges)
+    badge_step_ids = _apply_duration_badges(flow_nodes, duration_badges)
     _resolve_artifact_links(flow_nodes, edges)
+    # Геометрию правим до сбора замечаний: часть из них про размеры фигур.
+    layout_report = normalize_layout(flow_nodes, lanes)
+    timed_step_ids |= badge_step_ids
 
     title = filename.replace('.drawio', '').replace('.xml', '')
     task_nodes = [n for n in flow_nodes if n.type in TASK_NODE_TYPES]
@@ -1465,7 +1539,15 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         ]
     )
 
-    validations = _collect_validations(flow_nodes, edges)
+    page_used, pages_skipped = page_report(content)
+    validations = collect_import_diagnostics(
+        flow_nodes, lanes, edges,
+        pages_skipped=pages_skipped,
+        page_used=page_used,
+        snapped_edges=snapped_edge_ids,
+        layout_report=layout_report,
+        timed_step_ids=timed_step_ids,
+    )
 
     metrics = analyze_process_conformance(flow_nodes, passport, len(registry.records))
 

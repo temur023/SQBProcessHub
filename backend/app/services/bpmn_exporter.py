@@ -11,7 +11,13 @@
 * порядок элементов внутри ``bpmn:process`` соблюдает XSD-последовательность
   ``laneSet* , flowElement* , artifact*``;
 * ``flowNodeRef`` дорожки перечисляет только узлы потока: артефакты
-  элементами потока не являются.
+  элементами потока не являются;
+* дорожка без шагов — это внешняя сторона (клиент), а не зона ответственности:
+  она выгружается отдельным участником-«чёрным ящиком», а пунктир к ней —
+  ``messageFlow``. Дорожка без ``flowNodeRef`` импортёру не нужна, и раньше
+  такая строка вместе со всеми связями к ней пропадала из схемы;
+* дорожки замощают пул по вертикали и делят с ним ширину: импортёр рисует
+  геометрию как есть, и разрыв между полосами виден на схеме.
 """
 import re
 from typing import Dict, Iterable, List, Optional, Set, Tuple
@@ -22,7 +28,15 @@ from app.models.process import (
     ProcessEdge,
     ProcessNode,
 )
-from app.services.edge_routing import orthogonal_waypoints
+from app.services.edge_routing import message_flow_endpoints, orthogonal_waypoints
+from app.services.layout import (
+    EXTERNAL_LABEL_TYPES,
+    choose_label_box,
+    edge_label_candidates,
+    external_label_candidates,
+    node_obstacles,
+    segment_boxes,
+)
 
 _NCNAME = re.compile(r'^[A-Za-z_][A-Za-z0-9._-]*$')
 
@@ -176,7 +190,49 @@ def _node_documentation(node: ProcessNode) -> str:
     return '; '.join(bits)
 
 
-def _union_bounds(nodes: Iterable[ProcessNode], header: int = 30) -> Tuple[int, int, int, int]:
+#: Ширина заголовочной полосы пула в BPMNDI (bpmn.io рисует ровно 30 px).
+POOL_HEADER = 30
+
+#: Типы, которым BPMN разрешает быть концом messageFlow (InteractionNode).
+_INTERACTION_TYPES = (
+    'task', 'userTask', 'serviceTask', 'subProcess',
+    'startEvent', 'endEvent', 'intermediateTimerEvent', 'intermediateMessageEvent',
+)
+
+
+def split_external_lanes(
+    lanes: List[ProcessNode],
+    flow_nodes: List[ProcessNode],
+) -> Tuple[List[ProcessNode], List[ProcessNode]]:
+    """Делит дорожки на полосы пула и внешних участников.
+
+    Дорожка без единого шага — это не зона ответственности внутри организации,
+    а внешняя сторона (клиент, госорган): аналитик отводит ей полосу и тянет к
+    ней пунктир от шагов банка. В BPMN такая полоса обязана быть отдельным
+    участником-«чёрным ящиком», иначе импортёр (PIX Процессная студия) выбросит
+    дорожку без ``flowNodeRef`` — и с карты пропадает целая строка вместе со
+    всеми пунктирными связями к ней.
+
+    Пустая дорожка, попадающая внутрь вертикального размаха заполненных,
+    участником не становится: вынести её из пула значило бы разорвать пул.
+    """
+    populated = [l for l in lanes if any(n.laneId == l.id for n in flow_nodes)]
+    if not populated:
+        return lanes, []
+    top = min(l.geometry.y for l in populated)
+    bottom = max(l.geometry.y + l.geometry.height for l in populated)
+
+    inner: List[ProcessNode] = []
+    external: List[ProcessNode] = []
+    for lane in lanes:
+        g = lane.geometry
+        empty = lane not in populated
+        overlaps = g.y < bottom and g.y + g.height > top
+        (external if empty and not overlaps else inner).append(lane)
+    return inner, external
+
+
+def _union_bounds(nodes: Iterable[ProcessNode], header: int = POOL_HEADER) -> Tuple[int, int, int, int]:
     items = list(nodes)
     if not items:
         return (40, 40, 800, 200)
@@ -209,9 +265,23 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
     all_nodes = [n for n in process.nodes if n.type != 'lane']
     flow_nodes = [n for n in all_nodes if n.type not in ARTIFACT_NODE_TYPES]
     artifact_nodes = [n for n in all_nodes if n.type in ARTIFACT_NODE_TYPES]
-    lanes = list(process.lanes or [])
+    lanes, external_lanes = split_external_lanes(list(process.lanes or []), flow_nodes)
+    external_by_id = {lane.id: lane for lane in external_lanes}
     node_by_id = {n.id: n for n in all_nodes}
     valid_ids = set(node_by_id)
+
+    # Точки контакта с внешним участником: один конец — его полоса, другой —
+    # шаг или событие процесса. В BPMN это messageFlow внутри collaboration.
+    message_flows = [
+        e for e in process.edges
+        if e.kind == 'messageFlow'
+        and (
+            (e.sourceId in external_by_id and node_by_id.get(e.targetId or '') is not None
+             and node_by_id[e.targetId].type in _INTERACTION_TYPES)
+            or (e.targetId in external_by_id and node_by_id.get(e.sourceId or '') is not None
+                and node_by_id[e.sourceId].type in _INTERACTION_TYPES)
+        )
+    ]
 
     # Висячие связи и оформительские линии draw.io в схему не идут: у
     # annotationLine хотя бы один конец не опирается на шаг процесса.
@@ -219,8 +289,8 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         e for e in process.edges
         if e.kind != 'annotationLine' and e.sourceId in valid_ids and e.targetId in valid_ids
     ]
-    # messageFlow допустим только между пулами; карта SQB — один пул, поэтому
-    # такие связи выгружаются как обычный поток управления.
+    # messageFlow между двумя шагами одного пула спецификация запрещает: карта
+    # SQB — один пул, поэтому такие связи выгружаются как поток управления.
     sequence_edges = [e for e in edges if e.kind != 'association']
     association_edges = [e for e in edges if e.kind == 'association']
 
@@ -233,8 +303,16 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         id_of[n.id] = _safe_id(n.id, 'Artifact', used, taken)
     for lane in lanes:
         id_of[lane.id] = _safe_id(lane.id, 'Lane', used, taken)
+    external_process_of: Dict[str, str] = {}
+    for lane in external_lanes:
+        id_of[lane.id] = _safe_id(f'Participant_{lane.id}', 'Participant', used, taken)
+        external_process_of[lane.id] = _safe_id(
+            f'Process_{lane.id}', 'Process', used, taken
+        )
     for edge in edges:
         id_of[edge.id] = _safe_id(edge.id, 'Flow', used, taken)
+    for edge in message_flows:
+        id_of[edge.id] = _safe_id(edge.id, 'MessageFlow', used, taken)
 
     incoming_by_node: Dict[str, List[str]] = {n.id: [] for n in flow_nodes}
     outgoing_by_node: Dict[str, List[str]] = {n.id: [] for n in flow_nodes}
@@ -244,7 +322,7 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         if edge.sourceId in outgoing_by_node:
             outgoing_by_node[edge.sourceId].append(edge.id)
 
-    use_collab = bool(lanes)
+    use_collab = bool(lanes) or bool(external_lanes)
     plane_ref = collab_id if use_collab else proc_id
     process_name = escape_xml(process.passport.name or process.name or 'Business process')
     comment = process_name.replace('--', '—')
@@ -271,6 +349,26 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
             f'    <bpmn:participant id="{escape_xml(participant_id)}" '
             f'name="{pool_name}" processRef="{escape_xml(proc_id)}" />'
         )
+        # Внешний участник ссылается на собственный пустой процесс. Без
+        # processRef импортёр считает пул свёрнутым и печатает имя по центру
+        # полосы: на карте шириной 4620 px подпись уезжала за экран, и строка
+        # выглядела безымянной. С процессом пул раскрыт, и имя стоит в шапке
+        # слева — там же, где имена дорожек.
+        for lane in external_lanes:
+            xml.append(
+                f'    <bpmn:participant id="{escape_xml(id_of[lane.id])}" '
+                f'name="{escape_xml(lane.name)}" '
+                f'processRef="{escape_xml(external_process_of[lane.id])}" />'
+            )
+        for edge in message_flows:
+            src_id = id_of[edge.sourceId]
+            tgt_id = id_of[edge.targetId]
+            name = (edge.name or edge.condition or '').strip()
+            name_attr = f' name="{escape_xml(name)}"' if name else ''
+            xml.append(
+                f'    <bpmn:messageFlow id="{escape_xml(id_of[edge.id])}"{name_attr}'
+                f' sourceRef="{escape_xml(src_id)}" targetRef="{escape_xml(tgt_id)}" />'
+            )
         xml.append('  </bpmn:collaboration>')
         xml.append('')
 
@@ -378,6 +476,14 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
     xml.append('  </bpmn:process>')
     xml.append('')
 
+    for lane in external_lanes:
+        xml.append(
+            f'  <bpmn:process id="{escape_xml(external_process_of[lane.id])}" '
+            f'name="{escape_xml(lane.name)}" isExecutable="false" />'
+        )
+    if external_lanes:
+        xml.append('')
+
     # ── Диаграмма ───────────────────────────────────────────────────────────
     xml.append(f'  <bpmndi:BPMNDiagram id="{escape_xml(diag_id)}">')
     xml.append(
@@ -385,7 +491,8 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
     )
 
     if use_collab:
-        # Пул охватывает и дорожки, и узлы: иначе часть карты окажется вне пула.
+        # Пул охватывает дорожки и узлы; полосы внешних участников — отдельные
+        # пулы и в его границы не входят.
         px, py, pw, ph = _union_bounds(lanes + all_nodes)
         xml.append(
             f'      <bpmndi:BPMNShape id="{escape_xml(participant_id)}_di" '
@@ -393,17 +500,87 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         )
         xml.append(f'        <dc:Bounds x="{px}" y="{py}" width="{pw}" height="{ph}" />')
         xml.append('      </bpmndi:BPMNShape>')
+        for lane in external_lanes:
+            xml.append(
+                f'      <bpmndi:BPMNShape id="{escape_xml(id_of[lane.id])}_di" '
+                f'bpmnElement="{escape_xml(id_of[lane.id])}" isHorizontal="true">'
+            )
+            xml.append(
+                f'        <dc:Bounds x="{lane.geometry.x}" y="{lane.geometry.y}" '
+                f'width="{lane.geometry.width}" height="{lane.geometry.height}" />'
+            )
+            xml.append('      </bpmndi:BPMNShape>')
+    else:
+        px, pw = 0, 0
 
     for lane in lanes:
+        # Полосы обязаны тайлиться внутри пула: иначе импортёр рисует их
+        # уступами, а часть карты оказывается за пределами дорожек.
+        lane_x = px + POOL_HEADER if use_collab else lane.geometry.x
+        lane_w = max(pw - POOL_HEADER, 80) if use_collab else lane.geometry.width
         xml.append(
             f'      <bpmndi:BPMNShape id="{escape_xml(id_of[lane.id])}_di" '
             f'bpmnElement="{escape_xml(id_of[lane.id])}" isHorizontal="true">'
         )
         xml.append(
-            f'        <dc:Bounds x="{lane.geometry.x}" y="{lane.geometry.y}" '
-            f'width="{lane.geometry.width}" height="{lane.geometry.height}" />'
+            f'        <dc:Bounds x="{lane_x}" y="{lane.geometry.y}" '
+            f'width="{lane_w}" height="{lane.geometry.height}" />'
         )
         xml.append('      </bpmndi:BPMNShape>')
+
+    # ── Подписи ────────────────────────────────────────────────────────────
+    # Позиции считаем ДО отрисовки: подпись шлюза, подпись связи и подпись
+    # соседнего события претендуют на одно и то же место под фигурой, и
+    # разводить их можно, только зная все занятые прямоугольники сразу.
+    routes: List[Tuple[ProcessEdge, List[Tuple[int, int]]]] = []
+    for edge in edges:
+        routes.append((
+            edge,
+            _edge_waypoints(
+                edge,
+                node_by_id.get(edge.sourceId or ''),
+                node_by_id.get(edge.targetId or ''),
+            ),
+        ))
+    for edge in message_flows:
+        lane_is_source = edge.sourceId in external_by_id
+        lane = external_by_id[edge.sourceId if lane_is_source else edge.targetId]
+        peer = node_by_id[edge.targetId if lane_is_source else edge.sourceId]
+        src_node, tgt_node = message_flow_endpoints(edge, peer, lane, lane_is_source)
+        routes.append((edge, _edge_waypoints(edge, src_node, tgt_node)))
+
+    taken_boxes: List[Tuple[int, int, int, int]] = node_obstacles(all_nodes)
+    # Линии связей — тоже препятствие: подпись, положенная на связь, читается
+    # как перечёркнутая.
+    for _, route in routes:
+        taken_boxes.extend(segment_boxes(route))
+    edge_label_of: Dict[str, Tuple[int, int, int, int]] = {}
+    for edge, route in routes:
+        text = (edge.name or edge.condition or '').strip()
+        if not text:
+            continue
+        box = choose_label_box(edge_label_candidates(route, text), taken_boxes)
+        edge_label_of[edge.id] = box
+        taken_boxes.append(box)
+
+    node_label_of: Dict[str, Tuple[int, int, int, int]] = {}
+    for node in all_nodes:
+        if node.type not in EXTERNAL_LABEL_TYPES or not (node.name or '').strip():
+            continue
+        obstacles = [b for b in taken_boxes if b != (
+            node.geometry.x, node.geometry.y, node.geometry.width, node.geometry.height
+        )]
+        box = choose_label_box(external_label_candidates(node), obstacles)
+        node_label_of[node.id] = box
+        taken_boxes.append(box)
+
+    def _label_xml(box: Tuple[int, int, int, int], indent: str) -> List[str]:
+        lx, ly, lw, lh = box
+        return [
+            f'{indent}<bpmndi:BPMNLabel>',
+            f'{indent}  <dc:Bounds x="{lx}" y="{ly}" width="{lw}" height="{lh}" />',
+            f'{indent}</bpmndi:BPMNLabel>',
+        ]
 
     for node in all_nodes:
         xml.append(
@@ -414,17 +591,22 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
             f'        <dc:Bounds x="{node.geometry.x}" y="{node.geometry.y}" '
             f'width="{node.geometry.width}" height="{node.geometry.height}" />'
         )
+        # Подпись события, шлюза и артефакта импортёр рисует вне фигуры и
+        # переносит по рамке в 90 px. Без явных границ длинное имя шлюза
+        # превращается в столбец, накрывающий соседние шаги и подписи связей.
+        if node.id in node_label_of:
+            xml.extend(_label_xml(node_label_of[node.id], '        '))
         xml.append('      </bpmndi:BPMNShape>')
 
-    for edge in edges:
-        src = node_by_id.get(edge.sourceId or '')
-        tgt = node_by_id.get(edge.targetId or '')
+    for edge, route in routes:
         xml.append(
             f'      <bpmndi:BPMNEdge id="{escape_xml(id_of[edge.id])}_di" '
             f'bpmnElement="{escape_xml(id_of[edge.id])}">'
         )
-        for x, y in _edge_waypoints(edge, src, tgt):
+        for x, y in route:
             xml.append(f'        <di:waypoint x="{x}" y="{y}" />')
+        if edge.id in edge_label_of:
+            xml.extend(_label_xml(edge_label_of[edge.id], '        '))
         xml.append('      </bpmndi:BPMNEdge>')
 
     xml.append('    </bpmndi:BPMNPlane>')

@@ -7,6 +7,7 @@ import { StepMatrixTable } from '@/components/StepMatrixTable'
 import { PixRegistryView } from '@/components/PixRegistryView'
 import { ProcessetAnalyticsView } from '@/components/ProcessetAnalyticsView'
 import { ProcessImportModal } from '@/components/ProcessImportModal'
+import { ImportReport } from '@/components/ImportReport'
 import { NodeDetailDrawer } from '@/components/NodeDetailDrawer'
 import { ExportDrawer } from '@/components/ExportDrawer'
 import { generateProcessRegulationCsv, downloadFile } from '@/lib/processet-export'
@@ -50,9 +51,24 @@ export default function Home() {
     setCurrentProcess(newProcess)
     setSelectedNode(null)
     void saveProcessToBackend(newProcess)
-    toast.success(`Бизнес-процесс «${newProcess.name}» успешно загружен!`, {
-      description: `Создан регламент на ${newProcess.nodes.length} шагов и реестр PIX.`,
-    })
+    const issues = newProcess.validation ?? []
+    const errors = issues.filter((i) => i.level === 'error').length
+    const warnings = issues.filter((i) => i.level === 'warning').length
+    const summary = `Создан регламент на ${newProcess.nodes.length} шагов и реестр PIX.`
+    // Замечания к карте показываем сразу: молча импортировать неполную схему
+    // нельзя — ошибка дойдёт до регламента и до выгрузки в PIX.
+    if (errors || warnings) {
+      toast.warning(`Процесс «${newProcess.name}» загружен с замечаниями`, {
+        description:
+          `${summary} Ошибок: ${errors}, предупреждений: ${warnings}. ` +
+          'Подробности — в панели «Проверка импорта» над картой.',
+        duration: 8000,
+      })
+    } else {
+      toast.success(`Бизнес-процесс «${newProcess.name}» успешно загружен!`, {
+        description: summary,
+      })
+    }
   }
 
   const handleSaveNode = (updatedNode: ProcessNode) => {
@@ -141,6 +157,15 @@ export default function Home() {
         onOpenImport={() => setIsImportOpen(true)}
         onOpenExport={() => setIsExportOpen(true)}
         onExportExcel={handleExportExcel}
+      />
+
+      {/* Отчёт о качестве импортированной карты */}
+      <ImportReport
+        process={currentProcess}
+        onSelectNode={(node) => {
+          setActiveTab('visualizer')
+          setSelectedNode(node)
+        }}
       />
 
       {/* Main Content Area */}

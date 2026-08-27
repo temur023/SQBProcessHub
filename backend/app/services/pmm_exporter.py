@@ -13,9 +13,13 @@
 * подпись связи хранится в атрибуте ``Text``, а не ``label``
   (``label`` студия игнорирует — подписи шлюзов теряются);
 * список ``waypoint`` — это ПОЛНАЯ ломаная, включая точки на границе исходного
-  и целевого узла, а не только промежуточные изломы;
-* ``sourcePoint``/``targetPoint`` — необязательные индексы якорей; если их не
-  указывать, студия трассирует связь сама (в эталоне так у 30 связей из 50).
+  и целевого узла, а не только промежуточные изломы; ломаную задаём для каждой
+  связи — без неё студия трассирует сама и на плотной карте кладёт линии
+  поверх соседних;
+* ``sourcePoint``/``targetPoint`` — необязательные индексы якорей: не задаём их,
+  чтобы студия сама выбрала точку примыкания к грани фигуры;
+* стиль линии (``lineStyle``) и оформление подписи хранятся дочерними
+  элементами рядом с ``color``/``fontSize``.
 
 В отличие от BPMN-выгрузки, здесь НЕ применяется нормализация степеней
 событий: ``.pmm`` — это рисунок карты, и узел должен выглядеть так, как его
@@ -32,7 +36,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from app.models.process import BusinessProcess, ProcessEdge, ProcessNode
-from app.services.edge_routing import orthogonal_waypoints
+from app.services.bpmn_exporter import split_external_lanes
+from app.services.edge_routing import message_flow_endpoints, orthogonal_waypoints
 
 _NS_XSI = 'http://www.w3.org/2001/XMLSchema-instance'
 _NS_XSD = 'http://www.w3.org/2001/XMLSchema'
@@ -187,19 +192,6 @@ def clamp_into_lane(child: ProcessNode, lane: ProcessNode) -> Tuple[int, int]:
     return int(rel_x), int(rel_y)
 
 
-def _anchor_point(
-    node: Optional[ProcessNode],
-    frac_x: float,
-    frac_y: float,
-    placed: Optional[Dict[str, Tuple[int, int]]] = None,
-) -> Optional[Tuple[float, float]]:
-    if node is None:
-        return None
-    g = node.geometry
-    origin_x, origin_y = (placed or {}).get(node.id, (g.x, g.y))
-    return (origin_x + g.width * frac_x, origin_y + g.height * frac_y)
-
-
 def polyline(
     edge: ProcessEdge,
     src: Optional[ProcessNode],
@@ -208,9 +200,11 @@ def polyline(
 ) -> List[Tuple[float, float]]:
     """Полная ломаная связи в абсолютных координатах карты.
 
-    Возвращает пустой список, если автор диаграммы не задавал изломов: тогда
-    трассировку лучше оставить студии (так же поступает сама PIX — в эталоне
-    30 связей из 50 идут вообще без waypoint).
+    Ломаную задаём ВСЕГДА, а не только когда аналитик двигал изломы руками.
+    Без waypoint студия трассирует связь сама, и на плотной карте банка это
+    даёт то, на что жалуются аналитики: линии идут поверх соседних связей и
+    сквозь чужие фигуры. В BPMN-выгрузке ломаная передаётся целиком, и там
+    схема читается — здесь должно быть так же.
 
     ``placed`` — фактические абсолютные координаты узлов после зажатия в
     границы дорожки; концы ломаной обязаны лежать на них, а не на исходной
@@ -219,8 +213,6 @@ def polyline(
     Ломаная строится ортогонально (`edge_routing`): связи в PIX имеют тип
     ``step``, и диагональные изломы в них выглядели бы чужеродно.
     """
-    if not edge.points:
-        return []
     route = orthogonal_waypoints(edge, src, tgt, placed)
     return route if len(route) >= 2 else []
 
@@ -234,6 +226,10 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
     id_map: Dict[str, str] = {}
     flow = [n for n in process.nodes if n.type != 'lane']
     lanes = list(process.lanes or [])
+    # Полоса без единого шага — внешний участник (клиент): она остаётся строкой
+    # карты, но, в отличие от дорожки с шагами, пунктир к ней осмыслен и
+    # выгружается связью, а не отбрасывается как оформление.
+    _, external = split_external_lanes(lanes, [n for n in flow if n.laneId])
     for n in flow + lanes:
         id_map[n.id] = _pix_id(n.id)
     node_by_id = {n.id: n for n in flow}
@@ -252,8 +248,14 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
     if bounds_nodes:
         min_x = min(n.geometry.x for n in bounds_nodes)
         min_y = min(n.geometry.y for n in bounds_nodes)
+        # Плашка шире эталонной, если карта шире: узкий заголовок над картой
+        # в 4600 px выглядит обрывком, а не шапкой схемы.
+        title_width = max(
+            _TITLE_POOL_WIDTH,
+            max(n.geometry.x + n.geometry.width for n in bounds_nodes) - min_x,
+        )
     else:
-        min_x, min_y = 0, 120
+        min_x, min_y, title_width = 0, 120, _TITLE_POOL_WIDTH
     lines.append(
         _node_xml(
             'emptyPool',
@@ -261,7 +263,7 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
             title,
             min_x,
             min_y - (_TITLE_POOL_HEIGHT + 40),
-            _TITLE_POOL_WIDTH,
+            title_width,
             _TITLE_POOL_HEIGHT,
             extra=' font_size="28"',
         )
@@ -306,6 +308,7 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
 
     # ── Связи ───────────────────────────────────────────────────────────────
     lane_ids = {lane.id for lane in lanes}
+    external_lanes = {lane.id: lane for lane in external}
     for edge in process.edges:
         # Оформительские линии draw.io (разделители этапов) в карту PIX не идут.
         if edge.kind == 'annotationLine':
@@ -314,12 +317,27 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
             continue
         if edge.sourceId not in id_map or edge.targetId not in id_map:
             continue
-        if edge.sourceId in lane_ids or edge.targetId in lane_ids:
-            continue
+
+        src_node = node_by_id.get(edge.sourceId)
+        tgt_node = node_by_id.get(edge.targetId)
+        touches_lane = edge.sourceId in lane_ids or edge.targetId in lane_ids
+        if touches_lane:
+            lane_is_source = edge.sourceId in lane_ids
+            lane_id = edge.sourceId if lane_is_source else edge.targetId
+            lane = external_lanes.get(lane_id)
+            other = tgt_node if lane_is_source else src_node
+            # Связь с полосой-участником (клиент) остаётся на карте: это точка
+            # контакта. Линия, упирающаяся в дорожку с шагами, — оформление.
+            if lane is None or other is None:
+                continue
+            src_node, tgt_node = message_flow_endpoints(edge, other, lane, lane_is_source)
 
         dotted = edge.kind in ('association', 'messageFlow') or bool(edge.dashed)
         line_style = 'dotted' if dotted else 'solid'
-        marker_end = 'arrowLine' if dotted else 'arrowclosed'
+        # Маркер конца берём из словаря React Flow, на котором построен холст
+        # студии (`arrowclosed` пришёл из эталонной выгрузки): нестандартное
+        # значение студия молча отбрасывает вместе со связью.
+        marker_end = 'arrow' if dotted else 'arrowclosed'
         label = (edge.name or edge.condition or '').strip()
         # Подпись связи в PIX — атрибут Text; label студия не читает.
         text_attr = f' Text="{escape_xml(label)}"' if label else ''
@@ -333,11 +351,13 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
         lines.append('    <MarkerStart>line</MarkerStart>')
         lines.append('    <MarkerMiddle />')
         lines.append(f'    <MarkerEnd>{marker_end}</MarkerEnd>')
-        for index, (px, py) in enumerate(
-            polyline(edge, node_by_id.get(edge.sourceId), node_by_id.get(edge.targetId), placed)
-        ):
+        for index, (px, py) in enumerate(polyline(edge, src_node, tgt_node, placed)):
             lines.append(f'    <waypoint x="{_coord(px)}" y="{_coord(py)}" index="{index}" />')
         lines.append('    <labelPosition>50</labelPosition>')
+        # Стиль линии дублируется дочерним элементом: остальные свойства
+        # оформления (color, fontSize) студия хранит именно так, и как атрибут
+        # lineStyle до неё не доезжал — пунктир приходил сплошной линией.
+        lines.append(f'    <lineStyle>{line_style}</lineStyle>')
         lines.append('    <color>var(--fg-gray-primary)</color>')
         lines.append('    <fontSize>12</fontSize>')
         lines.append('    <fontBold>false</fontBold>')

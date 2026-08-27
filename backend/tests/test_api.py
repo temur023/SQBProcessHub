@@ -206,10 +206,13 @@ class TestSQBProcessHubApi(unittest.TestCase):
         proc = import_res.json()
         by_id = {n["id"]: n for n in proc["nodes"]}
         self.assertIn("task_a", by_id)
-        # Absolute = local + lane (0,20) + pool (10,20) => (50, 80)
-        self.assertEqual(by_id["task_a"]["geometry"]["x"], 50)
-        self.assertEqual(by_id["task_a"]["geometry"]["y"], 80)
-        self.assertEqual(by_id["task_a"]["geometry"]["width"], 120)
+        # Absolute = local + lane (0,20) + pool (10,20) => (50, 80).
+        # Рамку после разбора подгоняют под подпись, поэтому сверяем центр:
+        # именно он обязан остаться там, где фигуру поставил аналитик.
+        geo_a = by_id["task_a"]["geometry"]
+        self.assertEqual(geo_a["x"], 50)
+        self.assertEqual(geo_a["width"], 120)
+        self.assertEqual(geo_a["y"] + geo_a["height"] / 2, 80 + 60 / 2)
         self.assertEqual(by_id["task_b"]["geometry"]["x"], 270)
         edges = {e["id"]: e for e in proc["edges"]}
         self.assertIn("e_ab", edges)
@@ -474,10 +477,13 @@ class TestSQBProcessHubApi(unittest.TestCase):
         for n in nodes + children:
             self.assertTrue(uuid_re.match(n.get("id") or ""), n.get("id"))
 
-        # Nested coords are relative to the road origin (lane abs = pool 10,20 + lane 0,20 => 10,40)
+        # Nested coords are relative to the road origin (lane abs = pool 10,20 + lane 0,20 => 10,40).
+        # Высоту рамки подгоняют под подпись, поэтому сверяем центр по вертикали.
         task = next(c for c in children if c.get("type") == "userTask")
         self.assertEqual(int(task.get("x")), 120)
-        self.assertEqual(int(task.get("y")), 60)
+        self.assertEqual(
+            int(task.get("y")) + int(task.get("height")) / 2, 60 + 60 / 2
+        )
 
         connectors = root.findall("connector")
         self.assertGreaterEqual(len(connectors), 5)
@@ -487,7 +493,12 @@ class TestSQBProcessHubApi(unittest.TestCase):
         self.assertTrue(all(c.get("targetPoint") is None for c in connectors))
         self.assertTrue(any(c.get("lineStyle") == "dotted" for c in connectors))
         dotted = next(c for c in connectors if c.get("lineStyle") == "dotted")
-        self.assertEqual(dotted.findtext("MarkerEnd"), "arrowLine")
+        # Маркер конца — из словаря React Flow, на котором построен холст студии:
+        # нестандартное значение она молча отбрасывает вместе со связью.
+        self.assertEqual(dotted.findtext("MarkerEnd"), "arrow")
+        # Стиль линии дублируется дочерним элементом рядом с color/fontSize —
+        # как атрибут студия его не читала, и пунктир приходил сплошным.
+        self.assertEqual(dotted.findtext("lineStyle"), "dotted")
         solid = next(c for c in connectors if c.get("lineStyle") == "solid")
         self.assertEqual(solid.findtext("MarkerStart"), "line")
         self.assertEqual(solid.findtext("MarkerEnd"), "arrowclosed")

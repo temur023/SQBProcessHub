@@ -228,3 +228,41 @@ export function orthogonalWaypoints(
   }
   return snapToPixelGrid(routeWithoutBends(start, d0, end, d1))
 }
+
+
+/** Точечная «фигура» для трассировки конца связи, висящего на полосе. */
+export function pointStub(stubId: string, x: number, y: number): ProcessNode {
+  return {
+    id: stubId,
+    name: '',
+    type: 'textAnnotation',
+    geometry: { x: Math.round(x) - 1, y: Math.round(y) - 1, width: 2, height: 2 },
+    style: '',
+  }
+}
+
+/**
+ * Пара фигур для трассировки связи «шаг ↔ полоса внешнего участника».
+ *
+ * Полоса тянется на всю ширину карты, поэтому её центр как якорь не годится:
+ * линия ушла бы через полсхемы. Берём точку, которую нарисовал аналитик
+ * (свободный конец в draw.io), иначе — проекцию шага на ближайшую грань полосы.
+ */
+export function messageFlowEndpoints(
+  edge: ProcessEdge,
+  node: ProcessNode,
+  lane: ProcessNode,
+  laneIsSource: boolean,
+): [ProcessNode, ProcessNode] {
+  const free = laneIsSource ? edge.sourcePoint : edge.targetPoint
+  let stub: ProcessNode
+  if (free) {
+    stub = pointStub(`${edge.id}__lane`, free.x, free.y)
+  } else {
+    const cx = node.geometry.x + node.geometry.width / 2
+    const laneBottom = lane.geometry.y + lane.geometry.height
+    const y = node.geometry.y >= laneBottom ? laneBottom : lane.geometry.y
+    stub = pointStub(`${edge.id}__lane`, cx, y)
+  }
+  return laneIsSource ? [stub, node] : [node, stub]
+}

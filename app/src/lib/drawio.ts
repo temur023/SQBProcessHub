@@ -5,13 +5,14 @@ import type {
   ProcessEdge,
   ProcessEdgePoint,
   ProcessNode,
-  ProcessValidation,
   StepCategory,
   ProcessPassport,
   PixRegistrySchema,
 } from '@/types/process'
 import { isArtifactNode, isTaskNode } from '@/types/process'
 import { analyzeProcessConformance } from './conformance'
+import { normalizeLayout } from './layout'
+import { collectImportDiagnostics } from './diagnostics'
 
 /** Decodes HTML entities and tags in draw.io labels without executing markup */
 function cleanLabel(raw: string | null): string {
@@ -101,6 +102,56 @@ async function inflateDiagram(data: string): Promise<string> {
   throw new Error('Браузер не поддерживает DecompressionStream для сжатых draw.io. Сохраните диаграмму как несжатый XML или откройте в современном браузере.')
 }
 
+/** Сколько фигур на странице draw.io: пустые страницы пропускаем. */
+function modelVertexCount(modelXml: string): number {
+  const doc = new DOMParser().parseFromString(modelXml, 'text/xml')
+  if (doc.querySelector('parsererror')) return 0
+  return Array.from(doc.querySelectorAll('mxCell')).filter(
+    (c) => c.getAttribute('vertex') === '1' && !['0', '1'].includes(c.getAttribute('id') ?? ''),
+  ).length
+}
+
+/**
+ * XML одной карты процесса + признак «это BPMN 2.0, а не draw.io».
+ *
+ * Порядок проверок важен: файл `.drawio` — это `<mxfile>` со страницами, и
+ * внутри него тоже встречается подстрока `<mxGraphModel`. Если сначала искать
+ * модель, многостраничный файл разбирается как его первая страница случайно,
+ * а сжатый — попадает в другую ветку и разбирается иначе.
+ *
+ * Страницы НЕ объединяются: в картах банка это варианты одного процесса
+ * (AS-IS, AS-IS с изменениями, TO-BE). Склейка накладывала их друг на друга —
+ * получалась одна нечитаемая схема с дублями шагов и пересечениями связей.
+ * Берём первую непустую страницу — ту же, что draw.io открывает по умолчанию.
+ */
+/**
+ * Имя импортированной страницы и имена пропущенных.
+ *
+ * Нужно, чтобы сотрудник увидел: файл многостраничный, а в работу взята одна
+ * страница. Молча брать первую нельзя — на второй обычно лежит TO-BE, и её
+ * отсутствие выглядит как потеря данных.
+ */
+export function pageReport(text: string): { used: string; skipped: string[] } {
+  const trimmed = (text || '').trim()
+  if (!trimmed.includes('<mxfile') && !trimmed.includes('<diagram')) return { used: '', skipped: [] }
+  const doc = new DOMParser().parseFromString(trimmed, 'text/xml')
+  if (doc.querySelector('parsererror')) return { used: '', skipped: [] }
+  const diagrams = Array.from(doc.querySelectorAll('diagram'))
+  if (diagrams.length < 2) {
+    return { used: diagrams[0]?.getAttribute('name') ?? '', skipped: [] }
+  }
+  const names = diagrams.map((d, i) => d.getAttribute('name') || `Страница ${i + 1}`)
+  const usedIndex = Math.max(
+    0,
+    diagrams.findIndex((d) =>
+      Array.from(d.querySelectorAll('mxCell')).some(
+        (c) => c.getAttribute('vertex') === '1' && !['0', '1'].includes(c.getAttribute('id') ?? ''),
+      ),
+    ),
+  )
+  return { used: names[usedIndex], skipped: names.filter((_, i) => i !== usedIndex) }
+}
+
 async function extractGraphXml(text: string): Promise<{ xml: string; isBpmn: boolean }> {
   const trimmed = text.trim()
 
@@ -114,16 +165,7 @@ async function extractGraphXml(text: string): Promise<{ xml: string; isBpmn: boo
     return { xml: trimmed, isBpmn: true }
   }
 
-  // 2. Direct mxGraphModel
-  if (trimmed.startsWith('<mxGraphModel') || trimmed.includes('<mxGraphModel')) {
-    const doc = new DOMParser().parseFromString(trimmed, 'text/xml')
-    const model = doc.querySelector('mxGraphModel')
-    if (model) {
-      return { xml: new XMLSerializer().serializeToString(model), isBpmn: false }
-    }
-  }
-
-  // 3. mxfile container — поддерживаем несколько diagram, объединяем
+  // 2. mxfile container — страницы диаграммы
   if (trimmed.includes('<mxfile') || trimmed.includes('<diagram')) {
     const doc = new DOMParser().parseFromString(trimmed, 'text/xml')
     const parserError = doc.querySelector('parsererror')
@@ -132,84 +174,42 @@ async function extractGraphXml(text: string): Promise<{ xml: string; isBpmn: boo
     }
 
     const diagrams = Array.from(doc.querySelectorAll('diagram')) as Element[]
-    if (diagrams.length === 0) throw new Error('В файле draw.io не найдено ни одной диаграммы (<diagram>)')
-
-    const models: string[] = []
-    for (const diagram of diagrams) {
-      const model = diagram.querySelector('mxGraphModel')
-      if (model) {
-        models.push(new XMLSerializer().serializeToString(model))
-        continue
-      }
-      const rootEl = diagram.querySelector('root')
-      if (rootEl) {
-        models.push(`<mxGraphModel>${new XMLSerializer().serializeToString(rootEl)}</mxGraphModel>`)
-        continue
-      }
-      const innerText = diagram.textContent?.trim() ?? ''
-      if (innerText) {
-        if (innerText.startsWith('<mxGraphModel') || innerText.includes('<mxGraphModel')) {
+    if (diagrams.length > 0) {
+      const models: string[] = []
+      for (const diagram of diagrams) {
+        const model = diagram.querySelector('mxGraphModel')
+        if (model) {
+          models.push(new XMLSerializer().serializeToString(model))
+          continue
+        }
+        const rootEl = diagram.querySelector('root')
+        if (rootEl) {
+          models.push(`<mxGraphModel>${new XMLSerializer().serializeToString(rootEl)}</mxGraphModel>`)
+          continue
+        }
+        const innerText = diagram.textContent?.trim() ?? ''
+        if (!innerText) continue
+        if (innerText.includes('<mxGraphModel')) {
           models.push(innerText)
         } else {
           try {
-            const decompressed = await inflateDiagram(innerText)
-            models.push(decompressed)
+            models.push(await inflateDiagram(innerText))
           } catch {
-            // пропускаем битую диаграмму
+            // пропускаем битую страницу
           }
         }
       }
+      if (models.length === 0) throw new Error('Не удалось извлечь ни одной диаграммы')
+      return { xml: models.find((m) => modelVertexCount(m) > 0) ?? models[0], isBpmn: false }
     }
-    if (models.length === 0) throw new Error('Не удалось извлечь ни одной диаграммы')
-    if (models.length === 1) return { xml: models[0], isBpmn: false }
-    // объединяем несколько диаграмм с вертикальным offset
-    try {
-      const ser = new XMLSerializer()
-      let yOffset = 0
-      const combinedRoot = doc.createElement('root')
-      const c0 = doc.createElement('mxCell'); c0.setAttribute('id', '0'); combinedRoot.appendChild(c0)
-      const c1 = doc.createElement('mxCell'); c1.setAttribute('id', '1'); c1.setAttribute('parent', '0'); combinedRoot.appendChild(c1)
-      for (const mXml of models) {
-        const mDoc = new DOMParser().parseFromString(mXml, 'text/xml')
-        const root = mDoc.querySelector('root')
-        if (!root) continue
-        let maxY = 0
-        Array.from(root.querySelectorAll('mxCell')).forEach((c) => {
-          const geo = c.querySelector('mxGeometry')
-          if (geo) {
-            const y = Number(geo.getAttribute('y') ?? 0)
-            const h = Number(geo.getAttribute('height') ?? 0)
-            maxY = Math.max(maxY, y + h)
-          }
-        })
-        Array.from(root.querySelectorAll('mxCell')).forEach((c) => {
-          const cid = c.getAttribute('id')
-          if (cid === '0' || cid === '1') return
-          const clone = doc.createElement('mxCell')
-          Array.from(c.attributes).forEach((a) => clone.setAttribute(a.name, a.value))
-          const geo = c.querySelector('mxGeometry')
-          if (geo) {
-            const ng = doc.createElement('mxGeometry')
-            Array.from(geo.attributes).forEach((a) => ng.setAttribute(a.name, a.value))
-            if (yOffset !== 0 && geo.getAttribute('relative') !== '1') {
-              const origY = Number(geo.getAttribute('y') ?? 0)
-              ng.setAttribute('y', String(origY + yOffset))
-            }
-            Array.from(geo.children).forEach((ch) => ng.appendChild(ch.cloneNode(true)))
-            clone.appendChild(ng)
-          }
-          Array.from(c.children).forEach((ch) => {
-            if ((ch as Element).tagName !== 'mxGeometry') clone.appendChild(ch.cloneNode(true))
-          })
-          combinedRoot.appendChild(clone)
-        })
-        yOffset += maxY + 100
-      }
-      const wrapper = doc.createElement('mxGraphModel')
-      wrapper.appendChild(combinedRoot)
-      return { xml: ser.serializeToString(wrapper), isBpmn: false }
-    } catch {
-      return { xml: models[0], isBpmn: false }
+  }
+
+  // 3. Direct mxGraphModel
+  if (trimmed.includes('<mxGraphModel')) {
+    const doc = new DOMParser().parseFromString(trimmed, 'text/xml')
+    const model = doc.querySelector('mxGraphModel')
+    if (model) {
+      return { xml: new XMLSerializer().serializeToString(model), isBpmn: false }
     }
   }
 
@@ -405,16 +405,28 @@ function resolveFreeEndpoint(point: Pt | undefined, candidates: ProcessNode[]): 
   return bestId
 }
 
+/** Типы, которым BPMN разрешает быть концом messageFlow (InteractionNode). */
+const INTERACTION_TYPES: NodeType[] = [
+  'task', 'userTask', 'serviceTask', 'subProcess',
+  'startEvent', 'endEvent', 'intermediateTimerEvent', 'intermediateMessageEvent',
+]
+
 /** Вид соединения: связь с артефактом по BPMN не может быть потоком управления. */
 function edgeKind(
   sourceType?: NodeType,
   targetType?: NodeType,
   dashed?: boolean,
-  touchesLane?: boolean,
+  laneEnd?: { external: boolean; otherType?: NodeType },
 ): EdgeKind {
-  // Линия, упирающаяся в дорожку, — оформление (разделитель этапов),
-  // а не поток управления: в BPMN дорожка не может быть концом связи.
-  if (touchesLane) return 'annotationLine'
+  if (laneEnd) {
+    // Пунктир «шаг банка ↔ полоса клиента» — это обмен сообщениями с внешним
+    // участником, а не оформление: в выгрузке он обязан остаться, иначе с
+    // карты пропадают точки контакта с клиентом. Линия, упирающаяся в дорожку
+    // с шагами, — по-прежнему разделитель этапов.
+    if (laneEnd.external && laneEnd.otherType && INTERACTION_TYPES.includes(laneEnd.otherType))
+      return 'messageFlow'
+    return 'annotationLine'
+  }
   if ((sourceType && isArtifactNode(sourceType)) || (targetType && isArtifactNode(targetType)))
     return 'association'
   if (dashed && (sourceType === 'intermediateMessageEvent' || targetType === 'intermediateMessageEvent'))
@@ -452,14 +464,18 @@ function nameAndPruneLanes(lanes: ProcessNode[], flowNodes: ProcessNode[]): void
   })
 }
 
-/** Переносит ST/WT из фигур-таймеров в ближайший шаг процесса (4-ILOVA). */
+/**
+ * Переносит ST/WT из фигур-таймеров в ближайший шаг процесса (4-ILOVA).
+ * Возвращает шаги, которым время проставил реальный бейдж с карты: остальным
+ * оно досталось от эвристики по категории, и об этом надо сказать аналитику.
+ */
 function applyDurationBadges(
   flowNodes: ProcessNode[],
   badges: { x: number; y: number; minutes: number; isWait: boolean }[],
-): void {
-  const tasks = flowNodes.filter((n) => isTaskNode(n.type))
-  if (tasks.length === 0 || badges.length === 0) return
+): Set<string> {
   const stSeen = new Set<string>()
+  const tasks = flowNodes.filter((n) => isTaskNode(n.type))
+  if (tasks.length === 0 || badges.length === 0) return stSeen
   for (const badge of badges) {
     let best: ProcessNode | null = null
     let bestDist = BADGE_ATTACH_RADIUS
@@ -484,6 +500,7 @@ function applyDurationBadges(
     }
     if (best.category !== 'rpa_bot') best.costPerExecution = (best.slaMinutes || 0) * 1932
   }
+  return stSeen
 }
 
 /** Системы и документы шага — из реальных ассоциаций карты, а не из эвристик. */
@@ -531,6 +548,56 @@ function isNonTaskLabel(val: string): boolean {
   return false
 }
 
+/** Короткая подпись рядом с фигурой — это бейдж, а не примечание к процессу. */
+const TEXT_NOTE_MIN_LEN = 12
+
+/**
+ * Обрамлённая текстовая врезка draw.io — примечание к процессу.
+ *
+ * На картах SQB перечень требуемых документов оформлен как `text`-фигура с
+ * рамкой (`strokeColor` задан). Такие врезки раньше отбрасывались вместе с
+ * подписями-накладками, и содержательный текст пропадал из выгрузки. Заголовок
+ * схемы и подписи связей рамки не имеют (`strokeColor=none`) — они по-прежнему
+ * остаются оформлением.
+ */
+function isTextNote(style: string, label: string): boolean {
+  const s = (style || '').toLowerCase()
+  if (!s.includes('text;') || s.includes('swimlane') || s.includes('edgelabel')) return false
+  const text = (label || '').trim()
+  if (text.length < TEXT_NOTE_MIN_LEN || isNonTaskLabel(text)) return false
+  if (durationMinutes(text) !== null) return false
+  const stroke = parseStyleMap(s).strokecolor ?? 'none'
+  return stroke !== 'none' && stroke !== ''
+}
+
+function formatMinutes(minutes: number): string {
+  return Number.isInteger(minutes) ? String(minutes) : String(minutes)
+}
+
+/**
+ * Осмысленное имя фигуры без подписи — никогда не идентификатор ячейки.
+ *
+ * Раньше на карту и в выгрузку попадали заголовки вида «Операция
+ * G9DXMv3N_W9X6-3aXuzq-1»: у промежуточного таймера вся подпись — это
+ * длительность («10 min»), а её снимает нормализация имени шага. Возвращаем
+ * длительность в имя события и подписываем остальные фигуры по их роли.
+ */
+export function fallbackNodeName(type: NodeType, code?: string | null, rawText = ''): string {
+  if (type === 'intermediateTimerEvent') {
+    const minutes = durationMinutes(rawText)
+    return minutes !== null ? `Ожидание ${formatMinutes(minutes)} мин` : 'Ожидание'
+  }
+  if (type === 'intermediateMessageEvent') return 'Событие-сообщение'
+  if (type === 'startEvent') return 'Старт'
+  if (type === 'endEvent') return 'Завершение'
+  if (type.includes('Gateway')) return 'Условие'
+  if (type === 'dataStore') return 'Информационная система'
+  if (type === 'dataObject') return 'Документ'
+  if (type === 'textAnnotation') return 'Примечание'
+  if (type === 'subProcess') return code ? `Подпроцесс ${code}` : 'Подпроцесс'
+  return code ? `Операция ${code}` : 'Операция'
+}
+
 function classifyVertex(
   style: string,
   label: string,
@@ -556,6 +623,7 @@ function classifyVertex(
     return 'dataObject'
   if (s.includes('shape=note') || s.includes('mxgraph.bpmn.annotation') || s.includes('shape=mxgraph.flowchart.annotation'))
     return 'textAnnotation'
+  if (isTextNote(style, label)) return 'textAnnotation'
 
   if (s.includes('mxgraph.bpmn.gateway') || shape.endsWith('gateway2') || smap.gwtype) {
     const gw = (smap.gwtype || smap.symbol || '').toLowerCase()
@@ -928,7 +996,7 @@ function parseBpmnXml(xmlText: string, fileName: string): BusinessProcess {
     nodes,
     edges,
     lanes,
-    validation: validate(nodes, edges),
+    validation: collectImportDiagnostics(nodes, lanes, edges),
     registry,
     miningMetrics: {
       totalCases: 100,
@@ -1056,6 +1124,9 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       return
     }
 
+    // Condition 2.5: обрамлённая текстовая врезка — примечание, а не оформление.
+    if (isTextNote(style, cleaned)) return
+
     // Condition 3: Text label overlay (e.g. node_start_label, gw_risk_label)
     if (id.endsWith('_label') || (style.includes('text;') && !style.includes('swimlane') && (style.includes('strokecolor=none') || style.includes('fillcolor=none') || isNonTaskLabel(cleaned) || cleaned.length < 2))) {
       ignoreCellIds.add(id)
@@ -1159,6 +1230,9 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
   const nodes: ProcessNode[] = []
   let stepIndex = 1
 
+  /** Шаги, чьё время взято с карты, а не из эвристики по категории. */
+  const timedStepIds = new Set<string>()
+
   for (const cell of rawVertices) {
     const id = cell.getAttribute('id') ?? `node_${crypto.randomUUID()}`
     const style = getStyle(cell)
@@ -1205,7 +1279,9 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       code = `STEP-${String(stepIndex++).padStart(2, '0')}`
     }
 
-    const slaMin = extractSlaMinutes(`${rawValue || ''} ${rawCleaned}`, category, type)
+    const rawText = `${rawValue || ''} ${rawCleaned}`
+    const slaMin = extractSlaMinutes(rawText, category, type)
+    if (durationMinutes(rawText) !== null) timedStepIds.add(id)
 
     // Clean human-friendly name (strip [PIX RPA], numbers, minutes)
     let cleanName = rawCleaned
@@ -1218,14 +1294,7 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     if (!cleanName && type === 'lane') {
       // безымянная дорожка: имя присвоим позиционно после разбора
     } else if (!cleanName) {
-      cleanName =
-        type === 'startEvent'
-          ? 'Старт'
-          : type === 'endEvent'
-          ? 'Завершение'
-          : type.includes('Gateway')
-          ? 'Условие'
-          : `Операция ${code || id}`
+      cleanName = fallbackNodeName(type, code, `${rawValue || ''} ${rawCleaned}`)
     }
 
     // Guard against invisible boxes: разные минимумы по типу
@@ -1277,29 +1346,38 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
   nameAndPruneLanes(lanes, flowNodes)
 
   // Geometry-based lane assignment fallback — учитываем ширину заголовка дорожки (44px)
-  const LANE_HEAD_WIDTH = 44
+  const laneById = new Map(lanes.map((l) => [l.id, l]))
+  /** Дорожка, внутри которой лежит центр фигуры. */
+  const laneUnder = (node: ProcessNode): ProcessNode | undefined => {
+    const cx = node.geometry.x + node.geometry.width / 2
+    const cy = node.geometry.y + node.geometry.height / 2
+    return lanes.find(
+      (l) =>
+        l.geometry.x <= cx && cx <= l.geometry.x + l.geometry.width &&
+        l.geometry.y <= cy && cy < l.geometry.y + l.geometry.height,
+    )
+  }
+
   for (const n of flowNodes) {
-    if (!n.laneId) {
-      const hit = lanes.find(
-        (l) =>
-          n.geometry.x >= l.geometry.x + LANE_HEAD_WIDTH - 10 &&
-          n.geometry.x <= l.geometry.x + l.geometry.width + 50 &&
-          n.geometry.y >= l.geometry.y &&
-          n.geometry.y < l.geometry.y + l.geometry.height,
-      )
-      if (hit) {
-        n.laneId = hit.id
-        n.laneName = hit.name
-        n.role = hit.name
-      }
+    // Родитель ячейки в draw.io — не то же самое, что дорожка на рисунке:
+    // фигуру можно утащить из дорожки, и редактор сохранит прежнего родителя.
+    // Исполнителя шага определяем по тому, где фигура лежит на самом деле,
+    // иначе роль в регламенте берётся от чужого подразделения.
+    const declared = n.laneId ? laneById.get(n.laneId) : undefined
+    const actual = laneUnder(n)
+    if (actual && actual.id !== declared?.id) {
+      n.laneId = actual.id
+      n.role = undefined
+    } else if (declared && !actual) {
+      n.laneId = undefined
+      n.laneName = undefined
+      n.role = undefined
     }
 
-    if (n.laneId) {
-      const parentLane = lanes.find((l) => l.id === n.laneId)
-      if (parentLane) {
-        n.laneName = parentLane.name
-        n.role = n.role || parentLane.name
-      }
+    const parentLane = n.laneId ? laneById.get(n.laneId) : undefined
+    if (parentLane) {
+      n.laneName = parentLane.name
+      n.role = n.role || parentLane.name
     }
     n.system = detectSystem(n.name, n.laneName || '')
   }
@@ -1307,6 +1385,10 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
   const validNodeIdSet = new Set(flowNodes.map((n) => n.id))
   const validLaneIdSet = new Set(lanes.map((l) => l.id))
   const typeById = new Map<string, NodeType>(flowNodes.map((n) => [n.id, n.type]))
+  // Дорожка без единого шага — это внешний участник (клиент, госорган):
+  // аналитик отводит ему полосу и тянет к ней пунктир от шагов банка.
+  const populatedLaneIds = new Set(flowNodes.map((n) => n.laneId).filter(Boolean) as string[])
+  const externalLaneIds = new Set([...validLaneIdSet].filter((id) => !populatedLaneIds.has(id)))
 
   const snapTargets = [...flowNodes, ...lanes]
   const isKnown = (id?: string | null): boolean =>
@@ -1383,15 +1465,21 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       const srcId = ends.s
       const tgtId = ends.t
       const isAnnotationLine = !srcId || !tgtId
-      const touchesLane =
-        (!!srcId && validLaneIdSet.has(srcId)) || (!!tgtId && validLaneIdSet.has(tgtId))
+      const laneIsSource = !!srcId && validLaneIdSet.has(srcId)
+      const laneIsTarget = !!tgtId && validLaneIdSet.has(tgtId)
+      const laneEnd = laneIsSource || laneIsTarget
+        ? {
+            external: externalLaneIds.has((laneIsSource ? srcId : tgtId) as string),
+            otherType: typeById.get((laneIsSource ? tgtId : srcId) ?? ''),
+          }
+        : undefined
 
       return {
         id: edgeId,
         name: edgeName,
         kind: isAnnotationLine
           ? ('annotationLine' as EdgeKind)
-          : edgeKind(typeById.get(srcId ?? ''), typeById.get(tgtId ?? ''), dashed, touchesLane),
+          : edgeKind(typeById.get(srcId ?? ''), typeById.get(tgtId ?? ''), dashed, laneEnd),
         sourceId: srcId,
         targetId: tgtId,
         sourcePoint: ends.free.sourcePoint
@@ -1459,8 +1547,6 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     }
   }
 
-  const validation = validate(flowNodes, edges)
-
   let diagramName = ''
   try {
     diagramName =
@@ -1472,8 +1558,18 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     // ignore
   }
 
-  applyDurationBadges(flowNodes, durationBadges)
+  for (const id of applyDurationBadges(flowNodes, durationBadges)) timedStepIds.add(id)
   resolveArtifactLinks(flowNodes, edges)
+  // Геометрию правим до сбора замечаний: часть из них про размеры фигур.
+  const layoutReport = normalizeLayout(flowNodes, lanes)
+
+  const pages = pageReport(text)
+  const validation = collectImportDiagnostics(flowNodes, lanes, edges, {
+    pagesSkipped: pages.skipped,
+    pageUsed: pages.used,
+    timedStepIds,
+    layoutReport,
+  })
 
   const cleanTitle = diagramName || fileName.replace(/\.(drawio|xml)$/i, '')
   const taskNodes = flowNodes.filter((n) => isTaskNode(n.type))
@@ -1555,24 +1651,3 @@ function roundHours(val: number): number {
   return Math.round(val * 10) / 10
 }
 
-function validate(nodes: ProcessNode[], edges: ProcessEdge[]): ProcessValidation[] {
-  const issues: ProcessValidation[] = []
-  const starts = nodes.filter((n) => n.type === 'startEvent')
-  const ends = nodes.filter((n) => n.type === 'endEvent')
-  if (starts.length === 0)
-    issues.push({ level: 'error', message: 'Отсутствует стартовое событие процесса' })
-  if (starts.length > 1)
-    issues.push({ level: 'warning', message: `Найдено ${starts.length} стартовых событий` })
-  if (ends.length === 0)
-    issues.push({ level: 'warning', message: 'Отсутствует событие успешного завершения' })
-
-  for (const n of nodes) {
-    const inE = edges.filter((e) => e.targetId === n.id)
-    const outE = edges.filter((e) => e.sourceId === n.id)
-    if (n.type !== 'startEvent' && n.type !== 'lane' && inE.length === 0)
-      issues.push({ level: 'error', message: `Шаг «${n.name || n.id}» не имеет входящих переходов (тупик)`, nodeId: n.id })
-    if (n.type !== 'endEvent' && n.type !== 'lane' && outE.length === 0)
-      issues.push({ level: 'warning', message: `Шаг «${n.name || n.id}» не имеет исходящих переходов`, nodeId: n.id })
-  }
-  return issues
-}

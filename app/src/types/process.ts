@@ -126,10 +126,17 @@ export interface ProcessEdge {
   strokeWidth?: number
 }
 
+/** Замечание к импортированной карте — то, что показывается сотруднику. */
 export interface ProcessValidation {
   level: 'error' | 'warning' | 'info'
   message: string
   nodeId?: string
+  /** Машинный код замечания: по нему UI группирует однотипные записи. */
+  code?: string
+  /** Имя фигуры на карте — чтобы сотрудник нашёл её без поиска по id. */
+  nodeName?: string
+  /** Что с этим делать: замечание без подсказки бесполезно. */
+  hint?: string
 }
 
 export interface ProcessPassport {

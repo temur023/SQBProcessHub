@@ -956,12 +956,37 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                       </text>
                     ))}
                   </g>
-                  {sla && (
-                    <text x={cx} y={y + h + 12} textAnchor="middle"
-                      fontSize="9" fill="#9a9a9a" style={{ userSelect: 'none', fontFamily: FONT }}>
-                      {sla}
-                    </text>
-                  )}
+                  {sla && (() => {
+                    // Бейдж длительности — как в draw.io: часы в правом нижнем
+                    // углу шага и время под ними. Сама фигура-таймер в модель не
+                    // попадает (её время уходит в ST шага), и без бейджа на карте
+                    // терялось, сколько шаг занимает.
+                    const bx = x + w - 15
+                    const by = y + h - 15
+                    return (
+                      <g pointerEvents="none">
+                        <circle cx={bx} cy={by} r={8} fill={C.canvas}
+                          stroke={C.timerStroke} strokeWidth={1.2} />
+                        <circle cx={bx} cy={by} r={5.6} fill="none"
+                          stroke={C.timerStroke} strokeWidth={0.9} />
+                        <path d={`M${bx},${by - 3.4} L${bx},${by} L${bx + 2.8},${by + 1.6}`}
+                          fill="none" stroke={C.timerStroke} strokeWidth={1.1}
+                          strokeLinecap="round" strokeLinejoin="round" />
+                        <text x={bx} y={y + h + 12} textAnchor="middle"
+                          fontSize="9.5" fill={C.timerStroke}
+                          style={{ userSelect: 'none', fontFamily: FONT }}>
+                          {sla}
+                        </text>
+                        {!!node.waitMinutes && (
+                          <text x={bx} y={y + h + 23} textAnchor="middle"
+                            fontSize="9" fill="#9a9a9a"
+                            style={{ userSelect: 'none', fontFamily: FONT }}>
+                            {`ожидание ${slaLabel(node.waitMinutes)}`}
+                          </text>
+                        )}
+                      </g>
+                    )
+                  })()}
                 </g>
               )
             })}

@@ -120,9 +120,16 @@ class ProcessEdge(BaseModel):
     strokeWidth: Optional[float] = None
 
 class ProcessValidation(BaseModel):
+    """Замечание к импортированной карте — то, что показывается сотруднику."""
     level: Literal['error', 'warning', 'info']
     message: str
     nodeId: Optional[str] = None
+    #: Машинный код замечания: по нему UI группирует однотипные записи.
+    code: Optional[str] = None
+    #: Имя фигуры на карте — чтобы сотрудник нашёл её без поиска по id.
+    nodeName: Optional[str] = None
+    #: Что с этим делать: замечание без подсказки бесполезно.
+    hint: Optional[str] = None
 
 class ProcessPassport(BaseModel):
     code: str = 'PRC-SQB-001'

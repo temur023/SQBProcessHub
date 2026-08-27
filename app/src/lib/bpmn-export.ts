@@ -1,6 +1,15 @@
 import type { BusinessProcess, NodeType, ProcessEdge, ProcessNode } from '@/types/process'
 import { isArtifactNode } from '@/types/process'
-import { orthogonalWaypoints } from './edge-routing'
+import { messageFlowEndpoints, orthogonalWaypoints } from './edge-routing'
+import type { Box } from './layout'
+import {
+  EXTERNAL_LABEL_TYPES,
+  chooseLabelBox,
+  edgeLabelCandidates,
+  externalLabelCandidates,
+  nodeObstacles,
+  segmentBoxes,
+} from './layout'
 
 /**
  * OMG BPMN 2.0 + BPMNDI для PIX Процессной студии / Processet / Camunda.
@@ -148,7 +157,49 @@ function nodeDoc(node: ProcessNode): string {
   return bits.join('; ')
 }
 
-function unionBounds(nodes: ProcessNode[], header = 30): { x: number; y: number; width: number; height: number } {
+/** Ширина заголовочной полосы пула в BPMNDI (bpmn.io рисует ровно 30 px). */
+const POOL_HEADER = 30
+
+/** Типы, которым BPMN разрешает быть концом messageFlow (InteractionNode). */
+const INTERACTION_TYPES: NodeType[] = [
+  'task', 'userTask', 'serviceTask', 'subProcess',
+  'startEvent', 'endEvent', 'intermediateTimerEvent', 'intermediateMessageEvent',
+]
+
+/**
+ * Делит дорожки на полосы пула и внешних участников.
+ *
+ * Дорожка без единого шага — это не зона ответственности внутри организации,
+ * а внешняя сторона (клиент, госорган): аналитик отводит ей полосу и тянет к
+ * ней пунктир от шагов банка. В BPMN такая полоса обязана быть отдельным
+ * участником-«чёрным ящиком», иначе импортёр (PIX Процессная студия) выбросит
+ * дорожку без `flowNodeRef` — и с карты пропадает целая строка вместе со всеми
+ * пунктирными связями к ней.
+ *
+ * Пустая дорожка, попадающая внутрь вертикального размаха заполненных,
+ * участником не становится: вынести её из пула значило бы разорвать пул.
+ */
+export function splitExternalLanes(
+  lanes: ProcessNode[],
+  flowNodes: ProcessNode[],
+): { inner: ProcessNode[]; external: ProcessNode[] } {
+  const populated = lanes.filter((l) => flowNodes.some((n) => n.laneId === l.id))
+  if (!populated.length) return { inner: lanes, external: [] }
+  const top = Math.min(...populated.map((l) => l.geometry.y))
+  const bottom = Math.max(...populated.map((l) => l.geometry.y + l.geometry.height))
+
+  const inner: ProcessNode[] = []
+  const external: ProcessNode[] = []
+  for (const lane of lanes) {
+    const g = lane.geometry
+    const empty = !populated.includes(lane)
+    const overlaps = g.y < bottom && g.y + g.height > top
+    ;(empty && !overlaps ? external : inner).push(lane)
+  }
+  return { inner, external }
+}
+
+function unionBounds(nodes: ProcessNode[], header = POOL_HEADER): { x: number; y: number; width: number; height: number } {
   if (!nodes.length) return { x: 40, y: 40, width: 800, height: 200 }
   const minX = Math.min(...nodes.map((n) => n.geometry.x))
   const minY = Math.min(...nodes.map((n) => n.geometry.y))
@@ -177,8 +228,20 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
   const allNodes = process.nodes.filter((n) => n.type !== 'lane')
   const flowNodes = allNodes.filter((n) => !isArtifactNode(n.type))
   const artifactNodes = allNodes.filter((n) => isArtifactNode(n.type))
-  const lanes = process.lanes || []
+  const { inner: lanes, external: externalLanes } = splitExternalLanes(process.lanes || [], flowNodes)
+  const externalById = new Map(externalLanes.map((l) => [l.id, l]))
   const nodeById = new Map(allNodes.map((n) => [n.id, n]))
+
+  // Точки контакта с внешним участником: один конец — его полоса, другой —
+  // шаг или событие процесса. В BPMN это messageFlow внутри collaboration.
+  const messageFlows = process.edges.filter((e) => {
+    if (e.kind !== 'messageFlow' || !e.sourceId || !e.targetId) return false
+    const laneIsSource = externalById.has(e.sourceId)
+    const laneIsTarget = externalById.has(e.targetId)
+    if (!laneIsSource && !laneIsTarget) return false
+    const other = nodeById.get((laneIsSource ? e.targetId : e.sourceId) as string)
+    return !!other && INTERACTION_TYPES.includes(other.type)
+  })
 
   // Висячие связи и оформительские линии draw.io в схему не идут.
   const edges = process.edges.filter(
@@ -186,8 +249,8 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
       e.kind !== 'annotationLine' &&
       e.sourceId && e.targetId && nodeById.has(e.sourceId) && nodeById.has(e.targetId),
   )
-  // messageFlow допустим только между пулами; карта SQB — один пул, поэтому
-  // такие связи выгружаются как обычный поток управления.
+  // messageFlow между двумя шагами одного пула спецификация запрещает: карта
+  // SQB — один пул, поэтому такие связи выгружаются как поток управления.
   const sequenceEdges = edges.filter((e) => (e.kind ?? 'sequenceFlow') !== 'association')
   const associationEdges = edges.filter((e) => e.kind === 'association')
 
@@ -197,7 +260,11 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
   for (const n of flowNodes) idOf.set(n.id, safeId(n.id, 'Node', used, taken))
   for (const n of artifactNodes) idOf.set(n.id, safeId(n.id, 'Artifact', used, taken))
   for (const lane of lanes) idOf.set(lane.id, safeId(lane.id, 'Lane', used, taken))
+  for (const lane of externalLanes) {
+    idOf.set(lane.id, safeId(`Participant_${lane.id}`, 'Participant', used, taken))
+  }
   for (const edge of edges) idOf.set(edge.id, safeId(edge.id, 'Flow', used, taken))
+  for (const edge of messageFlows) idOf.set(edge.id, safeId(edge.id, 'MessageFlow', used, taken))
 
   const incoming: Record<string, string[]> = {}
   const outgoing: Record<string, string[]> = {}
@@ -210,7 +277,7 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
     if (edge.sourceId && outgoing[edge.sourceId]) outgoing[edge.sourceId].push(edge.id)
   }
 
-  const useCollab = lanes.length > 0
+  const useCollab = lanes.length > 0 || externalLanes.length > 0
   const planeRef = useCollab ? collabId : procId
   const processName = escapeXml(process.passport.name || process.name || 'Business process')
   const xml: string[] = [
@@ -233,6 +300,21 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
     xml.push(
       `    <bpmn:participant id="${escapeXml(participantId)}" name="${processName}" processRef="${escapeXml(procId)}" />`,
     )
+    // Внешний участник — «чёрный ящик»: без processRef, только имя полосы.
+    for (const lane of externalLanes) {
+      xml.push(
+        `    <bpmn:participant id="${escapeXml(idOf.get(lane.id)!)}" name="${escapeXml(lane.name)}" />`,
+      )
+    }
+    for (const edge of messageFlows) {
+      const name = (edge.name || edge.condition || '').trim()
+      const nameAttr = name ? ` name="${escapeXml(name)}"` : ''
+      xml.push(
+        `    <bpmn:messageFlow id="${escapeXml(idOf.get(edge.id)!)}"${nameAttr}` +
+          ` sourceRef="${escapeXml(idOf.get(edge.sourceId!)!)}"` +
+          ` targetRef="${escapeXml(idOf.get(edge.targetId!)!)}" />`,
+      )
+    }
     xml.push('  </bpmn:collaboration>', '')
   }
 
@@ -341,24 +423,82 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
   xml.push(`  <bpmndi:BPMNDiagram id="${escapeXml(diagId)}">`)
   xml.push(`    <bpmndi:BPMNPlane id="${escapeXml(planeId)}" bpmnElement="${escapeXml(planeRef)}">`)
 
+  const pool = unionBounds([...lanes, ...allNodes])
   if (useCollab) {
-    // Пул охватывает и дорожки, и узлы: иначе часть карты окажется вне пула.
-    const b = unionBounds([...lanes, ...allNodes])
+    // Пул охватывает дорожки и узлы; полосы внешних участников — отдельные
+    // пулы и в его границы не входят.
     xml.push(
       `      <bpmndi:BPMNShape id="${escapeXml(participantId)}_di" bpmnElement="${escapeXml(participantId)}" isHorizontal="true">`,
     )
-    xml.push(`        <dc:Bounds x="${b.x}" y="${b.y}" width="${b.width}" height="${b.height}" />`)
+    xml.push(
+      `        <dc:Bounds x="${pool.x}" y="${pool.y}" width="${pool.width}" height="${pool.height}" />`,
+    )
     xml.push('      </bpmndi:BPMNShape>')
+    for (const lane of externalLanes) {
+      xml.push(
+        `      <bpmndi:BPMNShape id="${escapeXml(idOf.get(lane.id)!)}_di" bpmnElement="${escapeXml(idOf.get(lane.id)!)}" isHorizontal="true">`,
+      )
+      xml.push(
+        `        <dc:Bounds x="${lane.geometry.x}" y="${lane.geometry.y}" width="${lane.geometry.width}" height="${lane.geometry.height}" />`,
+      )
+      xml.push('      </bpmndi:BPMNShape>')
+    }
   }
 
   for (const lane of lanes) {
+    // Полосы обязаны тайлиться внутри пула: иначе импортёр рисует их уступами,
+    // а часть карты оказывается за пределами дорожек.
+    const laneX = useCollab ? pool.x + POOL_HEADER : lane.geometry.x
+    const laneW = useCollab ? Math.max(pool.width - POOL_HEADER, 80) : lane.geometry.width
     xml.push(
       `      <bpmndi:BPMNShape id="${escapeXml(idOf.get(lane.id)!)}_di" bpmnElement="${escapeXml(idOf.get(lane.id)!)}" isHorizontal="true">`,
     )
     xml.push(
-      `        <dc:Bounds x="${lane.geometry.x}" y="${lane.geometry.y}" width="${lane.geometry.width}" height="${lane.geometry.height}" />`,
+      `        <dc:Bounds x="${laneX}" y="${lane.geometry.y}" width="${laneW}" height="${lane.geometry.height}" />`,
     )
     xml.push('      </bpmndi:BPMNShape>')
+  }
+
+  // ── Подписи ──────────────────────────────────────────────────────────────
+  // Позиции считаем ДО отрисовки: подпись шлюза, подпись связи и подпись
+  // соседнего события претендуют на одно и то же место под фигурой, и
+  // разводить их можно, только зная все занятые прямоугольники сразу.
+  const routes: [ProcessEdge, { x: number; y: number }[]][] = edges.map((edge) => [
+    edge,
+    edgeWaypoints(edge, nodeById.get(edge.sourceId || ''), nodeById.get(edge.targetId || '')),
+  ])
+  for (const edge of messageFlows) {
+    const laneIsSource = externalById.has(edge.sourceId!)
+    const lane = externalById.get((laneIsSource ? edge.sourceId : edge.targetId) as string)!
+    const peer = nodeById.get((laneIsSource ? edge.targetId : edge.sourceId) as string)!
+    const [src, tgt] = messageFlowEndpoints(edge, peer, lane, laneIsSource)
+    routes.push([edge, edgeWaypoints(edge, src, tgt)])
+  }
+
+  const takenBoxes: Box[] = nodeObstacles(allNodes)
+  // Линии связей — тоже препятствие: подпись, положенная на связь, читается
+  // как перечёркнутая.
+  for (const [, route] of routes) takenBoxes.push(...segmentBoxes(route))
+
+  const edgeLabelOf = new Map<string, Box>()
+  for (const [edge, route] of routes) {
+    const text = (edge.name || edge.condition || '').trim()
+    if (!text) continue
+    const box = chooseLabelBox(edgeLabelCandidates(route, text), takenBoxes)
+    edgeLabelOf.set(edge.id, box)
+    takenBoxes.push(box)
+  }
+
+  const nodeLabelOf = new Map<string, Box>()
+  for (const node of allNodes) {
+    if (!EXTERNAL_LABEL_TYPES.includes(node.type) || !(node.name || '').trim()) continue
+    const own = node.geometry
+    const obstacles = takenBoxes.filter(
+      (b) => !(b.x === own.x && b.y === own.y && b.width === own.width && b.height === own.height),
+    )
+    const box = chooseLabelBox(externalLabelCandidates(node), obstacles)
+    nodeLabelOf.set(node.id, box)
+    takenBoxes.push(box)
   }
 
   for (const node of allNodes) {
@@ -368,18 +508,33 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
     xml.push(
       `        <dc:Bounds x="${node.geometry.x}" y="${node.geometry.y}" width="${node.geometry.width}" height="${node.geometry.height}" />`,
     )
+    // Подпись события, шлюза и артефакта импортёр рисует вне фигуры и переносит
+    // по рамке в 90 px. Без явных границ длинное имя шлюза превращается в
+    // столбец, накрывающий соседние шаги и подписи связей.
+    const nodeBox = nodeLabelOf.get(node.id)
+    if (nodeBox) {
+      xml.push(
+        '        <bpmndi:BPMNLabel>',
+        `          <dc:Bounds x="${nodeBox.x}" y="${nodeBox.y}" width="${nodeBox.width}" height="${nodeBox.height}" />`,
+        '        </bpmndi:BPMNLabel>',
+      )
+    }
     xml.push('      </bpmndi:BPMNShape>')
   }
 
-  for (const edge of edges) {
-    const src = nodeById.get(edge.sourceId || '')
-    const tgt = nodeById.get(edge.targetId || '')
+  const labelXml = (box: Box, indent: string) => [
+    `${indent}<bpmndi:BPMNLabel>`,
+    `${indent}  <dc:Bounds x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}" />`,
+    `${indent}</bpmndi:BPMNLabel>`,
+  ]
+
+  for (const [edge, route] of routes) {
     xml.push(
       `      <bpmndi:BPMNEdge id="${escapeXml(idOf.get(edge.id)!)}_di" bpmnElement="${escapeXml(idOf.get(edge.id)!)}">`,
     )
-    for (const p of edgeWaypoints(edge, src, tgt)) {
-      xml.push(`        <di:waypoint x="${p.x}" y="${p.y}" />`)
-    }
+    for (const p of route) xml.push(`        <di:waypoint x="${p.x}" y="${p.y}" />`)
+    const box = edgeLabelOf.get(edge.id)
+    if (box) xml.push(...labelXml(box, '        '))
     xml.push('      </bpmndi:BPMNEdge>')
   }
 

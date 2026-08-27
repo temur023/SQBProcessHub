@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, Sequence, Tuple
 
-from app.models.process import ProcessEdge, ProcessNode
+from app.models.process import Geometry, ProcessEdge, ProcessNode
 
 Point = Tuple[float, float]
 Direction = Tuple[int, int]
@@ -191,10 +191,16 @@ def orthogonal_waypoints(
     if src is None or tgt is None:
         return []
 
-    exit_x = edge.exitX if edge.exitX is not None else None
-    exit_y = edge.exitY if edge.exitY is not None else None
-    entry_x = edge.entryX if edge.entryX is not None else None
-    entry_y = edge.entryY if edge.entryY is not None else None
+    # draw.io допускает якорь чуть за гранью фигуры (entryY=-0.017), и линия
+    # там начинается «в воздухе». Импортёр ждёт точку на фигуре, поэтому долю
+    # прижимаем к грани.
+    def _frac(value: Optional[float]) -> Optional[float]:
+        return None if value is None else min(1.0, max(0.0, value))
+
+    exit_x = _frac(edge.exitX)
+    exit_y = _frac(edge.exitY)
+    entry_x = _frac(edge.entryX)
+    entry_y = _frac(edge.entryY)
 
     d0 = exit_direction(edge, src, tgt, placed)
     d1 = entry_direction(edge, src, tgt, placed)
@@ -214,3 +220,36 @@ def orthogonal_waypoints(
         bends = [(float(p.x), float(p.y)) for p in edge.points]
         return _snap_to_pixel_grid(_route_through_bends([start, *bends, end], d0, d1))
     return _snap_to_pixel_grid(_route_without_bends(start, d0, end, d1))
+
+
+def point_stub(stub_id: str, x: float, y: float) -> ProcessNode:
+    """Точечная «фигура» для трассировки конца связи, висящего на полосе."""
+    return ProcessNode(
+        id=stub_id,
+        name='',
+        type='textAnnotation',
+        geometry=Geometry(x=int(round(x)) - 1, y=int(round(y)) - 1, width=2, height=2),
+    )
+
+
+def message_flow_endpoints(
+    edge: ProcessEdge,
+    node: ProcessNode,
+    lane: ProcessNode,
+    lane_is_source: bool,
+) -> Tuple[ProcessNode, ProcessNode]:
+    """Пара фигур для трассировки связи «шаг ↔ полоса внешнего участника».
+
+    Полоса тянется на всю ширину карты, поэтому её центр как якорь не годится:
+    линия ушла бы через полсхемы. Берём точку, которую нарисовал аналитик
+    (свободный конец в draw.io), иначе — проекцию шага на ближайшую грань полосы.
+    """
+    free = edge.sourcePoint if lane_is_source else edge.targetPoint
+    if free is not None:
+        stub = point_stub(f'{edge.id}__lane', free.x, free.y)
+    else:
+        cx = node.geometry.x + node.geometry.width / 2
+        lane_bottom = lane.geometry.y + lane.geometry.height
+        y = lane_bottom if node.geometry.y >= lane_bottom else lane.geometry.y
+        stub = point_stub(f'{edge.id}__lane', cx, y)
+    return (stub, node) if lane_is_source else (node, stub)
