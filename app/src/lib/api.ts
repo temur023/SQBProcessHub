@@ -5,6 +5,41 @@ import { generateProcessetEventLogCsv, generateProcessRegulationCsv, generatePix
 
 const API_BASE = '/api/v1'
 
+/** Экспорт невозможен без бэкенда — вызывающий код обязан показать это пользователю. */
+export class ExportUnavailableError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ExportUnavailableError'
+  }
+}
+
+/** Load process from backend store */
+export async function loadProcessFromBackend(processId: string): Promise<BusinessProcess | null> {
+  try {
+    const res = await fetch(`${API_BASE}/processes/${encodeURIComponent(processId)}`)
+    if (res.ok) {
+      return await res.json()
+    }
+  } catch (err) {
+    console.warn('Failed to load process from backend:', err)
+  }
+  return null
+}
+
+/** List all processes from backend */
+export async function listProcessesFromBackend(): Promise<Array<{id: string, name: string}>> {
+  try {
+    const res = await fetch(`${API_BASE}/processes/`)
+    if (res.ok) {
+      const data = await res.json()
+      return data.map((p: any) => ({ id: p.id, name: p.name }))
+    }
+  } catch (err) {
+    console.warn('Failed to list processes from backend:', err)
+  }
+  return []
+}
+
 /** Check if Python FastAPI server is live on :8000 */
 export async function checkBackendHealth(): Promise<boolean> {
   try {
@@ -32,15 +67,18 @@ export async function importDrawioFileApi(file: File): Promise<{ process: Busine
 
     if (res.ok) {
       const process: BusinessProcess = await res.json()
-      return { process, source: 'fastapi' }
+      if ((process.nodes?.length ?? 0) > 0) {
+        return { process, source: 'fastapi' }
+      }
     }
   } catch (err) {
     console.warn('FastAPI import endpoint unreachable, using client parser fallback:', err)
   }
 
-  // Local fallback
+  // Local fallback (also used when backend returned an empty graph)
   const text = await file.text()
   const process = await parseDrawio(text, file.name)
+  await saveProcessToBackend(process)
   return { process, source: 'local' }
 }
 
@@ -55,14 +93,17 @@ export async function importDrawioXmlApi(xml: string, fileName: string = 'Pasted
 
     if (res.ok) {
       const process: BusinessProcess = await res.json()
-      return { process, source: 'fastapi' }
+      if ((process.nodes?.length ?? 0) > 0) {
+        return { process, source: 'fastapi' }
+      }
     }
   } catch (err) {
     console.warn('FastAPI XML import endpoint unreachable, using client parser fallback:', err)
   }
 
-  // Local fallback
+  // Local fallback (also used when backend returned an empty graph)
   const process = await parseDrawio(xml, fileName)
+  await saveProcessToBackend(process)
   return { process, source: 'local' }
 }
 
@@ -102,17 +143,35 @@ export async function createRegistryCaseApi(
   return null
 }
 
+/**
+ * BPMN в том виде, в каком его отдаст скачивание.
+ * Клиентский генератор — двойник бэкендового, но источником истины остаётся
+ * бэкенд, поэтому предпросмотр берём оттуда, если он доступен.
+ */
+export async function fetchBpmnXml(processId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE}/import/${encodeURIComponent(processId)}/export/bpmn`)
+    if (res.ok) return await res.text()
+  } catch {
+    // офлайн-режим: вызывающий код покажет результат клиентского генератора
+  }
+  return null
+}
+
 /** Trigger direct backend file download with fallback */
 export async function triggerExportDownload(
   process: BusinessProcess,
-  type: 'bpmn' | 'event-log' | 'regulation' | 'pix-json'
+  type: 'bpmn' | 'pmm' | 'event-log' | 'regulation' | 'pix-json'
 ): Promise<void> {
   let endpoint = ''
   let defaultFilename = ''
 
   if (type === 'bpmn') {
     endpoint = `${API_BASE}/import/${encodeURIComponent(process.id)}/export/bpmn`
-    defaultFilename = `${process.passport.code}_Processet.bpmn20.xml`
+    defaultFilename = `${process.passport.code}_PIX_Map.bpmn`
+  } else if (type === 'pmm') {
+    endpoint = `${API_BASE}/import/${encodeURIComponent(process.id)}/export/pmm`
+    defaultFilename = `${process.passport.code}_PIX_Map.pmm`
   } else if (type === 'event-log') {
     endpoint = `${API_BASE}/import/${encodeURIComponent(process.id)}/export/event-log`
     defaultFilename = `${process.passport.code}_EventLogs.csv`
@@ -136,7 +195,21 @@ export async function triggerExportDownload(
       URL.revokeObjectURL(url)
       return
     }
+    if (type === 'pmm') {
+      throw new ExportUnavailableError(
+        `Сервер вернул ${res.status}. Нативный пакет .pmm собирается только на бэкенде.`,
+      )
+    }
+    console.warn(`Backend download failed with ${res.status}, generating client-side file`)
   } catch (err) {
+    if (err instanceof ExportUnavailableError) throw err
+    if (type === 'pmm') {
+      // .pmm — это ZIP из XML-частей PIX; клиентского генератора нет, и молча
+      // «ничего не скачать» пользователю нельзя.
+      throw new ExportUnavailableError(
+        'Экспорт .pmm требует запущенного бэкенда FastAPI. Запустите backend/start.sh и повторите.',
+      )
+    }
     console.warn('Backend download failed, generating client-side file:', err)
   }
 

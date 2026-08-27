@@ -2,16 +2,46 @@ from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field
 
 NodeType = Literal[
+    # События (2-ILOVA: Hodisa / Events)
     'startEvent',
     'endEvent',
+    'intermediateTimerEvent',    # Kutish vaqti — ожидание внутри потока
+    'intermediateMessageEvent',  # приём/отправка сообщения
+    # Действия (2-ILOVA: Harakatlar / Activity)
     'task',
     'userTask',
-    'serviceTask',      # PIX RPA or ABS integration
-    'exclusiveGateway', # XOR
-    'parallelGateway',  # AND
-    'inclusiveGateway', # OR
-    'lane'              # Swimlane
+    'serviceTask',               # PIX RPA or ABS integration
+    'subProcess',
+    # Шлюзы (2-ILOVA: Shlyuz / Gateway)
+    'exclusiveGateway',          # XOR
+    'parallelGateway',           # AND
+    'inclusiveGateway',          # OR
+    # Артефакты (2-ILOVA: Artefaktlar / Artifacts)
+    'dataStore',                 # IABS, EHA, EDO — информационная система
+    'dataObject',                # Dalolatnoma, Yig'ma jild — документ
+    'textAnnotation',            # текстовое примечание
+    # Зоны ответственности
+    'lane'                       # Swimlane
 ]
+
+#: Узлы, которые участвуют в потоке управления (могут иметь sequenceFlow).
+FLOW_NODE_TYPES = (
+    'startEvent', 'endEvent', 'intermediateTimerEvent', 'intermediateMessageEvent',
+    'task', 'userTask', 'serviceTask', 'subProcess',
+    'exclusiveGateway', 'parallelGateway', 'inclusiveGateway',
+)
+
+#: Узлы-артефакты: соединяются только ассоциациями, шагами процесса не являются.
+ARTIFACT_NODE_TYPES = ('dataStore', 'dataObject', 'textAnnotation')
+
+#: Узлы, которые считаются шагами регламента (4-ILOVA).
+TASK_NODE_TYPES = ('task', 'userTask', 'serviceTask', 'subProcess')
+
+#: Вид соединения (2-ILOVA: Birlashtiruvchi elementlar / Flows).
+#: ``annotationLine`` — оформительская линия draw.io, у которой хотя бы один
+#: конец висит в пустоте (разделители этапов). В BPMN и PIX такой конструкции
+#: нет, поэтому в выгрузку она не идёт, но на холсте рисуется.
+EdgeKind = Literal['sequenceFlow', 'messageFlow', 'association', 'annotationLine']
 
 StepCategory = Literal[
     'manual',
@@ -48,7 +78,8 @@ class ProcessNode(BaseModel):
     laneName: Optional[str] = None
     role: Optional[str] = None
     system: Optional[str] = None
-    slaMinutes: Optional[int] = 30
+    slaMinutes: Optional[int] = 30       # ST — время выполнения операции, мин (4-ILOVA)
+    waitMinutes: Optional[int] = 0       # WT — время ожидания перед операцией, мин (4-ILOVA)
     costPerExecution: Optional[int] = 5000
     automationPotential: Optional[int] = 50
     description: Optional[str] = None
@@ -65,16 +96,40 @@ class ProcessEdgePoint(BaseModel):
 class ProcessEdge(BaseModel):
     id: str
     name: str = ''
+    kind: EdgeKind = 'sequenceFlow'
     sourceId: Optional[str] = None
     targetId: Optional[str] = None
     condition: Optional[str] = None
     probability: Optional[int] = 100
     points: List[ProcessEdgePoint] = Field(default_factory=list)
+    #: Свободные концы линии в абсолютных координатах карты: заполняются, когда
+    #: в draw.io конец не привязан к фигуре (mxPoint as="sourcePoint"/"targetPoint").
+    sourcePoint: Optional[ProcessEdgePoint] = None
+    targetPoint: Optional[ProcessEdgePoint] = None
+    exitX: Optional[float] = None
+    exitY: Optional[float] = None
+    entryX: Optional[float] = None
+    entryY: Optional[float] = None
+    labelX: Optional[float] = None
+    labelY: Optional[float] = None
+    style: Optional[str] = None
+    dashed: Optional[bool] = None
+    dashPattern: Optional[str] = None
+    edgeStyle: Optional[str] = None
+    strokeColor: Optional[str] = None
+    strokeWidth: Optional[float] = None
 
 class ProcessValidation(BaseModel):
+    """Замечание к импортированной карте — то, что показывается сотруднику."""
     level: Literal['error', 'warning', 'info']
     message: str
     nodeId: Optional[str] = None
+    #: Машинный код замечания: по нему UI группирует однотипные записи.
+    code: Optional[str] = None
+    #: Имя фигуры на карте — чтобы сотрудник нашёл её без поиска по id.
+    nodeName: Optional[str] = None
+    #: Что с этим делать: замечание без подсказки бесполезно.
+    hint: Optional[str] = None
 
 class ProcessPassport(BaseModel):
     code: str = 'PRC-SQB-001'

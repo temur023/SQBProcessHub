@@ -3,7 +3,7 @@ SQB Process Hub — Analytics API Router
 Process Mining metrics and conformance analysis
 """
 from fastapi import APIRouter, HTTPException
-from app.models.process import ProcessetMiningMetrics
+from app.models.process import ProcessetMiningMetrics, TASK_NODE_TYPES
 from app.routers.processes import get_store
 from app.services.conformance_engine import analyze_process_conformance
 
@@ -60,7 +60,7 @@ def get_rpa_candidates(process_id: str):
             "annualSavingsUzs": (n.costPerExecution or 0) * 22 * 12  # estimate: 22 cases/month
         }
         for n in process.nodes
-        if n.type not in ('lane', 'startEvent', 'endEvent')
+        if n.type not in ('lane', 'startEvent', 'endEvent', 'exclusiveGateway', 'parallelGateway', 'inclusiveGateway')
         and (n.automationPotential or 0) >= 50
     ]
     candidates.sort(key=lambda x: x["automationPotential"], reverse=True)
@@ -76,13 +76,22 @@ def get_sla_report(process_id: str):
     if not process:
         raise HTTPException(404, f"Process '{process_id}' not found")
 
-    total_sla = sum(n.slaMinutes or 0 for n in process.nodes if n.type not in ('lane',))
+    # Суммируем только исполняемые задачи (без lane/start/end/gateway)
+    task_nodes = [n for n in process.nodes if n.type in TASK_NODE_TYPES]
+    total_sla = sum(n.slaMinutes or 0 for n in task_nodes)
     target_minutes = process.passport.targetSlaHours * 60
+    # Фактический SLA = сумма по задачам, целевой = из паспорта
+    actual_minutes = total_sla
+    # Оценка с учётом отклонений (бывший *1.38 заменён на прозрачный расчёт)
+    estimated_with_breach = round(total_sla * (1 + process.miningMetrics.slaBreachRate / 100)) if total_sla else 0
 
     return {
         "processName": process.name,
         "targetSlaMinutes": target_minutes,
-        "actualSlaMinutes": round(total_sla * 1.38),
+        "actualSlaMinutes": actual_minutes,
+        "estimatedSlaWithBreachMinutes": estimated_with_breach,
+        "totalTaskSlaMinutes": total_sla,
+        # deprecated alias для обратной совместимости
         "totalTargetSlaMinutes": total_sla,
         "conformanceRate": process.miningMetrics.conformanceRate,
         "slaBreachRate": process.miningMetrics.slaBreachRate,
@@ -96,7 +105,7 @@ def get_sla_report(process_id: str):
                 "breachRisk": "high" if (n.slaMinutes or 0) >= 180 else "medium" if (n.slaMinutes or 0) >= 60 else "low"
             }
             for n in process.nodes
-            if n.type not in ('lane', 'startEvent', 'endEvent')
+            if n.type in TASK_NODE_TYPES
             and (n.slaMinutes or 0) >= 45
         ]
     }

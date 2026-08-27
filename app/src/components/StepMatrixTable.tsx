@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import type { BusinessProcess, ProcessNode, StepCategory } from '@/types/process'
+import { isTaskNode, isArtifactNode } from '@/types/process'
 
 interface StepMatrixTableProps {
   process: BusinessProcess
@@ -29,7 +30,7 @@ export const StepMatrixTable: React.FC<StepMatrixTableProps> = ({
   const [selectedLane, setSelectedLane] = useState<string>('all')
 
   const flowNodes = useMemo(() => {
-    return process.nodes.filter((n) => n.type !== 'lane')
+    return process.nodes.filter((n) => n.type !== 'lane' && !isArtifactNode(n.type))
   }, [process.nodes])
 
   const filteredNodes = useMemo(() => {
@@ -51,7 +52,7 @@ export const StepMatrixTable: React.FC<StepMatrixTableProps> = ({
 
   // Aggregate Metrics
   const totalTasks = flowNodes.filter(
-    (n) => n.type === 'task' || n.type === 'userTask' || n.type === 'serviceTask',
+    (n) => isTaskNode(n.type),
   ).length
   const rpaTasks = flowNodes.filter((n) => n.category === 'rpa_bot').length
   const totalSlaMin = flowNodes.reduce((sum, n) => sum + (n.slaMinutes || 0), 0)

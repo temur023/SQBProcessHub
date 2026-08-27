@@ -27,15 +27,35 @@ export const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
   onSaveNode,
 }) => {
   const [formData, setFormData] = useState<ProcessNode | null>(null)
+  const [validationError, setValidationError] = useState<string | null>(null)
 
   useEffect(() => {
     setFormData(node ? { ...node } : null)
+    setValidationError(null)
   }, [node])
 
   if (!node || !formData) return null
 
   const handleSave = () => {
-    onSaveNode(formData)
+    if ((formData.slaMinutes ?? 0) < 1) {
+      setValidationError('SLA должен быть ≥ 1 мин')
+      return
+    }
+    if ((formData.costPerExecution ?? 0) < 0) {
+      setValidationError('Себестоимость не может быть отрицательной')
+      return
+    }
+    if (!formData.name.trim()) {
+      setValidationError('Наименование операции не может быть пустым')
+      return
+    }
+    setValidationError(null)
+    onSaveNode({
+      ...formData,
+      name: formData.name.trim(),
+      slaMinutes: Math.max(1, Math.round(formData.slaMinutes ?? 1)),
+      costPerExecution: Math.max(0, Math.round(formData.costPerExecution ?? 0)),
+    })
   }
 
   return (
@@ -93,13 +113,30 @@ export const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
             <Label className="text-xs font-semibold">Категория</Label>
             <select
               value={formData.category || 'manual'}
-              onChange={(e) =>
+              onChange={(e) => {
+                const nextCategory = e.target.value as StepCategory
+                const lockedTypes = new Set([
+                  'startEvent',
+                  'endEvent',
+                  'exclusiveGateway',
+                  'parallelGateway',
+                  'inclusiveGateway',
+                  'lane',
+                ])
+                let nextType = formData.type
+                if (!lockedTypes.has(formData.type)) {
+                  if (nextCategory === 'rpa_bot' || nextCategory === 'api_service') {
+                    nextType = 'serviceTask'
+                  } else if (formData.type === 'serviceTask') {
+                    nextType = 'userTask'
+                  }
+                }
                 setFormData({
                   ...formData,
-                  category: e.target.value as StepCategory,
-                  type: e.target.value === 'rpa_bot' ? 'serviceTask' : formData.type,
+                  category: nextCategory,
+                  type: nextType,
                 })
-              }
+              }}
               className="w-full h-9 px-2 text-xs rounded-md border bg-background"
             >
               <option value="manual">Ручная задача</option>
@@ -160,6 +197,11 @@ export const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
         </div>
 
         {/* SLA & Costs */}
+        {validationError && (
+          <p className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-md px-2.5 py-1.5">
+            {validationError}
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold flex items-center justify-between">
@@ -170,10 +212,13 @@ export const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
             </Label>
             <Input
               type="number"
+              min={1}
+              step={1}
               value={formData.slaMinutes || 30}
-              onChange={(e) =>
-                setFormData({ ...formData, slaMinutes: Number(e.target.value) })
-              }
+              onChange={(e) => {
+                const v = Math.max(1, Math.round(Number(e.target.value) || 1))
+                setFormData({ ...formData, slaMinutes: v })
+              }}
               className="text-xs"
             />
           </div>
@@ -182,10 +227,13 @@ export const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
             <Label className="text-xs font-semibold">Себестоимость (UZS)</Label>
             <Input
               type="number"
+              min={0}
+              step={100}
               value={formData.costPerExecution || 5000}
-              onChange={(e) =>
-                setFormData({ ...formData, costPerExecution: Number(e.target.value) })
-              }
+              onChange={(e) => {
+                const v = Math.max(0, Math.round(Number(e.target.value) || 0))
+                setFormData({ ...formData, costPerExecution: v })
+              }}
               className="text-xs"
             />
           </div>

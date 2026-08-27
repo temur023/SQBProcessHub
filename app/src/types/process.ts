@@ -1,13 +1,48 @@
 export type NodeType =
+  // События (2-ILOVA: Hodisa / Events)
   | 'startEvent'
   | 'endEvent'
+  | 'intermediateTimerEvent' // Kutish vaqti — ожидание внутри потока
+  | 'intermediateMessageEvent'
+  // Действия (2-ILOVA: Harakatlar / Activity)
   | 'task'
   | 'userTask'
   | 'serviceTask' // PIX RPA Bot or ABS Integration
+  | 'subProcess'
+  // Шлюзы (2-ILOVA: Shlyuz / Gateway)
   | 'exclusiveGateway' // XOR
   | 'parallelGateway' // AND
   | 'inclusiveGateway' // OR
+  // Артефакты (2-ILOVA: Artefaktlar / Artifacts)
+  | 'dataStore' // IABS, EHA, EDO — информационная система
+  | 'dataObject' // Dalolatnoma, Yig'ma jild — документ
+  | 'textAnnotation'
+  // Зоны ответственности
   | 'lane' // Department / Role Swimlane
+
+/** Узлы, участвующие в потоке управления (могут иметь sequenceFlow). */
+export const FLOW_NODE_TYPES = [
+  'startEvent', 'endEvent', 'intermediateTimerEvent', 'intermediateMessageEvent',
+  'task', 'userTask', 'serviceTask', 'subProcess',
+  'exclusiveGateway', 'parallelGateway', 'inclusiveGateway',
+] as const satisfies readonly NodeType[]
+
+/** Артефакты: соединяются только ассоциациями, шагами процесса не являются. */
+export const ARTIFACT_NODE_TYPES = ['dataStore', 'dataObject', 'textAnnotation'] as const satisfies readonly NodeType[]
+
+/** Узлы, которые считаются шагами регламента (4-ILOVA). */
+export const TASK_NODE_TYPES = ['task', 'userTask', 'serviceTask', 'subProcess'] as const satisfies readonly NodeType[]
+
+export const isTaskNode = (type: NodeType): boolean => (TASK_NODE_TYPES as readonly NodeType[]).includes(type)
+export const isArtifactNode = (type: NodeType): boolean => (ARTIFACT_NODE_TYPES as readonly NodeType[]).includes(type)
+
+/**
+ * Вид соединения (2-ILOVA: Birlashtiruvchi elementlar / Flows).
+ * `annotationLine` — оформительская линия draw.io (разделитель этапов): хотя бы
+ * один её конец не опирается на шаг процесса. В BPMN и PIX такой конструкции
+ * нет, поэтому в выгрузку она не идёт, но на холсте рисуется.
+ */
+export type EdgeKind = 'sequenceFlow' | 'messageFlow' | 'association' | 'annotationLine'
 
 export type StepCategory =
   | 'manual'
@@ -45,7 +80,8 @@ export interface ProcessNode {
   laneName?: string
   role?: string // e.g. Кредитный эксперт, Робот PIX RPA
   system?: string // e.g. АБС ЦФТ, ЕПИГУ, SAP, CRM SQB
-  slaMinutes?: number // Target SLA in minutes
+  slaMinutes?: number // ST — время выполнения операции, мин (4-ILOVA)
+  waitMinutes?: number // WT — время ожидания перед операцией, мин (4-ILOVA)
   costPerExecution?: number // In UZS
   automationPotential?: number // 0-100%
   description?: string
@@ -64,17 +100,43 @@ export interface ProcessEdgePoint {
 export interface ProcessEdge {
   id: string
   name: string
+  kind?: EdgeKind
   sourceId?: string
   targetId?: string
   condition?: string
   probability?: number // 0-100% for branch execution
   points: ProcessEdgePoint[]
+  /** Свободные концы линии в абсолютных координатах: конец не привязан к фигуре */
+  sourcePoint?: ProcessEdgePoint
+  targetPoint?: ProcessEdgePoint
+  /** mxGraph perimeter constraints, 0..1 of the source/target box */
+  exitX?: number
+  exitY?: number
+  entryX?: number
+  entryY?: number
+  /** Relative edge-label: x along the polyline (0..1), y perpendicular in px */
+  labelX?: number
+  labelY?: number
+  /** draw.io style */
+  style?: string
+  dashed?: boolean
+  dashPattern?: string
+  edgeStyle?: string // e.g. orthogonalEdgeStyle
+  strokeColor?: string
+  strokeWidth?: number
 }
 
+/** Замечание к импортированной карте — то, что показывается сотруднику. */
 export interface ProcessValidation {
   level: 'error' | 'warning' | 'info'
   message: string
   nodeId?: string
+  /** Машинный код замечания: по нему UI группирует однотипные записи. */
+  code?: string
+  /** Имя фигуры на карте — чтобы сотрудник нашёл её без поиска по id. */
+  nodeName?: string
+  /** Что с этим делать: замечание без подсказки бесполезно. */
+  hint?: string
 }
 
 export interface ProcessPassport {
@@ -153,11 +215,17 @@ export interface BusinessProcess {
 export const NODE_TYPE_LABELS: Record<NodeType, string> = {
   startEvent: 'Стартовое событие',
   endEvent: 'Завершение процесса',
+  intermediateTimerEvent: 'Ожидание (таймер)',
+  intermediateMessageEvent: 'Промежуточное событие-сообщение',
   task: 'Пользовательская задача',
   userTask: 'Ручная операция',
   serviceTask: 'PIX RPA / Сервис АБС',
+  subProcess: 'Подпроцесс',
   exclusiveGateway: 'Шлюз «ИЛИ» (XOR)',
   parallelGateway: 'Шлюз «И» (AND)',
   inclusiveGateway: 'Шлюз «И/ИЛИ» (OR)',
+  dataStore: 'Информационная система',
+  dataObject: 'Документ / объект данных',
+  textAnnotation: 'Примечание',
   lane: 'Дорожка / Подразделение',
 }

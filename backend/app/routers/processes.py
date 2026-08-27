@@ -1,3 +1,4 @@
+import os
 import uuid
 from typing import List, Optional
 from datetime import datetime
@@ -5,14 +6,52 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, Body
 from pydantic import BaseModel
 
+from pathlib import Path
+import json
+import threading
+
 from app.models.process import (
     BusinessProcess, PixRegistryRecord, ProcessValidation
 )
 
 router = APIRouter(prefix="/processes", tags=["processes"])
 
-# In-memory store (replace with DB in production)
+# In-memory store с file-persistence (replace with DB in production)
 _process_store: dict[str, BusinessProcess] = {}
+_store_lock = threading.Lock()
+# SQB_PROCESS_STORE позволяет увести персист в сторону от боевого файла —
+# тесты обязаны им пользоваться, иначе каждый прогон дописывает свои фикстуры
+# в app/data/process_store.json и файл попадает в коммит.
+_store_file = Path(
+    os.environ.get("SQB_PROCESS_STORE")
+    or Path(__file__).resolve().parent.parent / "data" / "process_store.json"
+)
+
+
+def _load_store():
+    try:
+        if _store_file.exists():
+            data = json.loads(_store_file.read_text(encoding='utf-8'))
+            for pid, raw in data.items():
+                try:
+                    _process_store[pid] = BusinessProcess.model_validate(raw)
+                except Exception:
+                    continue
+    except Exception:
+        pass
+
+
+def _persist_store():
+    try:
+        _store_file.parent.mkdir(parents=True, exist_ok=True)
+        dump = {pid: proc.model_dump(mode='json') for pid, proc in _process_store.items()}
+        _store_file.write_text(json.dumps(dump, ensure_ascii=False, indent=2), encoding='utf-8')
+    except Exception:
+        pass
+
+
+# Загружаем сохранённые процессы при импорте модуля
+_load_store()
 
 
 # ──────────────── Response schemas ────────────────
@@ -64,17 +103,27 @@ def get_process(process_id: str):
 
 @router.post("/", response_model=BusinessProcess, status_code=201, summary="Save a parsed process")
 def save_process(process: BusinessProcess):
-    if not process.id:
+    if not process.id or not process.id.strip():
         process.id = f"proc_{uuid.uuid4().hex[:8]}"
-    _process_store[process.id] = process
+    # Избегаем коллизии hardcoded sample id (proc-sqb-*) при повторном сохранении — генерируем уникальный id
+    if process.id.startswith("proc-sqb-") and process.id in _process_store:
+        existing = _process_store[process.id]
+        # Если это не тот же самый объект (разный passport.code или разное кол-во нод) — клонируем под новым id
+        if existing.passport.code != process.passport.code or len(existing.nodes) != len(process.nodes):
+            process.id = f"proc_{uuid.uuid4().hex[:8]}"
+    with _store_lock:
+        _process_store[process.id] = process
+        _persist_store()
     return process
 
 
 @router.delete("/{process_id}", status_code=204, summary="Delete a process")
 def delete_process(process_id: str):
-    if process_id not in _process_store:
-        raise HTTPException(status_code=404, detail=f"Process '{process_id}' not found")
-    del _process_store[process_id]
+    with _store_lock:
+        if process_id not in _process_store:
+            raise HTTPException(status_code=404, detail=f"Process '{process_id}' not found")
+        del _process_store[process_id]
+        _persist_store()
 
 
 @router.get("/{process_id}/validate", response_model=List[ProcessValidation], summary="Validate a process")
@@ -91,7 +140,10 @@ def create_case(process_id: str, body: CreateCaseBody):
     if not proc:
         raise HTTPException(status_code=404, detail=f"Process '{process_id}' not found")
 
-    first_step = next((n for n in proc.nodes if n.type not in ('lane', 'startEvent')), None)
+    # Выбираем первый исполняемый шаг (только задачи), исключаем lane/start/end/gateway
+    first_step = next((n for n in proc.nodes if n.type in ('userTask', 'serviceTask', 'task')), None)
+    if not first_step:
+        first_step = next((n for n in proc.nodes if n.type not in ('lane', 'startEvent', 'endEvent', 'exclusiveGateway', 'parallelGateway', 'inclusiveGateway')), None)
     record = PixRegistryRecord(
         id=f"rec-{uuid.uuid4().hex[:8]}",
         caseId=body.caseId,
@@ -103,7 +155,9 @@ def create_case(process_id: str, body: CreateCaseBody):
         elapsedMinutes=0,
         data=body.data
     )
-    proc.registry.records.append(record)
+    with _store_lock:
+        proc.registry.records.append(record)
+        _persist_store()
     return record
 
 
