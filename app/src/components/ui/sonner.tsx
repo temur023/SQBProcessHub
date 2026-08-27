@@ -24,9 +24,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
+          // Токены темы хранятся тройками HSL, поэтому голый var() тут не
+          // цвет: без hsl() уведомление уезжало на собственные цвета sonner
+          // и не совпадало с интерфейсом.
+          "--normal-bg": "hsl(var(--popover))",
+          "--normal-text": "hsl(var(--popover-foreground))",
+          "--normal-border": "hsl(var(--border))",
           "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }

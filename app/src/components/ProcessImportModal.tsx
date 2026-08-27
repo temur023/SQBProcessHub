@@ -20,6 +20,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { Spinner } from '@/components/ui/spinner'
 import { importDrawioFileApi, importDrawioXmlApi } from '@/lib/api'
 import { SAMPLE_PROCESSES, cloneSampleProcess } from '@/lib/sample-processes'
 import type { BusinessProcess } from '@/types/process'
@@ -108,15 +109,15 @@ export const ProcessImportModal: React.FC<ProcessImportModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[92dvh] max-w-3xl overflow-y-auto p-4 sm:max-w-3xl sm:p-6">
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600">
-              <UploadCloud className="w-5 h-5" />
+          <div className="flex items-start gap-2.5 pr-6">
+            <div className="shrink-0 rounded-lg bg-emerald-100 p-2 text-emerald-600 dark:bg-emerald-950/60">
+              <UploadCloud className="h-5 w-5" />
             </div>
-            <div>
-              <DialogTitle className="text-xl font-bold">Импорт диаграммы процесса</DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+            <div className="min-w-0">
+              <DialogTitle className="text-base font-bold sm:text-xl">Импорт диаграммы процесса</DialogTitle>
+              <DialogDescription className="mt-0.5 text-xs text-muted-foreground">
                 Загрузите диаграмму из Draw.io для автоматического создания бизнес-процесса, регламента PIX и эталона для Processet
               </DialogDescription>
             </div>
@@ -124,17 +125,17 @@ export const ProcessImportModal: React.FC<ProcessImportModalProps> = ({
         </DialogHeader>
 
         {/* Pipeline Info Banner */}
-        <div className="p-3.5 rounded-xl bg-muted/70 border text-xs space-y-2">
-          <div className="flex items-center justify-between">
+        <div className="space-y-2 rounded-xl border bg-muted/70 p-3 text-xs sm:p-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2 font-medium text-foreground">
-              <Sparkles className="w-4 h-4 text-amber-500" />
+              <Sparkles className="h-4 w-4 shrink-0 text-amber-500" />
               <span>Сквозной пайплайн трансформации (FastAPI + React):</span>
             </div>
-            <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-500/30 flex items-center gap-1 font-mono">
-              <Server className="w-3 h-3" /> Python Engine :8000
+            <Badge variant="outline" className="flex items-center gap-1 border-emerald-500/30 font-mono text-[10px] text-emerald-600">
+              <Server className="h-3 w-3" /> Python Engine :8000
             </Badge>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1 text-[11px]">
+          <div className="grid grid-cols-1 gap-2 pt-1 text-[11px] sm:grid-cols-3">
             <div className="flex items-center gap-2 p-2 rounded-lg bg-background border">
               <span className="h-5 w-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[10px] shrink-0">1</span>
               <div>
@@ -180,18 +181,23 @@ export const ProcessImportModal: React.FC<ProcessImportModalProps> = ({
         )}
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full mt-2">
-          <TabsList className="grid grid-cols-3 w-full h-auto p-1">
-            <TabsTrigger value="upload" className="text-xs py-2 px-1 gap-1.5">
-              <UploadCloud className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Загрузить .drawio</span>
+          {/* Подписи короче ниже `sm`: полные в треть телефонного экрана
+              не помещаются и рвут вкладку на три строки. */}
+          <TabsList className="grid h-auto w-full grid-cols-3 p-1">
+            <TabsTrigger value="upload" className="gap-1.5 px-1 py-2 text-xs">
+              <UploadCloud className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span className="hidden sm:inline">Загрузить .drawio</span>
+              <span className="sm:hidden">Файл</span>
             </TabsTrigger>
-            <TabsTrigger value="templates" className="text-xs py-2 px-1 gap-1.5">
-              <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
-              <span>Шаблоны SQB Банка</span>
+            <TabsTrigger value="templates" className="gap-1.5 px-1 py-2 text-xs">
+              <Building2 className="h-4 w-4 shrink-0 text-blue-600" />
+              <span className="hidden sm:inline">Шаблоны SQB Банка</span>
+              <span className="sm:hidden">Шаблоны</span>
             </TabsTrigger>
-            <TabsTrigger value="paste" className="text-xs py-2 px-1 gap-1.5">
-              <FileCode className="w-4 h-4 text-purple-600 shrink-0" />
-              <span>Вставить XML</span>
+            <TabsTrigger value="paste" className="gap-1.5 px-1 py-2 text-xs">
+              <FileCode className="h-4 w-4 shrink-0 text-purple-600" />
+              <span className="hidden sm:inline">Вставить XML</span>
+              <span className="sm:hidden">XML</span>
             </TabsTrigger>
           </TabsList>
 
@@ -209,31 +215,60 @@ export const ProcessImportModal: React.FC<ProcessImportModalProps> = ({
               }}
             />
             <div
+              role="button"
+              tabIndex={isProcessing ? -1 : 0}
+              aria-disabled={isProcessing}
+              aria-label="Выбрать файл диаграммы с диска"
               onDragOver={(e) => e.preventDefault()}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed rounded-xl p-8 text-center hover:border-emerald-500 hover:bg-muted/40 transition-colors cursor-pointer flex flex-col items-center justify-center gap-3 bg-muted/20"
+              onDrop={(e) => {
+                if (isProcessing) {
+                  e.preventDefault()
+                  return
+                }
+                handleDrop(e)
+              }}
+              onClick={() => !isProcessing && fileInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (isProcessing) return
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  fileInputRef.current?.click()
+                }
+              }}
+              className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed bg-muted/20 p-6 text-center transition-colors sm:p-8 ${
+                isProcessing
+                  ? 'cursor-wait opacity-70'
+                  : 'cursor-pointer hover:border-emerald-500 hover:bg-muted/40'
+              }`}
             >
-              <div className="h-14 w-14 rounded-full bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600">
-                <UploadCloud className="w-7 h-7" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 sm:h-14 sm:w-14">
+                {isProcessing ? (
+                  <Spinner className="h-6 w-6" />
+                ) : (
+                  <UploadCloud className="h-6 w-6 sm:h-7 sm:w-7" />
+                )}
               </div>
               <div>
                 <p className="text-sm font-semibold text-foreground">
-                  Перетащите файл .drawio или нажмите для выбора
+                  {isProcessing
+                    ? 'Разбираем диаграмму…'
+                    : 'Перетащите файл .drawio или нажмите для выбора'}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Поддерживаются сжатые и несжатые диаграммы Draw.io, схемы BPMN 2.0 (.drawio, .xml, .bpmn)
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {isProcessing
+                    ? 'Фигуры, дорожки и связи раскладываются в шаги регламента и реестр PIX.'
+                    : 'Поддерживаются сжатые и несжатые диаграммы Draw.io, схемы BPMN 2.0 (.drawio, .xml, .bpmn)'}
                 </p>
               </div>
-              <Button size="sm" variant="outline" className="mt-2" disabled={isProcessing}>
-                {isProcessing ? 'Парсинг через FastAPI...' : 'Выбрать файл с диска'}
+              <Button size="sm" variant="outline" className="mt-2" disabled={isProcessing} tabIndex={-1}>
+                {isProcessing ? 'Подождите…' : 'Выбрать файл с диска'}
               </Button>
             </div>
 
             {/* Quick action: Load process.drawio directly */}
-            <div className="p-3 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-500/20 flex items-center justify-between">
+            <div className="flex flex-col items-start justify-between gap-2.5 rounded-lg border border-emerald-500/20 bg-emerald-50/60 p-3 dark:bg-emerald-950/30 sm:flex-row sm:items-center">
               <div className="flex items-center gap-2 text-xs">
-                <FileCheck2 className="w-4 h-4 text-emerald-600" />
+                <FileCheck2 className="h-4 w-4 shrink-0 text-emerald-600" />
                 <span>
                   Файл <strong>process.drawio</strong> уже подготовлен в корне проекта
                 </span>
@@ -241,10 +276,11 @@ export const ProcessImportModal: React.FC<ProcessImportModalProps> = ({
               <Button
                 size="sm"
                 variant="outline"
-                className="text-xs h-7 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
+                className="h-7 w-full shrink-0 border-emerald-500/40 text-xs text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300 sm:w-auto"
                 onClick={() => handleOpenBundledDrawio()}
                 disabled={isProcessing}
               >
+                {isProcessing && <Spinner className="mr-1.5 h-3 w-3" />}
                 Открыть process.drawio
               </Button>
             </div>
@@ -255,7 +291,7 @@ export const ProcessImportModal: React.FC<ProcessImportModalProps> = ({
             <p className="text-xs text-muted-foreground">
               Выберите готовый регламент процесса SQB Банка для мгновенной демонстрации возможностей:
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {SAMPLE_PROCESSES.map((proc) => (
                 <div
                   key={proc.id}
@@ -307,9 +343,10 @@ export const ProcessImportModal: React.FC<ProcessImportModalProps> = ({
                 size="sm"
                 onClick={handlePasteSubmit}
                 disabled={!xmlText.trim() || isProcessing}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="w-full gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto"
               >
-                {isProcessing ? 'Обработка через FastAPI...' : 'Создать бизнес-процесс'}
+                {isProcessing && <Spinner className="h-3.5 w-3.5" />}
+                {isProcessing ? 'Разбираем…' : 'Создать бизнес-процесс'}
               </Button>
             </div>
           </TabsContent>

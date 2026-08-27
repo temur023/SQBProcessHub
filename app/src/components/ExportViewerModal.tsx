@@ -174,15 +174,15 @@ export const ExportViewerModal: React.FC<ExportViewerModalProps> = ({
         onOpenChange(next)
       }}
     >
-      <DialogContent className="max-w-[96vw] sm:max-w-[96vw] h-[92vh] flex flex-col overflow-hidden">
+      <DialogContent className="flex h-[92dvh] max-w-[96vw] flex-col overflow-hidden p-4 sm:max-w-[96vw] sm:p-6">
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-sky-100 dark:bg-sky-950/60 text-sky-600">
-              <FileSearch className="w-5 h-5" />
+          <div className="flex items-start gap-2.5 pr-6">
+            <div className="shrink-0 rounded-lg bg-sky-100 p-2 text-sky-600 dark:bg-sky-950/60">
+              <FileSearch className="h-5 w-5" />
             </div>
-            <div>
-              <DialogTitle className="text-xl font-bold">Просмотр выгрузки: BPMN и PMM</DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+            <div className="min-w-0">
+              <DialogTitle className="text-base font-bold sm:text-xl">Просмотр выгрузки: BPMN и PMM</DialogTitle>
+              <DialogDescription className="mt-0.5 text-xs text-muted-foreground">
                 Откройте файл <strong>.bpmn</strong> или пакет <strong>.pmm</strong> и посмотрите карту так,
                 как её получит PIX Процессная студия — вместе с часами и временем у шагов.
               </DialogDescription>
@@ -191,7 +191,7 @@ export const ExportViewerModal: React.FC<ExportViewerModalProps> = ({
         </DialogHeader>
 
         {/* Панель источников */}
-        <div className="flex items-center gap-2 flex-wrap border-b pb-3">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b pb-3">
           <Button
             variant="outline"
             size="sm"
@@ -213,8 +213,10 @@ export const ExportViewerModal: React.FC<ExportViewerModalProps> = ({
               e.target.value = ''
             }}
           />
-          <div className="h-4 w-px bg-border" />
-          <span className="text-[11px] text-muted-foreground">Проверить выгрузку текущего процесса:</span>
+          <div className="hidden h-4 w-px bg-border sm:block" />
+          <span className="hidden text-[11px] text-muted-foreground lg:inline">
+            Проверить выгрузку текущего процесса:
+          </span>
           <Button
             variant="outline"
             size="sm"
@@ -247,8 +249,9 @@ export const ExportViewerModal: React.FC<ExportViewerModalProps> = ({
                   reset()
                 }}
               >
-                <Send className="w-3.5 h-3.5" />
-                Загрузить в рабочую область
+                <Send className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Загрузить в рабочую область</span>
+                <span className="sm:hidden">В работу</span>
               </Button>
               <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-8" onClick={reset}>
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -303,7 +306,7 @@ export const ExportViewerModal: React.FC<ExportViewerModalProps> = ({
 
         {opened && stats && (
           <>
-            <div className="flex items-center gap-2 flex-wrap text-[11px]">
+            <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border bg-muted/40 px-2.5 py-2 text-[11px]">
               <Badge className={opened.format === 'bpmn' ? 'bg-indigo-600 text-white' : 'bg-sky-600 text-white'}>
                 {opened.format === 'bpmn' ? 'BPMN 2.0' : 'PIX .pmm'}
               </Badge>
@@ -339,10 +342,19 @@ export const ExportViewerModal: React.FC<ExportViewerModalProps> = ({
               onValueChange={(v) => setTab(v as typeof tab)}
               className="flex-1 min-h-0 flex flex-col mt-1"
             >
-              <TabsList className="grid grid-cols-3 w-full max-w-lg">
-                <TabsTrigger value="map" className="text-[11px]">Карта из файла</TabsTrigger>
-                <TabsTrigger value="steps" className="text-[11px]">Шаги и время</TabsTrigger>
-                <TabsTrigger value="source" className="text-[11px]">Исходный XML</TabsTrigger>
+              <TabsList className="grid w-full max-w-lg grid-cols-3">
+                <TabsTrigger value="map" className="text-[11px]">
+                  <span className="hidden sm:inline">Карта из файла</span>
+                  <span className="sm:hidden">Карта</span>
+                </TabsTrigger>
+                <TabsTrigger value="steps" className="text-[11px]">
+                  <span className="hidden sm:inline">Шаги и время</span>
+                  <span className="sm:hidden">Шаги</span>
+                </TabsTrigger>
+                <TabsTrigger value="source" className="text-[11px]">
+                  <span className="hidden sm:inline">Исходный XML</span>
+                  <span className="sm:hidden">XML</span>
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="map" className="flex-1 min-h-0 mt-2 overflow-hidden">
@@ -363,7 +375,9 @@ export const ExportViewerModal: React.FC<ExportViewerModalProps> = ({
                     Части пакета: <span className="font-mono">{opened.parts.join(', ')}</span>
                   </div>
                 )}
-                <div className="flex-1 overflow-auto rounded-lg border bg-slate-950 p-3 text-slate-200 font-mono text-[11px]">
+                {/* Подложка следует за темой: в светлом интерфейсе чёрная
+                    плита читалась как вставка из другого приложения. */}
+                <div className="flex-1 overflow-auto rounded-lg border bg-slate-50 p-3 font-mono text-[11px] text-slate-800 dark:bg-slate-950 dark:text-slate-200">
                   <pre>{opened.source}</pre>
                 </div>
               </TabsContent>

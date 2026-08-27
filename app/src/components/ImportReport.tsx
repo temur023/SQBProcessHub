@@ -79,11 +79,15 @@ export const ImportReport: React.FC<ImportReportProps> = ({ process, onSelectNod
 
   if (!issues.length) {
     return (
-      <div className="px-4 py-1.5 border-b border-border bg-emerald-500/5 flex items-center gap-2">
-        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-        <span className="text-xs text-emerald-700 dark:text-emerald-400">
-          Карта «{process.fileName}» импортирована без замечаний.
-        </span>
+      <div className="border-b bg-emerald-500/5">
+        {/* Та же сетка, что у шапки и основной области: без общего контейнера
+            полоса начиналась от края окна, а всё остальное — от логотипа. */}
+        <div className="mx-auto flex w-full max-w-[1600px] items-center gap-2 px-3 py-1.5 sm:px-4">
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <span className="truncate text-xs text-emerald-700 dark:text-emerald-400">
+            Карта «{process.fileName}» импортирована без замечаний.
+          </span>
+        </div>
       </div>
     )
   }
@@ -95,42 +99,47 @@ export const ImportReport: React.FC<ImportReportProps> = ({ process, onSelectNod
     : 'Карта импортирована, есть уточнения'
 
   return (
-    <div className="border-b border-border bg-muted/40">
+    <div className="border-b bg-muted/40">
       <button
         type="button"
+        aria-expanded={expanded}
         onClick={() => setExpanded((v) => !v)}
-        className="w-full px-4 py-2 flex items-center gap-2 text-left hover:bg-muted/70 transition-colors"
+        className="w-full text-left transition-colors hover:bg-muted/70"
       >
-        {expanded ? (
-          <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-        ) : (
-          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-        )}
-        <span className="text-xs font-semibold">Проверка импорта:</span>
-        <span
-          className={`text-xs ${
-            counts.error ? LEVEL_STYLE.error.text : counts.warning ? LEVEL_STYLE.warning.text : LEVEL_STYLE.info.text
-          }`}
-        >
-          {headline}
-        </span>
-        <span className="ml-auto flex items-center gap-1.5">
-          {(['error', 'warning', 'info'] as const)
-            .filter((level) => counts[level] > 0)
-            .map((level) => (
-              <span
-                key={level}
-                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium ${LEVEL_STYLE[level].chip}`}
-              >
-                {LEVEL_STYLE[level].icon}
-                {counts[level]}
-              </span>
-            ))}
+        <span className="mx-auto flex w-full max-w-[1600px] items-center gap-2 px-3 py-2 sm:px-4">
+          {expanded ? (
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          )}
+          <span className="shrink-0 text-xs font-semibold">Проверка импорта:</span>
+          {/* Заголовок обрезается, а счётчики — нет: на телефоне уводить
+              цифры за край нельзя, ради них панель и открывают. */}
+          <span
+            className={`min-w-0 flex-1 truncate text-xs ${
+              counts.error ? LEVEL_STYLE.error.text : counts.warning ? LEVEL_STYLE.warning.text : LEVEL_STYLE.info.text
+            }`}
+          >
+            {headline}
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5">
+            {(['error', 'warning', 'info'] as const)
+              .filter((level) => counts[level] > 0)
+              .map((level) => (
+                <span
+                  key={level}
+                  className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium ${LEVEL_STYLE[level].chip}`}
+                >
+                  {LEVEL_STYLE[level].icon}
+                  {counts[level]}
+                </span>
+              ))}
+          </span>
         </span>
       </button>
 
       {expanded && (
-        <div className="px-4 pb-3 max-h-[32vh] overflow-auto space-y-3">
+        <div className="mx-auto w-full max-w-[1600px] max-h-[32vh] space-y-3 overflow-auto px-3 pb-3 sm:px-4">
           {(['error', 'warning', 'info'] as const)
             .filter((level) => counts[level] > 0)
             .map((level) => (

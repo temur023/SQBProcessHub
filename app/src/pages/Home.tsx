@@ -14,7 +14,8 @@ import { ExportViewerModal } from '@/components/ExportViewerModal'
 import { generateProcessRegulationCsv, downloadFile } from '@/lib/processet-export'
 import { saveProcessToBackend, listProcessesFromBackend, loadProcessFromBackend } from '@/lib/api'
 import { analyzeProcessConformance } from '@/lib/conformance'
-import { Toaster, toast } from 'sonner'
+import { toast } from 'sonner'
+import { Toaster } from '@/components/ui/sonner'
 import { Database } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { isTaskNode } from '@/types/process'
@@ -135,24 +136,6 @@ export default function Home() {
           уведомлений живёт до 8 секунд, и закрыть их было нечем. */}
       <Toaster position="top-right" richColors closeButton />
 
-      {/* Backend process selector bar */}
-      {(backendProcesses.length > 0) && (
-        <div className="px-4 py-2 bg-muted/50 border-b border-border flex items-center gap-3 flex-wrap">
-          <Database className="w-4 h-4 text-muted-foreground" />
-          <span className="text-xs font-medium text-muted-foreground">Backend процессы:</span>
-          <Select value={selectedBackendProcess} onValueChange={(v) => handleLoadBackendProcess(v)}>
-            <SelectTrigger className="w-[280px] h-8 text-xs">
-              <SelectValue placeholder="Выбрать процесс из бэкенда..." />
-            </SelectTrigger>
-            <SelectContent>
-              {backendProcesses.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
       {/* Main Bank Header */}
       <Header
         currentProcess={currentProcess}
@@ -164,6 +147,33 @@ export default function Home() {
         onExportExcel={handleExportExcel}
       />
 
+      {/* Процессы, сохранённые на бэкенде. Строка идёт ПОСЛЕ шапки: сначала
+          сотрудник видит, какой процесс открыт, и только потом — чем его
+          заменить. Раньше выбор висел над логотипом и читался как главное
+          на экране. */}
+      {backendProcesses.length > 0 && (
+        <div className="border-b bg-muted/40">
+          <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-2 px-3 py-1.5 sm:px-4">
+            <Database className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className="shrink-0 text-[11px] font-medium text-muted-foreground">
+              Процессы на сервере:
+            </span>
+            <Select value={selectedBackendProcess} onValueChange={(v) => handleLoadBackendProcess(v)}>
+              <SelectTrigger className="h-7 w-full text-xs sm:w-[320px]">
+                <SelectValue placeholder="Открыть сохранённый процесс…" />
+              </SelectTrigger>
+              <SelectContent>
+                {backendProcesses.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
       {/* Отчёт о качестве импортированной карты */}
       <ImportReport
         process={currentProcess}
@@ -174,9 +184,13 @@ export default function Home() {
       />
 
       {/* Main Content Area */}
-      <main className={`flex-1 min-h-0 container mx-auto px-4 py-4 max-w-7xl flex flex-col ${
-        activeTab === 'visualizer' ? 'overflow-hidden' : 'overflow-auto'
-      }`}>
+      {/* Карта занимает всю доступную высоту и прокручивается внутри себя;
+          остальным разделам нужна обычная страничная прокрутка. */}
+      <main
+        className={`mx-auto flex w-full max-w-[1600px] flex-1 flex-col px-3 py-3 sm:px-4 sm:py-4 ${
+          activeTab === 'visualizer' ? 'min-h-0 overflow-hidden' : 'overflow-y-auto'
+        }`}
+      >
         {activeTab === 'visualizer' && (
           <ProcessVisualizer
             process={currentProcess}

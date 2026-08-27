@@ -22,6 +22,8 @@ import {
 } from 'recharts'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { StatTile } from '@/components/StatTile'
+import { useIsDark } from '@/hooks/use-dark-mode'
 import type { BusinessProcess, ProcessetDeviation } from '@/types/process'
 import { isTaskNode } from '@/types/process'
 import { generateBpmn2Xml } from '@/lib/bpmn-export'
@@ -39,6 +41,16 @@ export const ProcessetAnalyticsView: React.FC<ProcessetAnalyticsViewProps> = ({
   process,
 }) => {
   const metrics = process.miningMetrics
+  const isDark = useIsDark()
+
+  /**
+   * Оформление графика. Recharts проставляет цвета осей и подсказки инлайновым
+   * стилем, `dark:` до них не доходит — в тёмной теме подписи оставались
+   * почти чёрными на почти чёрном фоне, а подсказка приезжала белым блоком.
+   */
+  const chartTheme = isDark
+    ? { axis: '#94a3b8', grid: '#334155', tooltipBg: '#0f172a', tooltipText: '#e2e8f0', tooltipBorder: '#334155' }
+    : { axis: '#64748b', grid: '#e2e8f0', tooltipBg: '#ffffff', tooltipText: '#0f172a', tooltipBorder: '#e2e8f0' }
 
   const handleDownloadBpmn = () => {
     const xml = generateBpmn2Xml(process)
@@ -116,43 +128,45 @@ export const ProcessetAnalyticsView: React.FC<ProcessetAnalyticsViewProps> = ({
 
   return (
     <div className="space-y-5">
-      {/* Hero Banner: Processet Integration */}
-      <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950 text-white shadow-lg border border-indigo-800/40 relative overflow-hidden">
-        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-        
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative z-10">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Badge className="bg-purple-500/20 text-purple-200 border-purple-400/30 text-xs px-2 py-0.5">
+      {/* ── Шапка раздела: что и с чем сверяется ─────────────────────────── */}
+      {/* Тёмная заливка здесь намеренная в обеих темах: блок отделяет раздел
+          сверки от остальной платформы, как обложка отчёта. */}
+      <div className="relative overflow-hidden rounded-2xl border border-indigo-800/40 bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950 p-4 text-white shadow-lg sm:p-5">
+        <div className="pointer-events-none absolute -bottom-10 -right-10 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl" />
+
+        <div className="relative z-10 flex flex-col justify-between gap-4 lg:flex-row lg:items-center lg:gap-5">
+          <div className="min-w-0">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <Badge className="border-purple-400/30 bg-purple-500/20 px-2 py-0.5 text-[10px] text-purple-200 sm:text-xs">
                 Infomaximum Processet Conformance Engine
               </Badge>
-              <Badge variant="outline" className="text-slate-300 border-slate-700 text-xs font-mono">
+              <Badge variant="outline" className="border-slate-700 font-mono text-[10px] text-slate-300 sm:text-xs">
                 {process.passport.code}
               </Badge>
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+            <h2 className="text-lg font-bold leading-tight tracking-tight sm:text-2xl">
               Сверка эталона (Should-Be) с фактическими логами (As-Is)
             </h2>
-            <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              Диаграмма из <strong>Draw.io</strong> сформировала эталонную модель процесса. 
-              Система сверяет её с логами АБС ЦФТ и CRM в <strong>Processet</strong>, 
+            <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-slate-300 sm:text-sm">
+              Диаграмма из <strong>Draw.io</strong> сформировала эталонную модель процесса.
+              Система сверяет её с логами АБС ЦФТ и CRM в <strong>Processet</strong>,
               выявляя лишние шаги, задержки регламента и потенциал роботизации в <strong>PIX RPA</strong>.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
             <Button
               onClick={handleDownloadBpmn}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium gap-1.5 shadow-md"
+              className="w-full gap-1.5 bg-indigo-600 text-xs font-medium text-white shadow-md hover:bg-indigo-500 sm:w-auto"
             >
-              <FileCode className="w-4 h-4" />
+              <FileCode className="h-4 w-4" />
               <span>BPMN 2.0 для Processet</span>
             </Button>
             <Button
               onClick={handleDownloadLogs}
-              className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium gap-1.5 shadow-md"
+              className="w-full gap-1.5 bg-purple-600 text-xs font-medium text-white shadow-md hover:bg-purple-500 sm:w-auto"
             >
-              <Download className="w-4 h-4" />
+              <Download className="h-4 w-4" />
               <span>Event Logs (CSV)</span>
             </Button>
           </div>
@@ -160,68 +174,56 @@ export const ProcessetAnalyticsView: React.FC<ProcessetAnalyticsViewProps> = ({
       </div>
 
       {/* KPI Cards: Process Mining Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="p-4 rounded-xl border bg-card shadow-sm">
-          <div className="flex items-center justify-between text-muted-foreground text-xs">
-            <span>Соответствие эталону</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-foreground">{metrics.conformanceRate}%</span>
-            <span className="text-xs text-rose-500 font-medium">-{Math.round(100 - metrics.conformanceRate)}% отклонений</span>
-          </div>
-          <p className="text-[11px] text-muted-foreground mt-1">
-            Доля заявок, прошедших строго по регламенту draw.io
-          </p>
-        </div>
-
-        <div className="p-4 rounded-xl border bg-card shadow-sm">
-          <div className="flex items-center justify-between text-muted-foreground text-xs">
-            <span>Фактический Lead Time</span>
-            <Clock className="w-4 h-4 text-amber-500" />
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-amber-600">{metrics.avgLeadTimeHours} ч</span>
-            <span className="text-xs text-muted-foreground">План: {metrics.targetLeadTimeHours} ч</span>
-          </div>
-          <p className="text-[11px] text-amber-600 mt-1">
-            Задержка +{(metrics.avgLeadTimeHours - metrics.targetLeadTimeHours).toFixed(1)}ч от регламента
-          </p>
-        </div>
-
-        <div className="p-4 rounded-xl border bg-card shadow-sm">
-          <div className="flex items-center justify-between text-muted-foreground text-xs">
-            <span>Петли доработок & возвратов</span>
-            <RotateCcw className="w-4 h-4 text-purple-500" />
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-purple-600">{metrics.reworkRate}%</span>
-            <span className="text-xs text-muted-foreground">заявок с циклом</span>
-          </div>
-          <p className="text-[11px] text-muted-foreground mt-1">
-            Повторный сбор документов и перепроверка
-          </p>
-        </div>
-
-        <div className="p-4 rounded-xl border bg-card shadow-sm">
-          <div className="flex items-center justify-between text-muted-foreground text-xs">
-            <span>Экономия с PIX RPA</span>
-            <Zap className="w-4 h-4 text-emerald-500" />
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-emerald-600">
-              {(metrics.potentialRpaSavingsUzs / 1000000).toFixed(0)} млн
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 xl:grid-cols-4">
+        <StatTile
+          label="Соответствие эталону"
+          value={`${metrics.conformanceRate}%`}
+          hint="Доля заявок строго по регламенту draw.io"
+          icon={CheckCircle2}
+          tone="emerald"
+          footer={
+            <span className="text-[11px] font-medium text-rose-500">
+              −{Math.round(100 - metrics.conformanceRate)}% отклонений
             </span>
-            <span className="text-xs text-muted-foreground">UZS/год</span>
-          </div>
-          <p className="text-[11px] text-emerald-600 mt-1">
-            При роботизации ручных шагов
-          </p>
-        </div>
+          }
+        />
+        <StatTile
+          label="Фактический Lead Time"
+          value={`${metrics.avgLeadTimeHours} ч`}
+          suffix={`план ${metrics.targetLeadTimeHours} ч`}
+          icon={Clock}
+          tone="amber"
+          footer={
+            <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+              +{(metrics.avgLeadTimeHours - metrics.targetLeadTimeHours).toFixed(1)} ч к регламенту
+            </span>
+          }
+        />
+        <StatTile
+          label="Петли доработок и возвратов"
+          value={`${metrics.reworkRate}%`}
+          suffix="заявок с циклом"
+          hint="Повторный сбор документов и перепроверка"
+          icon={RotateCcw}
+          tone="purple"
+        />
+        <StatTile
+          label="Экономия с PIX RPA"
+          value={`${(metrics.potentialRpaSavingsUzs / 1000000).toFixed(0)} млн`}
+          suffix="UZS/год"
+          hint="При роботизации ручных шагов"
+          icon={Zap}
+          tone="emerald"
+        />
       </div>
 
-      {/* Should-Be vs As-Is Visual Matrix */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* ── Эталон против факта ──────────────────────────────────────────── */}
+      {/* `items-start` вместо растяжки по высоте: колонки заполнены по-разному,
+          и более короткая тянулась пустотой до высоты соседней. С `lg`, когда
+          колонки встают рядом, списки внутри прокручиваются сами — иначе
+          длинный процесс уводил бы график далеко за экран. На узком экране
+          вложенная прокрутка только мешает: страница и так листается. */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
         {/* Left Column: Should-Be (Эталон) */}
         <div className="p-4 rounded-xl border bg-card shadow-sm space-y-3">
           <div className="flex items-center justify-between pb-2 border-b">
@@ -240,7 +242,7 @@ export const ProcessetAnalyticsView: React.FC<ProcessetAnalyticsViewProps> = ({
             Утвержденный маршрут заявки без избыточных ручных проверок и с четкими SLA:
           </p>
 
-          <div className="space-y-2">
+          <div className="space-y-2 lg:max-h-[26rem] lg:overflow-y-auto lg:pr-1">
             {process.nodes
               .filter((n) => isTaskNode(n.type))
               .map((task, idx) => (
@@ -283,7 +285,7 @@ export const ProcessetAnalyticsView: React.FC<ProcessetAnalyticsViewProps> = ({
             Узкие места, негласные шаги и повторные циклы, обнаруженные алгоритмами Process Mining:
           </p>
 
-          <div className="space-y-2.5">
+          <div className="space-y-2.5 lg:max-h-[26rem] lg:overflow-y-auto lg:pr-1">
             {metrics.deviations.map((dev) => (
               <div
                 key={dev.id}
@@ -333,17 +335,38 @@ export const ProcessetAnalyticsView: React.FC<ProcessetAnalyticsViewProps> = ({
 
         <div className="h-64 w-full pt-2">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="name" fontSize={11} />
-              <YAxis fontSize={11} label={{ value: 'Часы', angle: -90, position: 'insideLeft', fontSize: 10 }} />
+            <BarChart data={chartData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} vertical={false} />
+              <XAxis
+                dataKey="name"
+                fontSize={11}
+                tickLine={false}
+                axisLine={{ stroke: chartTheme.grid }}
+                tick={{ fill: chartTheme.axis }}
+              />
+              <YAxis
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                tick={{ fill: chartTheme.axis }}
+                label={{ value: 'Часы', angle: -90, position: 'insideLeft', fontSize: 10, fill: chartTheme.axis }}
+              />
               <Tooltip
-                contentStyle={{ fontSize: '11px', borderRadius: '8px' }}
+                cursor={{ fill: chartTheme.grid, opacity: 0.35 }}
+                contentStyle={{
+                  fontSize: '11px',
+                  borderRadius: '8px',
+                  background: chartTheme.tooltipBg,
+                  border: `1px solid ${chartTheme.tooltipBorder}`,
+                  color: chartTheme.tooltipText,
+                }}
+                labelStyle={{ color: chartTheme.tooltipText, fontWeight: 600 }}
+                itemStyle={{ color: chartTheme.tooltipText }}
                 formatter={(value: any) => [`${value} ч`, '']}
               />
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
-              <Bar dataKey="Эталон SLA (ч)" fill="#10b981" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Факт Processet (ч)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              <Legend wrapperStyle={{ fontSize: '11px', color: chartTheme.axis }} />
+              <Bar dataKey="Эталон SLA (ч)" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={44} />
+              <Bar dataKey="Факт Processet (ч)" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={44} />
             </BarChart>
           </ResponsiveContainer>
         </div>

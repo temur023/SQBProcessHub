@@ -152,33 +152,35 @@ export const PixRegistryView: React.FC<PixRegistryViewProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Registry Passport Banner */}
-      <div className="p-4 rounded-xl border bg-card shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-md">
-            <Database className="w-6 h-6" />
+      {/* ── Паспорт реестра ──────────────────────────────────────────────── */}
+      {/* В строку — только с `lg`. На планшете название реестра и две кнопки
+          в один ряд не помещались: заголовок ломался на три строки. */}
+      <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 p-2.5 text-white shadow-md sm:p-3">
+            <Database className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-base text-foreground">{registry.name}</h3>
-              <Badge variant="outline" className="font-mono text-xs">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm font-bold text-foreground sm:text-base">{registry.name}</h3>
+              <Badge variant="outline" className="font-mono text-[10px] sm:text-xs">
                 {registry.code}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5 max-w-xl">
+            <p className="mt-0.5 max-w-xl text-xs leading-snug text-muted-foreground">
               {registry.description} • Структура переменных синхронизирована с формой PIX Реестры
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
           <Button
             size="sm"
             variant="outline"
             onClick={handleExportPix}
-            className="text-xs gap-1.5"
+            className="w-full gap-1.5 text-xs sm:w-auto"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download className="h-3.5 w-3.5" />
             <span>Экспорт PIX JSON</span>
           </Button>
           <Button
@@ -187,9 +189,9 @@ export const PixRegistryView: React.FC<PixRegistryViewProps> = ({
               setFormError(null)
               setIsAddRecordOpen(true)
             }}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
+            className="w-full gap-1.5 bg-emerald-600 text-xs text-white hover:bg-emerald-700 sm:w-auto"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="h-3.5 w-3.5" />
             <span>Создать заявку в реестре</span>
           </Button>
         </div>
@@ -197,12 +199,12 @@ export const PixRegistryView: React.FC<PixRegistryViewProps> = ({
 
       {/* Registry Fields Schema Preview */}
       <div className="p-3.5 rounded-xl border bg-muted/40 text-xs">
-        <div className="flex items-center justify-between mb-2">
-          <span className="font-semibold text-foreground flex items-center gap-1.5">
-            <Layers className="w-4 h-4 text-emerald-600" />
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="flex items-center gap-1.5 font-semibold text-foreground">
+            <Layers className="h-4 w-4 shrink-0 text-emerald-600" />
             Схема полей реестра PIX ({registry.fields.length} полей):
           </span>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="hidden shrink-0 text-[11px] text-muted-foreground xl:inline">
             Поля используются для передачи контекста между задачами в PIX BPM
           </span>
         </div>
@@ -228,7 +230,7 @@ export const PixRegistryView: React.FC<PixRegistryViewProps> = ({
       </div>
 
       {/* Records Table Toolbar */}
-      <div className="p-3.5 rounded-xl border bg-card shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+      <div className="flex flex-col items-stretch justify-between gap-3 rounded-xl border bg-card p-3.5 shadow-sm md:flex-row md:items-center">
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -244,11 +246,13 @@ export const PixRegistryView: React.FC<PixRegistryViewProps> = ({
         </div>
       </div>
 
-      {/* Records Data Table */}
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-muted/70 text-muted-foreground uppercase text-[10px] tracking-wider border-b">
+      {/* ── Реестр таблицей: широкий экран ───────────────────────────────── */}
+      <div className="hidden overflow-hidden rounded-xl border bg-card shadow-sm lg:block">
+        {/* Заголовок липкий: в реестре на сотни заявок колонки уезжают из
+            виду на первом же экране прокрутки. */}
+        <div className="max-h-[calc(100vh-26rem)] overflow-auto">
+          <table className="w-full min-w-[900px] text-left text-xs">
+            <thead className="sticky top-0 z-10 border-b bg-muted/95 text-[10px] uppercase tracking-wider text-muted-foreground backdrop-blur">
               <tr>
                 <th className="px-3.5 py-3 font-semibold">№ Заявки (Case ID)</th>
                 <th className="px-3.5 py-3 font-semibold">Дата создания</th>
@@ -297,6 +301,55 @@ export const PixRegistryView: React.FC<PixRegistryViewProps> = ({
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* ── Тот же реестр карточками: планшет и телефон ──────────────────── */}
+      {/* Семь колонок в 400 px превращаются в ленту, по которой невозможно
+          читать: заявка целиком помещается в карточку и не требует горизонтальной
+          прокрутки. */}
+      <div className="space-y-2.5 lg:hidden">
+        {filteredRecords.length === 0 ? (
+          <div className="rounded-xl border bg-card py-10 text-center text-xs text-muted-foreground shadow-sm">
+            Записей в реестре пока нет. Создайте первую заявку кнопкой выше.
+          </div>
+        ) : (
+          filteredRecords.map((rec) => (
+            <div key={rec.id} className="rounded-xl border bg-card p-3 shadow-sm">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-mono text-sm font-bold text-foreground">{rec.caseId}</div>
+                  <div className="text-[11px] text-muted-foreground">{rec.createdAt}</div>
+                </div>
+                <div className="shrink-0">{getStatusBadge(rec.status)}</div>
+              </div>
+
+              <div className="mt-2.5 border-t pt-2.5 text-xs">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Текущий шаг
+                </div>
+                <div className="font-medium text-foreground">{rec.currentStepName}</div>
+                <div className="mt-0.5 text-[11px] text-muted-foreground">{rec.assignedTo}</div>
+              </div>
+
+              {extraFields.length > 0 && (
+                <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 border-t pt-2.5 text-xs">
+                  {extraFields.map((f) => (
+                    <div key={f.id} className="min-w-0">
+                      <dt className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {f.name}
+                      </dt>
+                      <dd className="truncate font-medium tabular-nums text-foreground">
+                        {typeof rec.data[f.code] === 'number'
+                          ? rec.data[f.code].toLocaleString('ru-RU')
+                          : String(rec.data[f.code] ?? '—')}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </div>
+          ))
+        )}
       </div>
 
       {/* Add Record Modal */}

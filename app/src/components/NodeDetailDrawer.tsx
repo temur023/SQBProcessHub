@@ -34,6 +34,17 @@ export const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
     setValidationError(null)
   }, [node])
 
+  // Панель перекрывает половину экрана, но раньше закрывалась только крестиком:
+  // привычное Escape не работало, и уйти с клавиатуры было нечем.
+  useEffect(() => {
+    if (!node) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [node, onClose])
+
   if (!node || !formData) return null
 
   const handleSave = () => {
@@ -59,7 +70,20 @@ export const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[460px] bg-card border-l shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-200">
+    <>
+      {/* Затемнение: без него панель просто ложилась поверх таблицы, и было
+          непонятно, что остальной экран сейчас не в работе. */}
+      <div
+        className="fixed inset-0 z-40 bg-black/40 animate-in fade-in duration-150"
+        onClick={onClose}
+        aria-hidden
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Свойства шага «${node.name}»`}
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-full flex-col justify-between border-l bg-card shadow-2xl animate-in slide-in-from-right duration-200 sm:w-[460px]"
+      >
       {/* Drawer Header */}
       <div className="p-4 border-b bg-muted/40 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -98,7 +122,7 @@ export const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Код шага</Label>
             <Input
@@ -150,7 +174,7 @@ export const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
         </div>
 
         {/* Lane / Department & Role */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Подразделение (Дорожка)</Label>
             <select
@@ -202,7 +226,7 @@ export const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
             {validationError}
           </p>
         )}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold flex items-center justify-between">
               <span>Норматив SLA</span>
@@ -277,19 +301,20 @@ export const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
       </div>
 
       {/* Drawer Footer */}
-      <div className="p-4 border-t bg-muted/40 flex items-center justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={onClose}>
+      <div className="flex items-center justify-end gap-2 border-t bg-muted/40 p-4">
+        <Button variant="outline" size="sm" onClick={onClose} className="flex-1 sm:flex-none">
           Отмена
         </Button>
         <Button
           size="sm"
           onClick={handleSave}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+          className="flex-1 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700 sm:flex-none"
         >
-          <Check className="w-4 h-4" />
+          <Check className="h-4 w-4" />
           Сохранить изменения
         </Button>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

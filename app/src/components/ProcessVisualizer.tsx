@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import {
   ZoomIn, ZoomOut, Maximize2, Minimize2,
-  Cpu, AlertTriangle, Info, Search, RotateCcw, Grid,
+  Cpu, AlertTriangle, Info, Search, Grid, X,
+  type LucideIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useIsDark } from '@/hooks/use-dark-mode'
 import type { BusinessProcess, ProcessEdge, ProcessNode } from '@/types/process'
 import { orthogonalizePath } from '@/lib/edge-routing'
 import { formatDuration } from '@/lib/bpmn-export'
@@ -23,6 +25,23 @@ const LANE_HEAD_DEFAULT = 44
 const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif'
 /** Допуск выравнивания линии по осям на холсте, px. */
 const CANVAS_SNAP = 7
+/** Шаг от двух часов и дольше подсвечивается как узкое место. */
+const SLOW_STEP_MINUTES = 120
+
+type FilterId = 'all' | 'rpa' | 'bottlenecks'
+
+const FILTERS: { id: FilterId; icon?: LucideIcon; label: string }[] = [
+  { id: 'all', label: 'Все' },
+  { id: 'rpa', icon: Cpu, label: 'RPA' },
+  { id: 'bottlenecks', icon: AlertTriangle, label: 'SLA' },
+]
+
+/** Активный фильтр красится в цвет того, что он показывает. */
+const FILTER_ACTIVE: Record<FilterId, string> = {
+  all: 'bg-primary text-primary-foreground',
+  rpa: 'bg-emerald-600 text-white',
+  bottlenecks: 'bg-amber-500 text-white',
+}
 
 function laneHeaderWidth(lane: ProcessNode): number {
   const m = parseStyleMap(lane.style || '')
@@ -37,7 +56,54 @@ function laneHeaderWidth(lane: ProcessNode): number {
   return LANE_HEAD_DEFAULT
 }
 
-const C = {
+/**
+ * Палитра холста.
+ *
+ * Фигуры рисуются атрибутами SVG, а не классами Tailwind, поэтому `dark:`
+ * здесь не работает и цвет приходится выбирать в коде. Раньше палитра была
+ * одна — всегда тёмная: в светлой теме карта оставалась чёрной плитой посреди
+ * белого интерфейса, и на печати регламента получалась заливка на весь лист.
+ *
+ * Роли в обеих темах совпадают, различаются только значения, поэтому вся
+ * остальная отрисовка ничего не знает о теме и просто берёт `C.<роль>`.
+ */
+type CanvasPalette = {
+  canvas: string
+  gridMinor: string
+  gridMajor: string
+  laneLine: string
+  laneHead: string
+  laneText: string
+  taskFill: string
+  taskStroke: string
+  taskText: string
+  rpaFill: string
+  rpaStroke: string
+  badFill: string
+  badStroke: string
+  edge: string
+  /** Пунктир без собственного цвета и подписи шлюзов — тише основного потока. */
+  edgeSoft: string
+  edgeHi: string
+  labelBg: string
+  labelStroke: string
+  gwStroke: string
+  start: string
+  endOk: string
+  endNo: string
+  /** Подпись под событием. */
+  caption: string
+  /** Второстепенная подпись: «ожидание …». */
+  captionMuted: string
+  storeFill: string
+  storeStroke: string
+  docFill: string
+  docStroke: string
+  timerStroke: string
+  noteStroke: string
+}
+
+const DARK_CANVAS: CanvasPalette = {
   canvas: '#1a1a1a',
   gridMinor: 'rgba(255,255,255,0.05)',
   gridMajor: 'rgba(255,255,255,0.12)',
@@ -52,12 +118,16 @@ const C = {
   badFill: '#231c0c',
   badStroke: '#e8b84a',
   edge: '#dedede',
+  edgeSoft: '#e8e8e8',
   edgeHi: '#7db7ff',
   labelBg: '#1a1a1a',
+  labelStroke: '#3a3a3a',
   gwStroke: '#e6b422',
   start: '#f3f3f3',
   endOk: '#5ee08a',
   endNo: '#ff6b6b',
+  caption: '#d8d8d8',
+  captionMuted: '#9a9a9a',
   // Артефакты и промежуточные события (2-ILOVA)
   storeFill: '#10201c',
   storeStroke: '#4fd1c5',
@@ -65,6 +135,44 @@ const C = {
   docStroke: '#d7c56a',
   timerStroke: '#c9a227',
   noteStroke: '#9aa0a6',
+}
+
+/**
+ * Светлый холст держится ближе к тому, как та же схема выглядит в draw.io и
+ * в PIX Процессной студии: белый лист, тёмный контур, цветом выделены только
+ * роботы, узкие места и артефакты.
+ */
+const LIGHT_CANVAS: CanvasPalette = {
+  canvas: '#ffffff',
+  gridMinor: 'rgba(15,23,42,0.055)',
+  gridMajor: 'rgba(15,23,42,0.13)',
+  laneLine: '#94a3b8',
+  laneHead: '#f1f5f9',
+  laneText: '#0f172a',
+  taskFill: '#ffffff',
+  taskStroke: '#334155',
+  taskText: '#0f172a',
+  rpaFill: '#ecfdf5',
+  rpaStroke: '#059669',
+  badFill: '#fffbeb',
+  badStroke: '#d97706',
+  edge: '#475569',
+  edgeSoft: '#64748b',
+  edgeHi: '#2563eb',
+  labelBg: '#ffffff',
+  labelStroke: '#cbd5e1',
+  gwStroke: '#b45309',
+  start: '#0f172a',
+  endOk: '#059669',
+  endNo: '#dc2626',
+  caption: '#334155',
+  captionMuted: '#64748b',
+  storeFill: '#ecfeff',
+  storeStroke: '#0e7490',
+  docFill: '#fefce8',
+  docStroke: '#a16207',
+  timerStroke: '#b45309',
+  noteStroke: '#64748b',
 }
 
 type Box = { x: number; y: number; w: number; h: number; cx: number; cy: number }
@@ -398,6 +506,51 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   const [isPanning, setIsPanning]       = useState(false)
   const panRef   = useRef({ ox: 0, oy: 0, px: 0, py: 0 })
   const wrapRef  = useRef<HTMLDivElement>(null)
+  /**
+   * Синхронная копия положения холста. Зум «к точке» должен пересчитать сдвиг
+   * по тому масштабу, что виден прямо сейчас, а `zoom` из состояния во время
+   * серии событий колеса отстаёт на кадр — карта уезжала бы из-под курсора.
+   */
+  const viewRef  = useRef({ zoom, x: panPos.x, y: panPos.y })
+  /** Активные пальцы на холсте — для панорамы одним и щипка двумя. */
+  const pointers = useRef(new Map<number, { x: number; y: number }>())
+  const pinchRef = useRef<{ dist: number; zoom: number } | null>(null)
+
+  const isDark = useIsDark()
+  const C = isDark ? DARK_CANVAS : LIGHT_CANVAS
+
+  /** Единственная точка, через которую меняется положение холста. */
+  const setView = useCallback((next: { zoom: number; x: number; y: number }) => {
+    viewRef.current = next
+    setZoom(next.zoom)
+    setPanPos({ x: next.x, y: next.y })
+  }, [])
+
+  /**
+   * Масштабирование с якорем: точка под курсором (или под серединой щипка)
+   * остаётся на месте. Без якоря карта при каждом повороте колеса уползает
+   * к левому верхнему углу, и на большой схеме нужную область приходится
+   * догонять перетаскиванием.
+   */
+  const zoomTo = useCallback(
+    (nextZoom: number, clientX?: number, clientY?: number) => {
+      const { zoom: z, x, y } = viewRef.current
+      const next = +Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, nextZoom)).toFixed(3)
+      if (next === z) return
+      const rect = wrapRef.current?.getBoundingClientRect()
+      if (!rect || clientX == null || clientY == null) {
+        // Без якоря сохраняем центр видимой области.
+        const cx = (rect?.width ?? 0) / 2
+        const cy = (rect?.height ?? 0) / 2
+        setView({ zoom: next, x: cx - ((cx - x) * next) / z, y: cy - ((cy - y) * next) / z })
+        return
+      }
+      const px = clientX - rect.left
+      const py = clientY - rect.top
+      setView({ zoom: next, x: px - ((px - x) * next) / z, y: py - ((py - y) * next) / z })
+    },
+    [setView],
+  )
 
   const bounds = useMemo(() => {
     let minX = Infinity
@@ -450,7 +603,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   const visibleIds = useMemo(() => {
     let list = process.nodes
     if (activeFilter === 'rpa')         list = list.filter(n => n.category === 'rpa_bot')
-    if (activeFilter === 'bottlenecks') list = list.filter(n => (n.slaMinutes || 0) >= 120)
+    if (activeFilter === 'bottlenecks') list = list.filter(n => (n.slaMinutes || 0) >= SLOW_STEP_MINUTES)
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       list = list.filter(n =>
@@ -470,27 +623,96 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
     const pad = 28
     const s = Math.min((width - pad * 2) / bounds.w, (height - pad * 2) / bounds.h, 1)
     const z = +Math.max(s, MIN_ZOOM).toFixed(2)
-    setZoom(z)
-    setPanPos({
+    setView({
+      zoom: z,
       x: (width  - bounds.w * z) / 2 - bounds.minX * z,
       y: (height - bounds.h * z) / 2 - bounds.minY * z,
     })
-  }, [bounds])
+  }, [bounds, setView])
 
-  const onMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('.nb')) return
-    e.preventDefault()
-    setIsPanning(true)
-    panRef.current = { ox: e.clientX, oy: e.clientY, px: panPos.x, py: panPos.y }
+  /** Расстояние между двумя пальцами — база для щипка. */
+  const pinchDistance = () => {
+    const [a, b] = [...pointers.current.values()]
+    return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0
   }
-  const onMouseMove = (e: React.MouseEvent) => {
+  const pinchCenter = () => {
+    const [a, b] = [...pointers.current.values()]
+    return a && b ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } : null
+  }
+
+  // Указатели вместо мыши: те же обработчики обслуживают и мышь, и палец, и
+  // перо. На планшете карту нельзя было ни сдвинуть, ни масштабировать —
+  // `onMouseDown` о касаниях не знает.
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('.nb')) return
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    e.currentTarget.setPointerCapture(e.pointerId)
+    if (pointers.current.size === 2) {
+      pinchRef.current = { dist: pinchDistance(), zoom: viewRef.current.zoom }
+      setIsPanning(false)
+      return
+    }
+    setIsPanning(true)
+    panRef.current = { ox: e.clientX, oy: e.clientY, px: viewRef.current.x, py: viewRef.current.y }
+  }
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!pointers.current.has(e.pointerId)) return
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+    if (pointers.current.size >= 2 && pinchRef.current) {
+      const dist = pinchDistance()
+      const center = pinchCenter()
+      if (dist > 0 && pinchRef.current.dist > 0) {
+        zoomTo(pinchRef.current.zoom * (dist / pinchRef.current.dist), center?.x, center?.y)
+      }
+      return
+    }
     if (!isPanning) return
-    setPanPos({
+    setView({
+      zoom: viewRef.current.zoom,
       x: panRef.current.px + e.clientX - panRef.current.ox,
       y: panRef.current.py + e.clientY - panRef.current.oy,
     })
   }
-  const onMouseUp = () => setIsPanning(false)
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    pointers.current.delete(e.pointerId)
+    if (pointers.current.size < 2) pinchRef.current = null
+    if (pointers.current.size === 0) setIsPanning(false)
+  }
+
+  /**
+   * Клавиатура работает только когда холст в фокусе: тот же компонент открыт
+   * и внутри окна просмотра выгрузки, и глобальный обработчик перехватывал бы
+   * стрелки у остальной страницы.
+   */
+  const onCanvasKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = e.shiftKey ? 120 : 40
+    const { zoom: z, x, y } = viewRef.current
+    switch (e.key) {
+      case '+':
+      case '=':
+        zoomTo(z + 0.15); break
+      case '-':
+      case '_':
+        zoomTo(z - 0.15); break
+      case '0':
+        fitToScreen(); break
+      case 'ArrowLeft':
+        setView({ zoom: z, x: x + step, y }); break
+      case 'ArrowRight':
+        setView({ zoom: z, x: x - step, y }); break
+      case 'ArrowUp':
+        setView({ zoom: z, x, y: y + step }); break
+      case 'ArrowDown':
+        setView({ zoom: z, x, y: y - step }); break
+      default:
+        return
+    }
+    e.preventDefault()
+  }
 
   useEffect(() => {
     const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsFullscreen(false) }
@@ -522,12 +744,15 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
     if (!el) return
     const handler = (e: WheelEvent) => {
       e.preventDefault()
-      const delta = e.deltaY > 0 ? -0.08 : 0.08
-      setZoom((z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, +(z + delta).toFixed(2))))
+      // Множитель, а не слагаемое: на 15 % шаг колеса ощущается одинаково и на
+      // мелком, и на крупном масштабе, тогда как фиксированные 0.08 у нижней
+      // границы перепрыгивали половину диапазона.
+      const factor = e.deltaY > 0 ? 1 / 1.12 : 1.12
+      zoomTo(viewRef.current.zoom * factor, e.clientX, e.clientY)
     }
     el.addEventListener('wheel', handler, { passive: false })
     return () => el.removeEventListener('wheel', handler)
-  }, [])
+  }, [zoomTo])
 
   const patternOffset = {
     x: ((panPos.x % (GRID_MAJOR * zoom)) + GRID_MAJOR * zoom) % (GRID_MAJOR * zoom),
@@ -535,70 +760,140 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   }
 
   return (
-    <div className={`flex flex-col bg-[#141414] rounded-xl border border-zinc-800 shadow-sm overflow-hidden transition-all duration-200 ${
+    <div className={`flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-200 ${
       isFullscreen ? 'fixed inset-0 z-50 rounded-none border-none' : 'flex-1 min-h-0 h-full'
     }`}>
-      <div className="px-3 py-2 border-b border-zinc-800 bg-[#121212] flex flex-wrap items-center justify-between gap-2 shrink-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-bold text-zinc-200 uppercase tracking-wide">BPMN Карта</span>
-          <span className="text-[10px] text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-full">
+      {/* Панель холста.
+          Собрана лентами, а не одной строкой с `flex-wrap`: на ноутбуке в один
+          ряд помещается всё, ниже `md` фильтры и управление расходятся на две
+          строки, и ни одна кнопка не выпадает за край. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-muted/40 px-2.5 py-2">
+        <div className="no-scrollbar -mx-0.5 flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto px-0.5">
+          <span className="hidden shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:inline">
+            Карта
+          </span>
+          <span className="hidden shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] tabular-nums text-muted-foreground sm:inline">
             {process.nodes.length} эл. · {process.lanes.length} дорожек
           </span>
-          <div className="h-4 w-px bg-zinc-700 mx-1" />
-          {(['all', 'rpa', 'bottlenecks'] as const).map(f => (
-            <button key={f} onClick={() => setActiveFilter(f)}
-              className={`flex items-center gap-1 px-2.5 py-1 text-xs rounded transition-colors ${
-                activeFilter === f
-                  ? f === 'rpa' ? 'bg-emerald-600 text-white'
-                  : f === 'bottlenecks' ? 'bg-amber-500 text-white'
-                  : 'bg-zinc-200 text-zinc-900'
-                  : 'border border-zinc-700 hover:bg-zinc-800 text-zinc-400'
-              }`}>
-              {f === 'all' && `Все (${process.nodes.length})`}
-              {f === 'rpa' && <><Cpu className="w-3 h-3 mr-0.5" />RPA ({process.nodes.filter(n=>n.category==='rpa_bot').length})</>}
-              {f === 'bottlenecks' && <><AlertTriangle className="w-3 h-3 mr-0.5" />SLA</>}
-            </button>
-          ))}
+          <span className="mx-0.5 hidden h-4 w-px shrink-0 bg-border sm:block" />
+          {FILTERS.map(({ id, icon: FilterIcon, label }) => {
+            const active = activeFilter === id
+            const count =
+              id === 'all'
+                ? process.nodes.length
+                : id === 'rpa'
+                ? process.nodes.filter((n) => n.category === 'rpa_bot').length
+                : process.nodes.filter((n) => (n.slaMinutes || 0) >= SLOW_STEP_MINUTES).length
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setActiveFilter(id)}
+                className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg px-2 py-1 text-xs font-medium transition-colors ${
+                  active
+                    ? FILTER_ACTIVE[id]
+                    : 'border border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                {FilterIcon && <FilterIcon className="h-3 w-3 shrink-0" />}
+                {label}
+                <span className={`tabular-nums ${active ? 'opacity-80' : 'opacity-60'}`}>{count}</span>
+              </button>
+            )
+          })}
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500" />
-            <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Поиск..." className="pl-6 h-7 text-xs w-32 bg-zinc-900 border-zinc-700 text-zinc-200" />
+        <div className="flex w-full shrink-0 items-center gap-1.5 md:w-auto">
+          <div className="relative min-w-0 flex-1 md:w-40 md:flex-none lg:w-52">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Поиск по шагам…"
+              aria-label="Поиск по шагам карты"
+              className="h-8 pl-8 pr-7 text-xs"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                aria-label="Очистить поиск"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
-          <div className="flex items-center gap-1 border-l border-zinc-700 pl-2">
-            <Button variant={showGrid ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7 text-zinc-300"
-              onClick={() => setShowGrid(v => !v)} title="Сетка 10px">
-              <Grid className="w-3.5 h-3.5" />
+
+          {/* Зум собран одним сегментом: три соседние кнопки без общей рамки
+              читались как три независимых действия. Процент — кнопка «вписать
+              в экран», а не подпись: возвращать масштаб приходится чаще всего. */}
+          <div className="flex shrink-0 items-center rounded-lg border bg-background p-0.5">
+            <Button
+              variant="ghost" size="icon" className="h-7 w-7"
+              onClick={() => zoomTo(viewRef.current.zoom - 0.15)}
+              title="Отдалить (−)" aria-label="Отдалить"
+            >
+              <ZoomOut className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-300"
-              onClick={() => setZoom(z => Math.max(MIN_ZOOM, +(z-0.15).toFixed(2)))}>
-              <ZoomOut className="w-3.5 h-3.5" />
-            </Button>
-            <span className="text-[11px] w-9 text-center font-mono text-zinc-400">{Math.round(zoom*100)}%</span>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-300"
-              onClick={() => setZoom(z => Math.min(MAX_ZOOM, +(z+0.15).toFixed(2)))}>
-              <ZoomIn className="w-3.5 h-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-300" onClick={fitToScreen} title="Вписать">
-              <RotateCcw className="w-3.5 h-3.5" />
-            </Button>
-            <Button variant={isFullscreen ? 'default' : 'ghost'} size="sm" className="h-7 gap-1 text-xs px-2 text-zinc-200"
-              onClick={() => setIsFullscreen(v => !v)}>
-              {isFullscreen ? <><Minimize2 className="w-3.5 h-3.5" />Свернуть</> : <><Maximize2 className="w-3.5 h-3.5" />На весь экран</>}
+            <button
+              type="button"
+              onClick={fitToScreen}
+              title="Вписать карту в экран (0)"
+              aria-label="Вписать карту в экран"
+              className="w-11 rounded px-1 py-1 text-[11px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <Button
+              variant="ghost" size="icon" className="h-7 w-7"
+              onClick={() => zoomTo(viewRef.current.zoom + 0.15)}
+              title="Приблизить (+)" aria-label="Приблизить"
+            >
+              <ZoomIn className="h-3.5 w-3.5" />
             </Button>
           </div>
+
+          <Button
+            variant="ghost" size="icon"
+            className={`h-8 w-8 shrink-0 ${showGrid ? 'bg-muted text-foreground' : 'text-muted-foreground'}`}
+            onClick={() => setShowGrid((v) => !v)}
+            aria-pressed={showGrid}
+            title="Сетка 10 px" aria-label="Показать сетку"
+          >
+            <Grid className="h-3.5 w-3.5" />
+          </Button>
+
+          <Button
+            variant={isFullscreen ? 'secondary' : 'ghost'}
+            size="sm"
+            className="h-8 shrink-0 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => setIsFullscreen((v) => !v)}
+            title={isFullscreen ? 'Свернуть (Esc)' : 'Развернуть карту на весь экран'}
+            aria-label={isFullscreen ? 'Свернуть карту' : 'Развернуть карту на весь экран'}
+          >
+            {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+            <span className="hidden lg:inline">{isFullscreen ? 'Свернуть' : 'На весь экран'}</span>
+          </Button>
         </div>
       </div>
 
       <div
         ref={wrapRef}
-        className={`relative flex-1 min-h-0 overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
+        tabIndex={0}
+        role="application"
+        aria-label="Холст карты процесса: перетаскивание — панорама, колесо — масштаб, стрелки — сдвиг"
+        // touch-none: без этого браузер забирает жест себе и страница
+        // прокручивается вместо того, чтобы двигать карту.
+        className={`relative flex-1 min-h-0 touch-none overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${
+          isPanning ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onKeyDown={onCanvasKeyDown}
       >
         <svg
           width="100%"
@@ -625,10 +920,10 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               <polygon points="0 0,8 3,0 6" fill={C.edgeHi} />
             </marker>
             <marker id="arr-dashed" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-              <polygon points="0 0,8 3,0 6" fill="#f0f0f0" />
+              <polygon points="0 0,8 3,0 6" fill={C.edgeSoft} />
             </marker>
             <marker id="arr-dashed-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-              <polygon points="0 0,8 3,0 6" fill="#ff6b6b" />
+              <polygon points="0 0,8 3,0 6" fill={C.endNo} />
             </marker>
             {process.edges.map(edge => {
               // динамический маркер под цвет ребра (зелёные/красные/серые пунктиры)
@@ -713,7 +1008,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                 : isAssociation
                 ? C.storeStroke
                 : isDashed
-                ? '#e8e8e8'
+                ? C.edgeSoft
                 : C.edge
               const strokeColor = hi ? C.edgeHi : baseColor
               const sw = isDashed ? 1.7 : (edge.strokeWidth ? Math.max(1, Math.min(3.5, edge.strokeWidth)) : (hi ? 2 : 1.35))
@@ -739,7 +1034,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               const faded = !visibleIds.has(node.id)
               const sel   = selectedNodeId === node.id
               const isRpa = node.category === 'rpa_bot'
-              const isBad = (node.slaMinutes || 0) >= 120
+              const isBad = (node.slaMinutes || 0) >= SLOW_STEP_MINUTES
               const isRej = node.id.toLowerCase().includes('reject') ||
                             node.name.toLowerCase().includes('отказ') ||
                             node.name.toLowerCase().includes('rad etildi')
@@ -763,7 +1058,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                         x={cx}
                         y={vpos === 'top' ? y - 6 - (cap.lines.length - 1 - i) * (cap.fontSize + 2) : y + h + 11 + i * (cap.fontSize + 2)}
                         textAnchor="middle"
-                        fontSize={cap.fontSize} fill="#d8d8d8"
+                        fontSize={cap.fontSize} fill={C.caption}
                         style={{ userSelect: 'none', fontFamily: FONT }}>
                         {line}
                       </text>
@@ -914,7 +1209,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                     </text>
                     {cap && cap.lines.map((line, i) => (
                       <text key={i} x={cx} y={y - 6 - (cap.lines.length - 1 - i) * (cap.fontSize + 1)}
-                        textAnchor="middle" fontSize={cap.fontSize} fill="#e8e8e8"
+                        textAnchor="middle" fontSize={cap.fontSize} fill={C.caption}
                         style={{ userSelect: 'none', fontFamily: FONT }}>
                         {line}
                       </text>
@@ -984,7 +1279,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                         )}
                         {!!node.waitMinutes && (
                           <text x={bx} y={y + h + (sla ? 23 : 12)} textAnchor="middle"
-                            fontSize="9" fill="#9a9a9a"
+                            fontSize="9" fill={C.captionMuted}
                             style={{ userSelect: 'none', fontFamily: FONT }}>
                             {`ожидание ${slaLabel(node.waitMinutes)}`}
                           </text>
@@ -1045,9 +1340,9 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               return labels.map(lb => (
                 <g key={`lbl-${lb.id}`}>
                   <rect x={lb.lx - lb.lw / 2} y={lb.ly - 7} width={lb.lw} height={14} rx={3}
-                    fill={C.labelBg} stroke="#3a3a3a" strokeWidth="0.7" />
+                    fill={C.labelBg} stroke={C.labelStroke} strokeWidth="0.7" />
                   <text x={lb.lx} y={lb.ly + 3} textAnchor="middle"
-                    fontSize={lb.cap.fontSize} fill="#e8e8e8"
+                    fontSize={lb.cap.fontSize} fill={C.taskText}
                     style={{ userSelect: 'none', fontFamily: FONT }}>
                     {lb.cap.lines[0]}
                   </text>
@@ -1088,24 +1383,42 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
           </g>
         </svg>
 
-        <div className="absolute bottom-3 right-3 pointer-events-none bg-black/70 border border-zinc-700 rounded px-2 py-0.5 text-[11px] font-mono text-zinc-400 shadow-sm select-none">
-          {Math.round(zoom * 100)}%
-        </div>
+        {/* Ничего не найдено — иначе после неудачного поиска остаётся пустой
+            холст без объяснения, почему все фигуры погасли. */}
+        {(searchQuery.trim() || activeFilter !== 'all') && visibleIds.size === 0 && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
+            <div className="pointer-events-auto max-w-xs rounded-xl border bg-card/95 p-4 text-center shadow-lg backdrop-blur">
+              <Search className="mx-auto h-5 w-5 text-muted-foreground" />
+              <p className="mt-2 text-sm font-medium">Шаги не найдены</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                По этому запросу и фильтру на карте нет ни одной фигуры.
+              </p>
+              <Button
+                variant="outline" size="sm" className="mt-3 h-7 text-xs"
+                onClick={() => { setSearchQuery(''); setActiveFilter('all') }}
+              >
+                Сбросить фильтры
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="px-3 py-1.5 bg-[#121212] border-t border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-400 shrink-0">
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded-full border-2 border-zinc-200 inline-block" />Старт</div>
-          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded-full border-2 border-emerald-400 inline-block" />Успех</div>
-          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded-full border-2 border-rose-400 inline-block" />Отказ</div>
-          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-emerald-950 border border-emerald-400 inline-block" />PIX RPA</div>
-          <div className="flex items-center gap-1"><span className="h-3 w-3 inline-block border border-amber-400" style={{ transform: 'rotate(45deg)' }} />Шлюз</div>
-          <div className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-amber-950 border border-amber-400 inline-block" />SLA&gt;2ч</div>
+      {/* Легенда прокручивается вбок: шесть обозначений и подсказка не влезают
+          в 400 px, а переносом строки они съедали высоту самой карты. */}
+      <div className="flex shrink-0 items-center gap-3 border-t bg-muted/40 px-3 py-1.5 text-[10px] text-muted-foreground">
+        <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-3 overflow-x-auto whitespace-nowrap">
+          <span className="flex shrink-0 items-center gap-1"><span className="inline-block h-3 w-3 rounded-full border-2 border-foreground/70" />Старт</span>
+          <span className="flex shrink-0 items-center gap-1"><span className="inline-block h-3 w-3 rounded-full border-2 border-emerald-500" />Успех</span>
+          <span className="flex shrink-0 items-center gap-1"><span className="inline-block h-3 w-3 rounded-full border-2 border-rose-500" />Отказ</span>
+          <span className="flex shrink-0 items-center gap-1"><span className="inline-block h-3 w-3 rounded border border-emerald-500 bg-emerald-500/15" />PIX RPA</span>
+          <span className="flex shrink-0 items-center gap-1"><span className="inline-block h-3 w-3 rotate-45 border border-amber-500" />Шлюз</span>
+          <span className="flex shrink-0 items-center gap-1"><span className="inline-block h-3 w-3 rounded border border-amber-500 bg-amber-500/15" />SLA&nbsp;&gt;&nbsp;2&nbsp;ч</span>
         </div>
-        <div className="flex items-center gap-1">
-          <Info className="w-3 h-3 text-sky-400" />
-          Клик — детали · Колёсико — зум · Тащить — пан
-        </div>
+        <span className="hidden shrink-0 items-center gap-1 xl:flex">
+          <Info className="h-3 w-3 text-sky-500" />
+          Клик — детали · колесо — масштаб · перетаскивание — сдвиг
+        </span>
       </div>
     </div>
   )

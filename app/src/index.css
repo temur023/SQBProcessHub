@@ -2,66 +2,79 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Палитра платформы.
+ *
+ * Нейтральные тона переведены на холодную сине-серую шкалу (hue ~215): она
+ * читается как банковский интерфейс, а не как стандартная заготовка, и лучше
+ * уживается с изумрудным акцентом бренда и с тёмным холстом карты процесса.
+ *
+ * Акцентные цвета (emerald / amber / rose / sky) компоненты берут прямо из
+ * палитры Tailwind: они уже описаны с парой `dark:` в каждом месте, и заводить
+ * под них токены значило бы переписать половину интерфейса ради того же цвета.
+ */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --background: 210 40% 99%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 13%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 13%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 19% 45%;
+    --accent: 210 40% 94%;
+    --accent-foreground: 222 47% 13%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 89%;
+    --input: 214 32% 89%;
+    /* Кольцо фокуса — изумрудное: это единственный цвет бренда, который обязан
+       быть виден на любом элементе, включая нейтральные кнопки. */
+    --ring: 160 84% 36%;
     --radius: 0.625rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 215 25% 27%;
+    --sidebar-primary: 222 47% 13%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 94%;
+    --sidebar-accent-foreground: 222 47% 13%;
+    --sidebar-border: 214 32% 89%;
+    --sidebar-ring: 160 84% 36%;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 222 47% 7%;
+    --foreground: 210 40% 96%;
+    --card: 222 44% 10%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 44% 11%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 210 40% 96%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 33% 16%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 217 33% 15%;
+    --muted-foreground: 215 20% 64%;
+    --accent: 217 33% 18%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 33% 19%;
+    --input: 217 33% 19%;
+    --ring: 160 70% 45%;
+    --sidebar-background: 222 47% 9%;
+    --sidebar-foreground: 210 40% 92%;
+    --sidebar-primary: 160 70% 45%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 217 33% 16%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 217 33% 19%;
+    --sidebar-ring: 160 70% 45%;
   }
 }
 
@@ -69,7 +82,94 @@
   * {
     @apply border-border;
   }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Единое кольцо фокуса для клавиатуры. Мышью его не видно, поэтому оно
+     ничего не портит визуально, но без него интерфейс невозможно пройти с
+     клавиатуры — а для банковского регламента это обязательное требование. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Числа в метриках должны стоять в колонку: при пропорциональных цифрах
+     значения «131» и «2.2» прыгают при каждом пересчёте. */
+  th,
+  td,
+  .metric-value {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Полосы прокрутки в тон интерфейсу: системные светлые полосы на тёмной
+     карте процесса выглядят чужеродно. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border: 2px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+    background-clip: content-box;
+  }
+}
+
+@layer utilities {
+  /* Полосу прокрутки у горизонтальных лент (навигация, фильтры) прячем: она
+     съедает высоту строки и на узком экране перекрывает подписи. Класс уже
+     стоял в разметке, но нигде не был описан. */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Горизонтальные ленты доводятся до края вкладки, а не останавливаются
+     посередине. */
+  .snap-strip {
+    scroll-snap-type: x proximity;
+  }
+
+  .snap-strip > * {
+    scroll-snap-align: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
