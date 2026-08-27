@@ -1,0 +1,12 @@
+# Виртуальное окружение бэкенда: тысячи чужих файлов, которые git иначе
+# начинает нормализовать по core.autocrlf и сыпать предупреждениями
+# «LF will be replaced by CRLF».
+backend/venv/
+
+# Байткод Python
+__pycache__/
+*.pyc
+
+# Секреты и локальное состояние
+.env
+backend/app/data/process_store.json
