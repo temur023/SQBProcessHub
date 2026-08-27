@@ -21,7 +21,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.models.process import Geometry, ProcessEdge, ProcessEdgePoint, ProcessNode
 from app.services.drawio_parser import parse_drawio_xml
-from app.services.bpmn_exporter import generate_bpmn_xml, iso_duration
+from app.services.bpmn_exporter import (
+    duration_label,
+    generate_bpmn_xml,
+    iso_duration,
+    step_duration_text,
+)
 from app.services.edge_routing import orthogonal_waypoints
 from app.services.pmm_exporter import generate_pmm_zip, map_slug
 
@@ -29,6 +34,8 @@ BPMN_NS = {
     "bpmn": "http://www.omg.org/spec/BPMN/20100524/MODEL",
     "bpmndi": "http://www.omg.org/spec/BPMN/20100524/DI",
 }
+
+DC_BOUNDS = "{http://www.omg.org/spec/DD/20100524/DC}Bounds"
 
 METHODOLOGY_MAP = """<mxGraphModel>
   <root>
@@ -277,8 +284,97 @@ class BpmnExportTest(unittest.TestCase):
                 )
 
     def test_timer_event_carries_iso_duration(self):
-        durations = [d.text for d in self.proc.iter("{%s}timeDuration" % BPMN_NS["bpmn"])]
+        catching = self.proc.findall("bpmn:intermediateCatchEvent", BPMN_NS)
+        durations = [
+            d.text
+            for el in catching
+            for d in el.iter("{%s}timeDuration" % BPMN_NS["bpmn"])
+        ]
         self.assertEqual(durations, ["PT30M"])
+
+    def test_step_duration_is_visible_on_the_diagram(self):
+        """Часы у шага и время под ними обязаны доживать до схемы.
+
+        До этого ST/WT уходили только в ``documentation``: в Процессной студии
+        карта открывалась без единой цифры, и сотрудник сверял длительность по
+        отдельному регламенту.
+        """
+        markers = {
+            el.get("attachedToRef"): el
+            for el in self.proc.findall("bpmn:boundaryEvent", BPMN_NS)
+        }
+        marker = markers.get("task_a")
+        self.assertIsNotNone(marker, "у шага с ST нет значка длительности")
+        self.assertEqual(marker.get("name"), "5 мин")
+        self.assertEqual(
+            marker.get("cancelActivity"), "false",
+            "значок обязан быть некрывающим: он помечает время, а не прерывает шаг",
+        )
+        self.assertIsNotNone(marker.find("bpmn:timerEventDefinition", BPMN_NS))
+        self.assertEqual(
+            marker.findtext("bpmn:timerEventDefinition/bpmn:timeDuration", None, BPMN_NS),
+            "PT5M",
+        )
+
+    def test_duration_marker_sits_in_the_corner_of_its_step(self):
+        marker = next(
+            el for el in self.proc.findall("bpmn:boundaryEvent", BPMN_NS)
+            if el.get("attachedToRef") == "task_a"
+        )
+        step = next(n for n in self.process.nodes if n.id == "task_a")
+        plane = self.root.find(".//bpmndi:BPMNPlane", BPMN_NS)
+        shape = next(
+            s for s in plane.findall("bpmndi:BPMNShape", BPMN_NS)
+            if s.get("bpmnElement") == marker.get("id")
+        )
+        box = shape.find(DC_BOUNDS)
+        cx = float(box.get("x")) + float(box.get("width")) / 2
+        cy = float(box.get("y")) + float(box.get("height")) / 2
+        self.assertAlmostEqual(
+            cy, step.geometry.y + step.geometry.height, delta=1,
+            msg="часы должны сидеть на нижней грани шага",
+        )
+        self.assertTrue(
+            step.geometry.x + step.geometry.width / 2 <= cx <= step.geometry.x + step.geometry.width,
+            f"значок ушёл из правого нижнего угла шага: {cx}",
+        )
+        self.assertIsNotNone(
+            shape.find("bpmndi:BPMNLabel", BPMN_NS),
+            "время без рамки подписи импортёр разложит в столбец поверх соседей",
+        )
+
+    def test_duration_marker_does_not_change_the_flow(self):
+        marker_ids = {el.get("id") for el in self.proc.findall("bpmn:boundaryEvent", BPMN_NS)}
+        self.assertTrue(marker_ids, "значков длительности нет вовсе")
+        for flow in self.proc.findall("bpmn:sequenceFlow", BPMN_NS):
+            self.assertNotIn(flow.get("sourceRef"), marker_ids)
+            self.assertNotIn(flow.get("targetRef"), marker_ids)
+
+    def test_duration_marker_joins_the_lane_of_its_step(self):
+        refs = {r.text for r in self.proc.iter("{%s}flowNodeRef" % BPMN_NS["bpmn"])}
+        for el in self.proc.findall("bpmn:boundaryEvent", BPMN_NS):
+            if el.get("attachedToRef") in refs:
+                self.assertIn(
+                    el.get("id"), refs,
+                    "дорожка без ссылки на значок теряет часы своего шага",
+                )
+
+    def test_duration_label_formatting(self):
+        self.assertEqual(duration_label(45), "45 мин")
+        self.assertEqual(duration_label(60), "1 ч")
+        self.assertEqual(duration_label(90), "1 ч 30 мин")
+        self.assertEqual(duration_label(2880), "2 дн")
+        self.assertEqual(duration_label(0), "")
+        self.assertEqual(duration_label(None), "")
+
+    def test_wait_time_joins_the_step_duration(self):
+        node = ProcessNode(
+            id="s", name="Шаг", type="userTask", slaMinutes=30, waitMinutes=15,
+            geometry=Geometry(x=0, y=0, width=120, height=80), style="",
+        )
+        self.assertEqual(step_duration_text(node), "30 мин · ожидание 15 мин")
+        node.slaMinutes = 0
+        self.assertEqual(step_duration_text(node), "ожидание 15 мин")
 
     def test_iso_duration_formatting(self):
         self.assertEqual(iso_duration(45), "PT45M")
@@ -406,6 +502,32 @@ class PmmExportTest(unittest.TestCase):
                 self.assertGreaterEqual(y, 0, child.get("label"))
                 self.assertLessEqual(x + w, rw, child.get("label"))
                 self.assertLessEqual(y + h, rh, child.get("label"))
+
+    def test_step_duration_is_drawn_on_the_pix_map(self):
+        """Часы со временем шага обязаны доехать до карты студии.
+
+        Без них .pmm открывается как схема без единой цифры: длительность
+        операции остаётся только в отдельном регламенте.
+        """
+        timers = [
+            n for road in self.roads for n in road.findall("node")
+            if n.get("type") == "intermediate_event_catch_timer"
+        ]
+        labels = {n.get("label") for n in timers}
+        self.assertIn("5 мин", labels, "время шага «Hujjatlarni qabul qilish» потерялось")
+        self.assertIn("10 мин", labels, "время шага «Dalolatnoma tuzish» потерялось")
+
+    def test_duration_marker_is_not_connected_to_anything(self):
+        timer_ids = {
+            n.get("id") for road in self.roads for n in road.findall("node")
+            if n.get("type") == "intermediate_event_catch_timer"
+        }
+        # Собственный таймер-ожидание карты связями соединён, значок — нет.
+        marker_ids = timer_ids - {n.get("id") for n in self.root.iter("node") if n.get("label", "").startswith("Kutish")}
+        self.assertTrue(marker_ids)
+        for connector in self.root.findall("connector"):
+            self.assertNotIn(connector.get("sourceNodeId"), marker_ids)
+            self.assertNotIn(connector.get("targetNodeId"), marker_ids)
 
     def test_decoration_line_is_not_in_the_map(self):
         # Идентификаторы в .pmm — uuid5 от исходных, поэтому сверяем по числу:

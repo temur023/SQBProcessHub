@@ -20,10 +20,11 @@
   геометрию как есть, и разрыв между полосами виден на схеме.
 """
 import re
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple
 
 from app.models.process import (
     ARTIFACT_NODE_TYPES,
+    TASK_NODE_TYPES,
     BusinessProcess,
     ProcessEdge,
     ProcessNode,
@@ -31,9 +32,11 @@ from app.models.process import (
 from app.services.edge_routing import message_flow_endpoints, orthogonal_waypoints
 from app.services.layout import (
     EXTERNAL_LABEL_TYPES,
+    Box,
     choose_label_box,
     edge_label_candidates,
     external_label_candidates,
+    label_size,
     node_obstacles,
     segment_boxes,
 )
@@ -84,6 +87,126 @@ def iso_duration(minutes: Optional[int]) -> str:
     if value >= 60 and value % 60 == 0:
         return f'PT{value // 60}H'
     return f'PT{value}M'
+
+
+#: Диаметр значка события в BPMNDI: bpmn.io и Процессная студия рисуют 36 px.
+EVENT_SIDE = 36
+
+#: Отступ значка длительности от правого края шага, px.
+_DURATION_INSET = 20
+
+
+def duration_label(minutes: Optional[float]) -> str:
+    """Человекочитаемая длительность: «45 мин», «2 ч», «1 ч 30 мин», «2 дн»."""
+    value = int(round(minutes or 0))
+    if value <= 0:
+        return ''
+    if value < 60:
+        return f'{value} мин'
+    hours, rest = divmod(value, 60)
+    if rest:
+        return f'{hours} ч {rest} мин'
+    if hours >= 24 and hours % 24 == 0:
+        return f'{hours // 24} дн'
+    return f'{hours} ч'
+
+
+def step_duration_text(node: ProcessNode) -> str:
+    """Подпись под часами у шага: время операции и, если есть, ожидание."""
+    st = duration_label(node.slaMinutes)
+    wt = duration_label(node.waitMinutes)
+    if st and wt:
+        return f'{st} · ожидание {wt}'
+    if wt:
+        return f'ожидание {wt}'
+    return st
+
+
+class DurationMarker(NamedTuple):
+    """Значок часов у шага: граничный таймер плюс подпись со временем.
+
+    На карте draw.io время операции нарисовано мелкой фигурой-таймером в углу
+    шага, и холст банка показывает его там же. В BPMN это время жило только в
+    ``documentation``: в Процессной студии карта открывалась без единой цифры,
+    и сотруднику приходилось сверяться с регламентом отдельно.
+
+    Некрывающий (``cancelActivity="false"``) граничный таймер — единственная
+    конструкция BPMN, которую импортёры рисуют ровно там, где значок стоит на
+    исходной карте: на границе фигуры. Поток она не меняет — у события нет
+    исходящих переходов, оно только помечает длительность.
+    """
+
+    node: ProcessNode
+    marker_id: str
+    text: str
+    minutes: int
+    cx: int
+    cy: int
+
+
+def duration_markers(
+    flow_nodes: List[ProcessNode],
+    id_of: Dict[str, str],
+    used: Dict[str, str],
+    taken: set,
+) -> List[DurationMarker]:
+    """Значки длительности для шагов, где проставлено ST или WT.
+
+    Граничное событие BPMN разрешено только у активности, поэтому события и
+    шлюзы значка не получают: их время и так уходит в ``timerEventDefinition``
+    самого события.
+    """
+    markers: List[DurationMarker] = []
+    for node in flow_nodes:
+        if node.type not in TASK_NODE_TYPES:
+            continue
+        text = step_duration_text(node)
+        if not text:
+            continue
+        geo = node.geometry
+        # Узкий шаг значком не разрезать пополам: у него часы встают по центру
+        # нижней грани, у обычного — в правом нижнем углу, как в draw.io.
+        offset = max(geo.width - _DURATION_INSET, geo.width / 2)
+        markers.append(DurationMarker(
+            node=node,
+            marker_id=_safe_id(f'Duration_{id_of[node.id]}', 'Duration', used, taken),
+            text=text,
+            minutes=int(node.slaMinutes or node.waitMinutes or 0),
+            cx=int(round(geo.x + offset)),
+            cy=int(geo.y + geo.height),
+        ))
+    return markers
+
+
+def marker_box(marker: DurationMarker) -> Box:
+    """Рамка самого значка: круг события сидит на границе шага."""
+    half = EVENT_SIDE // 2
+    return (marker.cx - half, marker.cy - half, EVENT_SIDE, EVENT_SIDE)
+
+
+def _duration_label_candidates(marker: DurationMarker) -> List[Box]:
+    """Куда положить время: под часами, затем правее, левее и выше."""
+    width, height = label_size(marker.text)
+    half = EVENT_SIDE // 2
+    return [
+        (marker.cx - width // 2, marker.cy + half + 2, width, height),
+        (marker.cx + half + 4, marker.cy - height // 2, width, height),
+        (marker.cx - half - 4 - width, marker.cy - height // 2, width, height),
+        (marker.cx - width // 2, marker.cy - half - 2 - height, width, height),
+    ]
+
+
+def _duration_marker_xml(marker: DurationMarker, attached_to: str) -> List[str]:
+    return [
+        f'    <bpmn:boundaryEvent id="{escape_xml(marker.marker_id)}"'
+        f' name="{escape_xml(marker.text)}"'
+        f' attachedToRef="{escape_xml(attached_to)}" cancelActivity="false">',
+        '      <bpmn:timerEventDefinition>',
+        '        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">'
+        f'{iso_duration(marker.minutes)}</bpmn:timeDuration>',
+        '      </bpmn:timerEventDefinition>',
+        '    </bpmn:boundaryEvent>',
+    ]
 
 
 def _edge_waypoints(
@@ -314,6 +437,9 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
     for edge in message_flows:
         id_of[edge.id] = _safe_id(edge.id, 'MessageFlow', used, taken)
 
+    markers = duration_markers(flow_nodes, id_of, used, taken)
+    marker_of = {m.node.id: m for m in markers}
+
     incoming_by_node: Dict[str, List[str]] = {n.id: [] for n in flow_nodes}
     outgoing_by_node: Dict[str, List[str]] = {n.id: [] for n in flow_nodes}
     for edge in sequence_edges:
@@ -384,9 +510,18 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
                 f'      <bpmn:lane id="{escape_xml(id_of[lane.id])}" name="{escape_xml(lane.name)}">'
             )
             for child in flow_nodes:
-                if child.laneId == lane.id:
+                if child.laneId != lane.id:
+                    continue
+                xml.append(
+                    f'        <bpmn:flowNodeRef>{escape_xml(id_of[child.id])}</bpmn:flowNodeRef>'
+                )
+                # Значок длительности — тоже узел потока: дорожка без
+                # ссылки на него импортируется без часов у своих шагов.
+                marker = marker_of.get(child.id)
+                if marker is not None:
                     xml.append(
-                        f'        <bpmn:flowNodeRef>{escape_xml(id_of[child.id])}</bpmn:flowNodeRef>'
+                        '        <bpmn:flowNodeRef>'
+                        f'{escape_xml(marker.marker_id)}</bpmn:flowNodeRef>'
                     )
             xml.append('      </bpmn:lane>')
         xml.append('    </bpmn:laneSet>')
@@ -429,6 +564,10 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
             xml.append(f'    </{tag}>')
         else:
             xml.append(f'    <{tag} id="{nid}"{name_attr}{extra} />')
+
+        marker = marker_of.get(node.id)
+        if marker is not None:
+            xml.extend(_duration_marker_xml(marker, nid))
 
     # ── 3. Артефакты-элементы потока: хранилища и документы ─────────────────
     for node in artifact_nodes:
@@ -550,6 +689,9 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         routes.append((edge, _edge_waypoints(edge, src_node, tgt_node)))
 
     taken_boxes: List[Tuple[int, int, int, int]] = node_obstacles(all_nodes)
+    # Часы у шага занимают место на карте так же, как фигура: подпись связи,
+    # положенная на них, скрывает цифру.
+    taken_boxes.extend(marker_box(m) for m in markers)
     # Линии связей — тоже препятствие: подпись, положенная на связь, читается
     # как перечёркнутая.
     for _, route in routes:
@@ -572,6 +714,14 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         )]
         box = choose_label_box(external_label_candidates(node), obstacles)
         node_label_of[node.id] = box
+        taken_boxes.append(box)
+
+    # Время под часами кладём последним: оно уступает место подписям связей
+    # и событий, а не наоборот — цифру читают, подойдя к конкретному шагу.
+    marker_label_of: Dict[str, Box] = {}
+    for marker in markers:
+        box = choose_label_box(_duration_label_candidates(marker), taken_boxes)
+        marker_label_of[marker.marker_id] = box
         taken_boxes.append(box)
 
     def _label_xml(box: Tuple[int, int, int, int], indent: str) -> List[str]:
@@ -597,6 +747,17 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         if node.id in node_label_of:
             xml.extend(_label_xml(node_label_of[node.id], '        '))
         xml.append('      </bpmndi:BPMNShape>')
+
+        marker = marker_of.get(node.id)
+        if marker is not None:
+            mx, my, mw, mh = marker_box(marker)
+            xml.append(
+                f'      <bpmndi:BPMNShape id="{escape_xml(marker.marker_id)}_di" '
+                f'bpmnElement="{escape_xml(marker.marker_id)}">'
+            )
+            xml.append(f'        <dc:Bounds x="{mx}" y="{my}" width="{mw}" height="{mh}" />')
+            xml.extend(_label_xml(marker_label_of[marker.marker_id], '        '))
+            xml.append('      </bpmndi:BPMNShape>')
 
     for edge, route in routes:
         xml.append(

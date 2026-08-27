@@ -761,7 +761,7 @@ function classifyVertex(
   return 'userTask'
 }
 
-function classifyCategory(type: NodeType, name: string, style: string): StepCategory {
+export function classifyCategory(type: NodeType, name: string, style: string): StepCategory {
   const lower = (name + ' ' + style).toLowerCase()
   if (isArtifactNode(type)) return type === 'dataStore' ? 'api_service' : 'manual'
   if (type === 'startEvent' || type === 'endEvent' || type === 'intermediateTimerEvent' || type === 'intermediateMessageEvent')
@@ -777,7 +777,7 @@ function classifyCategory(type: NodeType, name: string, style: string): StepCate
   return 'manual'
 }
 
-function detectSystem(name: string, laneName: string): string {
+export function detectSystem(name: string, laneName: string): string {
   const lower = (name + ' ' + laneName).toLowerCase()
   if (lower.includes('rpa') || lower.includes('робот') || lower.includes('avtomat sms')) return 'PIX RPA'
   if (lower.includes('nibbd')) return 'NIBBD / ЦБ РУз'

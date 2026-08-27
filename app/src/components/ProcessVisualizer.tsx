@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { BusinessProcess, ProcessEdge, ProcessNode } from '@/types/process'
 import { orthogonalizePath } from '@/lib/edge-routing'
+import { formatDuration } from '@/lib/bpmn-export'
 
 interface ProcessVisualizerProps {
   process: BusinessProcess
@@ -374,11 +375,13 @@ function fitLaneLabel(name: string, laneHeight: number): { lines: string[]; font
   return { lines, fontSize: fs }
 }
 
+/**
+ * Длительность у значка часов. Формат общий с выгрузкой (`bpmn-export`):
+ * холст и файл, открытый в Процессной студии, обязаны показывать шагу одно
+ * и то же время одними и теми же словами.
+ */
 function slaLabel(mins?: number): string {
-  if (mins == null) return ''
-  if (mins < 1) return `${mins} min`
-  if (mins % 60 === 0 && mins >= 60) return `${mins / 60} ч`
-  return `${mins} min`
+  return formatDuration(mins)
 }
 
 export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
@@ -956,7 +959,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                       </text>
                     ))}
                   </g>
-                  {sla && (() => {
+                  {(sla || !!node.waitMinutes) && (() => {
                     // Бейдж длительности — как в draw.io: часы в правом нижнем
                     // углу шага и время под ними. Сама фигура-таймер в модель не
                     // попадает (её время уходит в ST шага), и без бейджа на карте
@@ -972,13 +975,15 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                         <path d={`M${bx},${by - 3.4} L${bx},${by} L${bx + 2.8},${by + 1.6}`}
                           fill="none" stroke={C.timerStroke} strokeWidth={1.1}
                           strokeLinecap="round" strokeLinejoin="round" />
-                        <text x={bx} y={y + h + 12} textAnchor="middle"
-                          fontSize="9.5" fill={C.timerStroke}
-                          style={{ userSelect: 'none', fontFamily: FONT }}>
-                          {sla}
-                        </text>
+                        {!!sla && (
+                          <text x={bx} y={y + h + 12} textAnchor="middle"
+                            fontSize="9.5" fill={C.timerStroke}
+                            style={{ userSelect: 'none', fontFamily: FONT }}>
+                            {sla}
+                          </text>
+                        )}
                         {!!node.waitMinutes && (
-                          <text x={bx} y={y + h + 23} textAnchor="middle"
+                          <text x={bx} y={y + h + (sla ? 23 : 12)} textAnchor="middle"
                             fontSize="9" fill="#9a9a9a"
                             style={{ userSelect: 'none', fontFamily: FONT }}>
                             {`ожидание ${slaLabel(node.waitMinutes)}`}

@@ -10,6 +10,7 @@ import {
   Clock,
   Sparkles,
   Server,
+  FileSearch,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +23,7 @@ interface HeaderProps {
   setActiveTab: (tab: string) => void
   onOpenImport: () => void
   onOpenExport: () => void
+  onOpenViewer: () => void
   onExportExcel: () => void
 }
 
@@ -31,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   onOpenImport,
   onOpenExport,
+  onOpenViewer,
   onExportExcel,
 }) => {
   const [isBackendOnline, setIsBackendOnline] = useState<boolean | null>(null)
@@ -117,6 +120,17 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <UploadCloud className="w-4 h-4 text-emerald-600" />
               <span>Импорт Draw.io</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenViewer}
+              className="gap-1.5 text-xs font-medium h-9 hover:bg-muted"
+              title="Открыть готовый .bpmn или .pmm и увидеть карту так, как её получит PIX"
+            >
+              <FileSearch className="w-4 h-4 text-sky-600" />
+              <span className="hidden sm:inline">Просмотр BPMN / PMM</span>
             </Button>
 
             <Button

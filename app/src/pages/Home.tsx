@@ -10,6 +10,7 @@ import { ProcessImportModal } from '@/components/ProcessImportModal'
 import { ImportReport } from '@/components/ImportReport'
 import { NodeDetailDrawer } from '@/components/NodeDetailDrawer'
 import { ExportDrawer } from '@/components/ExportDrawer'
+import { ExportViewerModal } from '@/components/ExportViewerModal'
 import { generateProcessRegulationCsv, downloadFile } from '@/lib/processet-export'
 import { saveProcessToBackend, listProcessesFromBackend, loadProcessFromBackend } from '@/lib/api'
 import { analyzeProcessConformance } from '@/lib/conformance'
@@ -23,6 +24,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<string>('visualizer')
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
+  const [isViewerOpen, setIsViewerOpen] = useState(false)
   const [selectedNode, setSelectedNode] = useState<ProcessNode | null>(null)
   const [backendProcesses, setBackendProcesses] = useState<Array<{id: string, name: string}>>([])
   const [selectedBackendProcess, setSelectedBackendProcess] = useState<string>('')
@@ -129,7 +131,9 @@ export default function Home() {
 
   return (
     <div className="h-screen overflow-hidden bg-background text-foreground flex flex-col">
-      <Toaster position="top-right" richColors />
+      {/* closeButton: у сообщения в углу должен быть крестик — часть
+          уведомлений живёт до 8 секунд, и закрыть их было нечем. */}
+      <Toaster position="top-right" richColors closeButton />
 
       {/* Backend process selector bar */}
       {(backendProcesses.length > 0) && (
@@ -156,6 +160,7 @@ export default function Home() {
         setActiveTab={setActiveTab}
         onOpenImport={() => setIsImportOpen(true)}
         onOpenExport={() => setIsExportOpen(true)}
+        onOpenViewer={() => setIsViewerOpen(true)}
         onExportExcel={handleExportExcel}
       />
 
@@ -224,6 +229,13 @@ export default function Home() {
         open={isExportOpen}
         onOpenChange={setIsExportOpen}
         process={currentProcess}
+      />
+
+      <ExportViewerModal
+        open={isViewerOpen}
+        onOpenChange={setIsViewerOpen}
+        process={currentProcess}
+        onLoadIntoWorkspace={handleProcessLoaded}
       />
     </div>
   )

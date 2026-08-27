@@ -158,6 +158,30 @@ export async function fetchBpmnXml(processId: string): Promise<string | null> {
   return null
 }
 
+/**
+ * Нативный пакет .pmm в том виде, в каком его отдаст скачивание.
+ *
+ * Клиентского сборщика .pmm нет — пакет собирает только бэкенд, — поэтому
+ * просмотр этой выгрузки без запущенного FastAPI невозможен, и вызывающий код
+ * обязан сказать об этом сотруднику, а не показать пустое окно.
+ */
+export async function fetchPmmPackage(processId: string): Promise<ArrayBuffer> {
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/import/${encodeURIComponent(processId)}/export/pmm`)
+  } catch {
+    throw new ExportUnavailableError(
+      'Просмотр .pmm требует запущенного бэкенда FastAPI. Запустите backend/start.sh и повторите.',
+    )
+  }
+  if (!res.ok) {
+    throw new ExportUnavailableError(
+      `Сервер вернул ${res.status}. Нативный пакет .pmm собирается только на бэкенде.`,
+    )
+  }
+  return await res.arrayBuffer()
+}
+
 /** Trigger direct backend file download with fallback */
 export async function triggerExportDownload(
   process: BusinessProcess,

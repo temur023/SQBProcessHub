@@ -97,7 +97,7 @@ python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 | Фигура на карте draw.io | Модель | BPMN 2.0 | PIX `.pmm` |
 | :--- | :--- | :--- | :--- |
-| мелкий таймер без связей, «5 min» | ST шага (`slaMinutes`) | `documentation` | — |
+| мелкий таймер без связей, «5 min» | ST шага (`slaMinutes`) | `documentation` + граничный таймер-значок | `intermediate_event_catch_timer` 24×24 у грани шага |
 | таймер в потоке, «Kutish vaqti 30 min» | `intermediateTimerEvent` | `intermediateCatchEvent` + `timerEventDefinition` | `intermediate_event_catch_timer` |
 | `shape=datastore` (IABS, EHA, EDO) | `dataStore` | `dataStoreReference` | `dataStorage` |
 | `mxgraph.bpmn.data2` (Dalolatnoma) | `dataObject` | `dataObjectReference` | `dataObject` |
@@ -129,10 +129,32 @@ python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
   имена элементов нотаций (`dfd_process`, `c4_person`, `app_component`)
   заданы студией, и самодельный каталог рискует не пройти её валидацию.
 
+### Часы со временем шага в выгрузке
+
+Время операции (ST) и ожидания (WT) раньше уезжало только в
+`bpmn:documentation`: в Процессной студии карта открывалась без единой цифры.
+Теперь каждый шаг с проставленным временем получает **видимый значок**:
+
+* в **BPMN 2.0** — некрывающий граничный таймер
+  (`boundaryEvent` + `timerEventDefinition`, `cancelActivity="false"`) с
+  подписью вида «45 мин» или «1 ч 30 мин · ожидание 15 мин». Импортёр рисует
+  его на границе фигуры — там же, где часы стоят на исходной карте draw.io.
+  Поток он не меняет: исходящих переходов у события нет, и ни один
+  `sequenceFlow` на него не ссылается;
+* в **`.pmm`** — отдельная мелкая фигура `intermediate_event_catch_timer`
+  24×24 в правом нижнем углу шага, зажатая в границы дорожки. Граничных
+  событий формат не знает, поэтому значок повторяет рисунок аналитика.
+
+Прочитать это обратно умеет фронтенд: `app/src/lib/bpmn-import.ts` и
+`app/src/lib/pmm-import.ts` возвращают время значка в ST/WT шага, и в окне
+«Просмотр BPMN / PMM» сотрудник видит выгруженный файл с теми же часами, что
+и на холсте.
+
 Инварианты выгрузки BPMN проверяются в `tests/test_methodology_export.py`:
 стартовое событие без входящих переходов, конечное без исходящих, ассоциации
 только к артефактам, `flowNodeRef` только на узлы потока, порядок элементов
-`laneSet* , flowElement* , artifact*`.
+`laneSet* , flowElement* , artifact*`, значок длительности у каждого шага с
+временем и вне потока управления.
 
 ---
 

@@ -35,8 +35,13 @@ import zipfile
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from app.models.process import BusinessProcess, ProcessEdge, ProcessNode
-from app.services.bpmn_exporter import split_external_lanes
+from app.models.process import (
+    TASK_NODE_TYPES,
+    BusinessProcess,
+    ProcessEdge,
+    ProcessNode,
+)
+from app.services.bpmn_exporter import split_external_lanes, step_duration_text
 from app.services.edge_routing import message_flow_endpoints, orthogonal_waypoints
 
 _NS_XSI = 'http://www.w3.org/2001/XMLSchema-instance'
@@ -177,6 +182,59 @@ def _node_xml(
     )
 
 
+#: Диаметр значка длительности на карте PIX, px.
+_DURATION_SIDE = 24
+
+#: Отступ значка длительности от правого края шага, px.
+_DURATION_INSET = 20
+
+
+def duration_node_xml(
+    node: ProcessNode,
+    x: float,
+    y: float,
+    indent: str,
+    lane: Optional[ProcessNode] = None,
+) -> Optional[str]:
+    """Часы со временем шага — отдельная фигура-таймер у его нижней грани.
+
+    Граничных событий формат .pmm не знает: студия рисует ровно те узлы, что
+    перечислены в карте. Поэтому длительность показывается здесь так же, как её
+    рисует аналитик в draw.io, — мелким таймером в правом нижнем углу шага.
+    Связей у него нет, поток карты он не меняет; в BPMN-выгрузке то же самое
+    время едет некрывающим граничным таймером.
+
+    ``x``/``y`` — координаты шага в той же системе, в которой пишется его
+    собственный ``<node>``: относительные внутри дорожки и абсолютные вне её.
+    Значок шага у самого низа дорожки зажимается в её границы: вылезший за
+    край узел студия рисует поверх соседней дорожки.
+    """
+    if node.type not in TASK_NODE_TYPES:
+        return None
+    text = step_duration_text(node)
+    if not text:
+        return None
+    half = _DURATION_SIDE // 2
+    # Узкий шаг значком не разрезать пополам: у него часы встают по центру
+    # нижней грани, у обычного — в правом нижнем углу.
+    offset = max(node.geometry.width - _DURATION_INSET, node.geometry.width / 2)
+    mx = int(round(x + offset - half))
+    my = int(round(y + node.geometry.height - half))
+    if lane is not None:
+        mx = max(0, min(mx, max(lane.geometry.width, 80) - _DURATION_SIDE))
+        my = max(0, min(my, max(lane.geometry.height, 80) - _DURATION_SIDE))
+    return _node_xml(
+        'intermediate_event_catch_timer',
+        _pix_id(f'duration:{node.id}'),
+        text,
+        mx,
+        my,
+        _DURATION_SIDE,
+        _DURATION_SIDE,
+        indent=indent,
+    )
+
+
 def clamp_into_lane(child: ProcessNode, lane: ProcessNode) -> Tuple[int, int]:
     """Координаты узла относительно дорожки, зажатые в её границы.
 
@@ -294,6 +352,9 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
                     n.geometry.width, n.geometry.height, _node_extra(n), indent='    ',
                 )
             )
+            marker = duration_node_xml(n, rel_x, rel_y, '    ', lane)
+            if marker:
+                lines.append(marker)
         lines.append('  </node>')
 
     for n in flow:
@@ -305,6 +366,9 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
                 n.geometry.width, n.geometry.height, _node_extra(n),
             )
         )
+        marker = duration_node_xml(n, n.geometry.x, n.geometry.y, '  ')
+        if marker:
+            lines.append(marker)
 
     # ── Связи ───────────────────────────────────────────────────────────────
     lane_ids = {lane.id for lane in lanes}

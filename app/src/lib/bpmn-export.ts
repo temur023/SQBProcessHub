@@ -1,5 +1,5 @@
 import type { BusinessProcess, NodeType, ProcessEdge, ProcessNode } from '@/types/process'
-import { isArtifactNode } from '@/types/process'
+import { isArtifactNode, isTaskNode } from '@/types/process'
 import { messageFlowEndpoints, orthogonalWaypoints } from './edge-routing'
 import type { Box } from './layout'
 import {
@@ -7,6 +7,7 @@ import {
   chooseLabelBox,
   edgeLabelCandidates,
   externalLabelCandidates,
+  labelSize,
   nodeObstacles,
   segmentBoxes,
 } from './layout'
@@ -72,6 +73,114 @@ export function isoDuration(minutes: number | undefined): string {
   if (value >= 1440 && value % 1440 === 0) return `P${value / 1440}D`
   if (value >= 60 && value % 60 === 0) return `PT${value / 60}H`
   return `PT${value}M`
+}
+
+/** Диаметр значка события в BPMNDI: bpmn.io и Процессная студия рисуют 36 px. */
+export const EVENT_SIDE = 36
+
+/** Отступ значка длительности от правого края шага, px. */
+const DURATION_INSET = 20
+
+/** Человекочитаемая длительность: «45 мин», «2 ч», «1 ч 30 мин», «2 дн». */
+export function formatDuration(minutes: number | undefined | null): string {
+  const value = Math.round(minutes || 0)
+  if (value <= 0) return ''
+  if (value < 60) return `${value} мин`
+  const hours = Math.floor(value / 60)
+  const rest = value % 60
+  if (rest) return `${hours} ч ${rest} мин`
+  if (hours >= 24 && hours % 24 === 0) return `${hours / 24} дн`
+  return `${hours} ч`
+}
+
+/** Подпись под часами у шага: время операции и, если есть, ожидание. */
+export function stepDurationText(node: ProcessNode): string {
+  const st = formatDuration(node.slaMinutes)
+  const wt = formatDuration(node.waitMinutes)
+  if (st && wt) return `${st} · ожидание ${wt}`
+  if (wt) return `ожидание ${wt}`
+  return st
+}
+
+/**
+ * Значок часов у шага: граничный таймер плюс подпись со временем.
+ *
+ * На карте draw.io время операции нарисовано мелкой фигурой-таймером в углу
+ * шага, и холст банка показывает его там же. В BPMN это время жило только в
+ * `documentation`: в Процессной студии карта открывалась без единой цифры, и
+ * сотруднику приходилось сверяться с регламентом отдельно.
+ *
+ * Некрывающий (`cancelActivity="false"`) граничный таймер — единственная
+ * конструкция BPMN, которую импортёры рисуют ровно там, где значок стоит на
+ * исходной карте: на границе фигуры. Поток она не меняет — у события нет
+ * исходящих переходов, оно только помечает длительность.
+ */
+export interface DurationMarker {
+  node: ProcessNode
+  markerId: string
+  text: string
+  minutes: number
+  cx: number
+  cy: number
+}
+
+export function durationMarkers(
+  flowNodes: ProcessNode[],
+  idOf: Map<string, string>,
+  used: Map<string, string>,
+  taken: Set<string>,
+): DurationMarker[] {
+  const markers: DurationMarker[] = []
+  for (const node of flowNodes) {
+    // Граничное событие BPMN разрешено только у активности: события и шлюзы
+    // значка не получают — их время уходит в собственный timerEventDefinition.
+    if (!isTaskNode(node.type)) continue
+    const text = stepDurationText(node)
+    if (!text) continue
+    const g = node.geometry
+    // Узкий шаг значком не разрезать пополам: у него часы встают по центру
+    // нижней грани, у обычного — в правом нижнем углу, как в draw.io.
+    const offset = Math.max(g.width - DURATION_INSET, g.width / 2)
+    markers.push({
+      node,
+      markerId: safeId(`Duration_${idOf.get(node.id)!}`, 'Duration', used, taken),
+      text,
+      minutes: Math.round(node.slaMinutes || node.waitMinutes || 0),
+      cx: Math.round(g.x + offset),
+      cy: Math.round(g.y + g.height),
+    })
+  }
+  return markers
+}
+
+/** Рамка самого значка: круг события сидит на границе шага. */
+export function markerBox(marker: DurationMarker): Box {
+  const half = EVENT_SIDE / 2
+  return { x: marker.cx - half, y: marker.cy - half, width: EVENT_SIDE, height: EVENT_SIDE }
+}
+
+/** Куда положить время: под часами, затем правее, левее и выше. */
+function durationLabelCandidates(marker: DurationMarker): Box[] {
+  const { width, height } = labelSize(marker.text)
+  const half = EVENT_SIDE / 2
+  return [
+    { x: Math.round(marker.cx - width / 2), y: Math.round(marker.cy + half + 2), width, height },
+    { x: Math.round(marker.cx + half + 4), y: Math.round(marker.cy - height / 2), width, height },
+    { x: Math.round(marker.cx - half - 4 - width), y: Math.round(marker.cy - height / 2), width, height },
+    { x: Math.round(marker.cx - width / 2), y: Math.round(marker.cy - half - 2 - height), width, height },
+  ]
+}
+
+function durationMarkerXml(marker: DurationMarker, attachedTo: string): string[] {
+  return [
+    `    <bpmn:boundaryEvent id="${escapeXml(marker.markerId)}"` +
+      ` name="${escapeXml(marker.text)}"` +
+      ` attachedToRef="${escapeXml(attachedTo)}" cancelActivity="false">`,
+    '      <bpmn:timerEventDefinition>',
+    `        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">${isoDuration(marker.minutes)}</bpmn:timeDuration>`,
+    '      </bpmn:timerEventDefinition>',
+    '    </bpmn:boundaryEvent>',
+  ]
 }
 
 /**
@@ -266,6 +375,9 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
   for (const edge of edges) idOf.set(edge.id, safeId(edge.id, 'Flow', used, taken))
   for (const edge of messageFlows) idOf.set(edge.id, safeId(edge.id, 'MessageFlow', used, taken))
 
+  const markers = durationMarkers(flowNodes, idOf, used, taken)
+  const markerOf = new Map(markers.map((m) => [m.node.id, m]))
+
   const incoming: Record<string, string[]> = {}
   const outgoing: Record<string, string[]> = {}
   for (const n of flowNodes) {
@@ -326,8 +438,13 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
     for (const lane of lanes) {
       xml.push(`      <bpmn:lane id="${escapeXml(idOf.get(lane.id)!)}" name="${escapeXml(lane.name)}">`)
       for (const child of flowNodes) {
-        if (child.laneId === lane.id) {
-          xml.push(`        <bpmn:flowNodeRef>${escapeXml(idOf.get(child.id)!)}</bpmn:flowNodeRef>`)
+        if (child.laneId !== lane.id) continue
+        xml.push(`        <bpmn:flowNodeRef>${escapeXml(idOf.get(child.id)!)}</bpmn:flowNodeRef>`)
+        // Значок длительности — тоже узел потока: дорожка без ссылки на
+        // него импортируется без часов у своих шагов.
+        const marker = markerOf.get(child.id)
+        if (marker) {
+          xml.push(`        <bpmn:flowNodeRef>${escapeXml(marker.markerId)}</bpmn:flowNodeRef>`)
         }
       }
       xml.push('      </bpmn:lane>')
@@ -372,6 +489,9 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
     } else {
       xml.push(`    <${tag} id="${nid}" name="${escapeXml(node.name)}"${extra} />`)
     }
+
+    const marker = markerOf.get(node.id)
+    if (marker) xml.push(...durationMarkerXml(marker, nid))
   }
 
   // ── 3. Артефакты-элементы потока: хранилища и документы ───────────────────
@@ -476,6 +596,9 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
   }
 
   const takenBoxes: Box[] = nodeObstacles(allNodes)
+  // Часы у шага занимают место на карте так же, как фигура: подпись связи,
+  // положенная на них, скрывает цифру.
+  for (const m of markers) takenBoxes.push(markerBox(m))
   // Линии связей — тоже препятствие: подпись, положенная на связь, читается
   // как перечёркнутая.
   for (const [, route] of routes) takenBoxes.push(...segmentBoxes(route))
@@ -501,6 +624,15 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
     takenBoxes.push(box)
   }
 
+  // Время под часами кладём последним: оно уступает место подписям связей и
+  // событий, а не наоборот — цифру читают, подойдя к конкретному шагу.
+  const markerLabelOf = new Map<string, Box>()
+  for (const marker of markers) {
+    const box = chooseLabelBox(durationLabelCandidates(marker), takenBoxes)
+    markerLabelOf.set(marker.markerId, box)
+    takenBoxes.push(box)
+  }
+
   for (const node of allNodes) {
     xml.push(
       `      <bpmndi:BPMNShape id="${escapeXml(idOf.get(node.id)!)}_di" bpmnElement="${escapeXml(idOf.get(node.id)!)}">`,
@@ -520,6 +652,20 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
       )
     }
     xml.push('      </bpmndi:BPMNShape>')
+
+    const marker = markerOf.get(node.id)
+    if (marker) {
+      const mb = markerBox(marker)
+      const lb = markerLabelOf.get(marker.markerId)!
+      xml.push(
+        `      <bpmndi:BPMNShape id="${escapeXml(marker.markerId)}_di" bpmnElement="${escapeXml(marker.markerId)}">`,
+        `        <dc:Bounds x="${mb.x}" y="${mb.y}" width="${mb.width}" height="${mb.height}" />`,
+        '        <bpmndi:BPMNLabel>',
+        `          <dc:Bounds x="${lb.x}" y="${lb.y}" width="${lb.width}" height="${lb.height}" />`,
+        '        </bpmndi:BPMNLabel>',
+        '      </bpmndi:BPMNShape>',
+      )
+    }
   }
 
   const labelXml = (box: Box, indent: string) => [

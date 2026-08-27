@@ -70,6 +70,9 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
     'Нативный пакет PIX Процессной студии: Types + каталог нотаций + карта BPMN.',
     'Дорожки — horizontalRoad, шаги вложены с относительными координатами,',
     'переходы — connector type=step на уровне Map. Скачивается ZIP .pmm.',
+    '',
+    'Время шага рисуется мелким таймером у его нижней грани — как на карте draw.io.',
+    'Проверить файл, не выходя из системы, можно кнопкой «Просмотр BPMN / PMM».',
   ].join('\n')
 
   const getCurrentContent = () => {
@@ -156,7 +159,9 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
           <TabsContent value="bpmn" className="flex-1 flex flex-col overflow-hidden mt-3 space-y-2">
             <div className="p-2.5 rounded-lg bg-muted/60 text-xs flex items-center justify-between">
               <span>
-                Карта в OMG BPMN 2.0: пул/дорожки, якоря рёбер, условия шлюзов, BPMNDI. Официальный импорт <strong>PIX Процессной студии</strong> (.bpmn).
+                Карта в OMG BPMN 2.0: пул/дорожки, якоря рёбер, условия шлюзов, BPMNDI. Время шага едет
+                видимым значком — граничный таймер с подписью у фигуры. Официальный импорт{' '}
+                <strong>PIX Процессной студии</strong> (.bpmn).
               </span>
               <Badge className="bg-indigo-600 text-white text-[10px]">BPMN 2.0 XML</Badge>
             </div>
