@@ -456,7 +456,20 @@ class TestSQBProcessHubApi(unittest.TestCase):
 
         root = ET.fromstring(map_xml)
         self.assertEqual(root.tag, "Map")
-        self.assertEqual(root.get("notation"), "bpmn")
+        # Имя нотации должно совпадать с каталогом студии буква в букву:
+        # написанное на глаз «bpmn» вместо «BPMN» студия не находит и отвергает
+        # весь пакет («Notation element not found (Parameter 'type')»).
+        notation_names = {n.get("name") for n in conf.findall("notation")}
+        self.assertIn(root.get("notation"), notation_names)
+        allowed = {
+            e.get("name")
+            for n in conf.findall("notation")
+            if n.get("name") == root.get("notation")
+            for e in n.findall("element")
+        }
+        used_types = {node.get("type") for node in root.iter("node")}
+        self.assertTrue(used_types)
+        self.assertEqual(used_types - allowed, set(), "тип фигуры вне нотации студии")
         nodes = root.findall("node")
         types = {n.get("type") for n in nodes}
         self.assertIn("horizontalRoad", types)

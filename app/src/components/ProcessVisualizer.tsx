@@ -2,19 +2,45 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import {
   ZoomIn, ZoomOut, Maximize2, Minimize2,
   Cpu, AlertTriangle, Info, Search, Grid, X,
+  ChevronLeft, ChevronRight, Crosshair, XCircle,
   type LucideIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useIsDark } from '@/hooks/use-dark-mode'
-import type { BusinessProcess, ProcessEdge, ProcessNode } from '@/types/process'
+import type { BusinessProcess, NodeType, ProcessEdge, ProcessNode, ProcessValidation } from '@/types/process'
+import { NODE_TYPE_LABELS, isGatewayNode, isTaskNode } from '@/types/process'
 import { orthogonalizePath } from '@/lib/edge-routing'
 import { formatDuration } from '@/lib/bpmn-export'
+
+/**
+ * Наводка холста на фигуры, о которых говорит замечание проверки импорта.
+ *
+ * Замечание без адресата бесполезно: «Фигуры расширены под подпись: 226» не
+ * подсказывает сотруднику, где смотреть. Клик по строке отчёта отправляет сюда
+ * список фигур, холст подводит к ним камеру и подсвечивает их до тех пор, пока
+ * сотрудник сам не закроет подсказку.
+ */
+export interface CanvasFocus {
+  /** Фигуры замечания в порядке обхода. */
+  nodeIds: string[]
+  /**
+   * Растёт при каждом клике по строке отчёта. Без него повторный клик по уже
+   * наведённому замечанию ничего не делал бы: список фигур тот же самый.
+   */
+  nonce: number
+  /** Само замечание — его текст показывается карточкой над холстом. */
+  issue?: ProcessValidation
+}
 
 interface ProcessVisualizerProps {
   process: BusinessProcess
   onSelectNode: (node: ProcessNode) => void
   selectedNodeId?: string
+  /** Замечание, на фигуры которого надо навести карту. */
+  focus?: CanvasFocus
+  /** Сотрудник закрыл подсказку: подсветку снимаем. */
+  onClearFocus?: () => void
 }
 
 const GRID_MINOR = 10
@@ -101,6 +127,8 @@ type CanvasPalette = {
   docStroke: string
   timerStroke: string
   noteStroke: string
+  /** Кольцо вокруг фигуры, на которую навела проверка импорта. */
+  focusRing: string
 }
 
 const DARK_CANVAS: CanvasPalette = {
@@ -135,6 +163,7 @@ const DARK_CANVAS: CanvasPalette = {
   docStroke: '#d7c56a',
   timerStroke: '#c9a227',
   noteStroke: '#9aa0a6',
+  focusRing: '#ff9f0a',
 }
 
 /**
@@ -173,6 +202,7 @@ const LIGHT_CANVAS: CanvasPalette = {
   docStroke: '#a16207',
   timerStroke: '#b45309',
   noteStroke: '#64748b',
+  focusRing: '#ea580c',
 }
 
 type Box = { x: number; y: number; w: number; h: number; cx: number; cy: number }
@@ -240,8 +270,8 @@ function constraintPoint(box: Box, fx?: number, fy?: number): Pt | null {
   return { x: box.x + fx * box.w, y: box.y + fy * box.h }
 }
 
-function isGatewayNode(n: ProcessNode): boolean {
-  return n.type === 'exclusiveGateway' || n.type === 'parallelGateway' || n.type === 'inclusiveGateway'
+function isGatewayShape(n: ProcessNode): boolean {
+  return isGatewayNode(n.type)
 }
 
 // Точный ромб-пересечение (gateway)
@@ -394,14 +424,14 @@ function edgePath(
         y: tgtBox.cy < srcBox.cy ? srcBox.y : srcBox.y + srcBox.h,
       }
     : constraintPoint(srcBox, edge.exitX, edge.exitY) ||
-      intersectBorder(srcBox, startToward, isEventNode(src), isGatewayNode(src))
+      intersectBorder(srcBox, startToward, isEventNode(src), isGatewayShape(src))
   const end = isTgtLane
     ? {
         x: Math.max(tgtBox.x, Math.min(srcBox.cx, tgtBox.x + tgtBox.w)),
         y: srcBox.cy < tgtBox.cy ? tgtBox.y : tgtBox.y + tgtBox.h,
       }
     : constraintPoint(tgtBox, edge.entryX, edge.entryY) ||
-      intersectBorder(tgtBox, endToward, isEventNode(tgt), isGatewayNode(tgt))
+      intersectBorder(tgtBox, endToward, isEventNode(tgt), isGatewayShape(tgt))
 
   let pts: Pt[]
   if (wp.length > 0) {
@@ -492,10 +522,69 @@ function slaLabel(mins?: number): string {
   return formatDuration(mins)
 }
 
+/**
+ * Значок внутри ромба шлюза — тот же, что рисует draw.io и ждёт bpmn.io.
+ *
+ * Раньше всё, кроме параллельного, помечалось крестиком, а сложный шлюз вообще
+ * приходил на холст плюсом: аналитик рисовал звёздочку, а видел «И». Значок —
+ * это и есть тип шлюза, подменять его нельзя.
+ */
+function gatewayMarker(type: NodeType, cx: number, cy: number, s: number, color: string): React.ReactNode {
+  const r = s * 0.52
+  const w = Math.max(1.6, s * 0.13)
+  if (type === 'inclusiveGateway') {
+    return <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={w * 1.2} />
+  }
+  if (type === 'complexGateway') {
+    // Шестилучевая звёздочка: три отрезка через центр под 0°, 60° и 120°.
+    return (
+      <g stroke={color} strokeWidth={w} strokeLinecap="round">
+        {[0, 60, 120].map((deg) => {
+          const a = (deg * Math.PI) / 180
+          const dx = Math.cos(a) * r
+          const dy = Math.sin(a) * r
+          return <line key={deg} x1={cx - dx} y1={cy - dy} x2={cx + dx} y2={cy + dy} />
+        })}
+      </g>
+    )
+  }
+  if (type === 'parallelGateway') {
+    return (
+      <g stroke={color} strokeWidth={w} strokeLinecap="round">
+        <line x1={cx - r} y1={cy} x2={cx + r} y2={cy} />
+        <line x1={cx} y1={cy - r} x2={cx} y2={cy + r} />
+      </g>
+    )
+  }
+  const d = r * 0.78
+  return (
+    <g stroke={color} strokeWidth={w} strokeLinecap="round">
+      <line x1={cx - d} y1={cy - d} x2={cx + d} y2={cy + d} />
+      <line x1={cx - d} y1={cy + d} x2={cx + d} y2={cy - d} />
+    </g>
+  )
+}
+
+/** Значок и цвет уровня замечания в карточке наводки. */
+const FOCUS_LEVEL_STYLE: Record<ProcessValidation['level'], { text: string; icon: React.ReactNode }> = {
+  error:   { text: 'text-red-600 dark:text-red-400',   icon: <XCircle className="h-4 w-4" /> },
+  warning: { text: 'text-amber-600 dark:text-amber-400', icon: <AlertTriangle className="h-4 w-4" /> },
+  info:    { text: 'text-sky-600 dark:text-sky-400',   icon: <Info className="h-4 w-4" /> },
+}
+
+/** Максимальный масштаб, до которого холст «подъезжает» к фигуре замечания. */
+const FOCUS_MAX_ZOOM = 1.1
+/** Поля вокруг подсвеченной группы при наводке камеры, px экрана. */
+const FOCUS_PADDING = 90
+/** Больше этой доли холста карточка замечания занять не может. */
+const FOCUS_CARD_MAX_SHARE = 0.45
+
 export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   process,
   onSelectNode,
   selectedNodeId,
+  focus,
+  onClearFocus,
 }) => {
   const [zoom, setZoom]                 = useState(0.7)
   const [showGrid, setShowGrid]         = useState(true)
@@ -504,6 +593,13 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   const [searchQuery, setSearchQuery]   = useState('')
   const [panPos, setPanPos]             = useState({ x: 24, y: 24 })
   const [isPanning, setIsPanning]       = useState(false)
+  /** Какая по счёту фигура замечания сейчас в центре: по ней листает карточка. */
+  const [focusIndex, setFocusIndex]     = useState(0)
+  /** Сколько холста снизу занимает карточка замечания — меряем, а не угадываем. */
+  const [cardHeight, setCardHeight]     = useState(0)
+  const cardRef  = useRef<HTMLDivElement>(null)
+  /** Рамка, к которой сейчас подведена камера: нужна при изменении размера. */
+  const focusBoxRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null)
   const panRef   = useRef({ ox: 0, oy: 0, px: 0, py: 0 })
   const wrapRef  = useRef<HTMLDivElement>(null)
   /**
@@ -630,6 +726,126 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
     })
   }, [bounds, setView])
 
+  // ── Наводка на фигуры замечания ─────────────────────────────────────────
+  /** Фигуры замечания, которые действительно есть на карте. */
+  const focusNodes = useMemo(() => {
+    if (!focus?.nodeIds?.length) return [] as ProcessNode[]
+    const byId = new Map(process.nodes.map((n) => [n.id, n]))
+    return focus.nodeIds.map((id) => byId.get(id)).filter((n): n is ProcessNode => Boolean(n))
+  }, [focus, process.nodes])
+
+  const focusIds = useMemo(() => new Set(focusNodes.map((n) => n.id)), [focusNodes])
+
+  /**
+   * Подводит камеру к прямоугольнику карты, не приближая сильнее обычного
+   * чтения. Рамку запоминаем: когда панель отчёта схлопнется и холст станет
+   * выше, наводку надо повторить — иначе фигура останется у самого края.
+   */
+  const centerOn = useCallback(
+    (box: { x: number; y: number; w: number; h: number }) => {
+      focusBoxRef.current = box
+      const el = wrapRef.current
+      if (!el) return
+      const { width, height } = el.getBoundingClientRect()
+      if (width < 40 || height < 40) return
+      // Карточка замечания занимает низ холста: центрируем фигуру в том, что
+      // от холста остаётся, иначе подсказка закрывает ровно то, на что навела.
+      // Больше 45 % холста карточке не отдаём — на низком окне от него иначе
+      // не остаётся ничего, и «подъезд» к фигуре превращался в отъезд.
+      const usable = Math.max(height - cardHeight, height * (1 - FOCUS_CARD_MAX_SHARE))
+      // Поля тоже пропорциональные: фиксированные 90 px на невысоком холсте
+      // съедали всю доступную высоту, и масштаб схлопывался до минимума.
+      const padX = Math.min(FOCUS_PADDING, width * 0.15)
+      const padY = Math.min(FOCUS_PADDING, usable * 0.15)
+      const fit = Math.min(
+        (width - padX * 2) / Math.max(box.w, 1),
+        (usable - padY * 2) / Math.max(box.h, 1),
+      )
+      const z = +Math.min(FOCUS_MAX_ZOOM, Math.max(MIN_ZOOM, fit)).toFixed(3)
+      setView({
+        zoom: z,
+        x: width / 2 - (box.x + box.w / 2) * z,
+        y: usable / 2 - (box.y + box.h / 2) * z,
+      })
+    },
+    [setView, cardHeight],
+  )
+
+  /** Общая рамка нескольких фигур. */
+  const unionBox = useCallback(
+    (nodes: ProcessNode[]) => {
+      if (!nodes.length) return null
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      for (const n of nodes) {
+        const b = nodeBoxes.get(n.id) ?? rawBox(n)
+        minX = Math.min(minX, b.x)
+        minY = Math.min(minY, b.y)
+        maxX = Math.max(maxX, b.x + b.w)
+        maxY = Math.max(maxY, b.y + b.h)
+      }
+      return { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
+    },
+    [nodeBoxes],
+  )
+
+  // Новое замечание: снимаем фильтры (иначе нужная фигура останется погашенной)
+  // и показываем всю группу целиком — сотрудник сперва видит масштаб проблемы,
+  // а потом листает фигуры по одной.
+  useEffect(() => {
+    if (!focus || !focusNodes.length) return
+    setActiveFilter('all')
+    setSearchQuery('')
+    setFocusIndex(0)
+    const box = unionBox(focusNodes)
+    if (box) centerOn(box)
+    wrapRef.current?.focus({ preventScroll: true })
+    // Наводка привязана к клику (nonce), а не к составу группы: повторный клик
+    // по той же строке отчёта обязан вернуть камеру на место.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus?.nonce])
+
+  // Панель отчёта схлопывается в тот же клик, что и наводка: холст становится
+  // выше уже после того, как камера встала. Пересчитываем наводку по факту
+  // изменения размеров — заодно это чинит и обычное изменение окна.
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el || !focus) {
+      focusBoxRef.current = null
+      return
+    }
+    const ro = new ResizeObserver(() => {
+      const box = focusBoxRef.current
+      if (box) centerOn(box)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [focus, centerOn])
+
+  // Высота карточки зависит от длины замечания, поэтому её меряем.
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el) {
+      setCardHeight(0)
+      return
+    }
+    const ro = new ResizeObserver(() => setCardHeight(el.offsetHeight + 24))
+    ro.observe(el)
+    setCardHeight(el.offsetHeight + 24)
+    return () => ro.disconnect()
+  }, [focus, focusIndex])
+
+  /** Показать одну фигуру группы крупным планом. */
+  const goToFocusNode = useCallback(
+    (index: number) => {
+      const node = focusNodes[index]
+      if (!node) return
+      setFocusIndex(index)
+      const b = nodeBoxes.get(node.id) ?? rawBox(node)
+      centerOn(b)
+    },
+    [focusNodes, nodeBoxes, centerOn],
+  )
+
   /** Расстояние между двумя пальцами — база для щипка. */
   const pinchDistance = () => {
     const [a, b] = [...pointers.current.values()]
@@ -644,7 +860,11 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   // перо. На планшете карту нельзя было ни сдвинуть, ни масштабировать —
   // `onMouseDown` о касаниях не знает.
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('.nb')) return
+    // Панели поверх холста (карточка замечания, «ничего не найдено») живут
+    // внутри той же области, что и карта. Без этой проверки холст забирает
+    // указатель себе через setPointerCapture, и клик по кнопке панели до неё
+    // просто не доходит.
+    if ((e.target as HTMLElement).closest('.nb, [data-canvas-overlay]')) return
     if (e.pointerType === 'mouse' && e.button !== 0) return
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -715,10 +935,16 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
   }
 
   useEffect(() => {
-    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsFullscreen(false) }
+    const fn = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      // Escape снимает сначала подсветку, и только потом выходит из полного
+      // экрана: иначе сотрудник теряет весь контекст одним нажатием.
+      if (focus && onClearFocus) onClearFocus()
+      else setIsFullscreen(false)
+    }
     window.addEventListener('keydown', fn)
     return () => window.removeEventListener('keydown', fn)
-  }, [])
+  }, [focus, onClearFocus])
 
   useEffect(() => {
     let fitted = false
@@ -1031,7 +1257,9 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
             })}
 
             {process.nodes.map(node => {
-              const faded = !visibleIds.has(node.id)
+              // Подсвеченная фигура не гаснет под фильтром: иначе замечание
+              // приводит сотрудника к пустому месту на холсте.
+              const faded = !visibleIds.has(node.id) && !focusIds.has(node.id)
               const sel   = selectedNodeId === node.id
               const isRpa = node.category === 'rpa_bot'
               const isBad = (node.slaMinutes || 0) >= SLOW_STEP_MINUTES
@@ -1193,7 +1421,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                 )
               }
 
-              if (node.type === 'exclusiveGateway' || node.type === 'parallelGateway' || node.type === 'inclusiveGateway') {
+              if (isGatewayNode(node.type)) {
                 const s = Math.max(12, Math.min(w, h) / 2)
                 const cap = node.name && node.name !== 'Условие' ? fitCaption(node.name, 92, 2) : null
                 return (
@@ -1203,10 +1431,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                       fill="none" stroke={C.edgeHi} strokeWidth="1.2" strokeDasharray="4 3" />}
                     <polygon points={`${cx},${cy-s} ${cx+s},${cy} ${cx},${cy+s} ${cx-s},${cy}`}
                       fill={C.canvas} stroke={sel ? C.edgeHi : C.gwStroke} strokeWidth={1.8} />
-                    <text x={cx} y={cy + 5} textAnchor="middle" fontSize={Math.max(14, s * 0.7)} fontWeight="700"
-                      fill={C.gwStroke} style={{ userSelect: 'none', fontFamily: FONT }}>
-                      {node.type === 'parallelGateway' ? '+' : '×'}
-                    </text>
+                    {gatewayMarker(node.type, cx, cy, s, C.gwStroke)}
                     {cap && cap.lines.map((line, i) => (
                       <text key={i} x={cx} y={y - 6 - (cap.lines.length - 1 - i) * (cap.fontSize + 1)}
                         textAnchor="middle" fontSize={cap.fontSize} fill={C.caption}
@@ -1380,14 +1605,136 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                 </g>
               )
             })}
+
+            {/* Кольца вокруг фигур замечания. Рисуются последними: подсветка
+                должна лежать поверх шага, а не под ним. Пульсация задана одной
+                анимацией на группе — 200 отдельных SMIL-анимаций подвешивали
+                вкладку на больших картах. */}
+            {focusNodes.length > 0 && (
+              <g className="sqb-focus-pulse" pointerEvents="none">
+                {focusNodes.map((node, index) => {
+                  const b = nodeBoxes.get(node.id) ?? rawBox(node)
+                  const pad = 7
+                  // Толщина задаётся в единицах карты, а группа масштабируется:
+                  // делим на zoom, иначе на мелком масштабе кольцо исчезает.
+                  const w = Math.max(1.5, 3 / zoom)
+                  return (
+                    <rect
+                      key={node.id}
+                      x={b.x - pad}
+                      y={b.y - pad}
+                      width={b.w + pad * 2}
+                      height={b.h + pad * 2}
+                      rx={Math.max(4, 8 / zoom)}
+                      fill="none"
+                      stroke={C.focusRing}
+                      strokeWidth={index === focusIndex ? w * 1.8 : w}
+                      strokeDasharray={index === focusIndex ? undefined : `${10 / zoom} ${6 / zoom}`}
+                    />
+                  )
+                })}
+              </g>
+            )}
           </g>
         </svg>
+
+        {/* Карточка замечания: что не так, с какой фигурой и что делать.
+            Держится над холстом, пока сотрудник её не закроет — уведомление в
+            углу исчезает раньше, чем он успевает найти фигуру глазами. */}
+        {focus && focusNodes.length > 0 && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center px-3">
+            <div
+              ref={cardRef}
+              data-canvas-overlay
+              role="status"
+              className="pointer-events-auto w-full max-w-xl rounded-xl border border-orange-500/40 bg-card/95 p-3 shadow-xl backdrop-blur"
+            >
+              <div className="flex items-start gap-2">
+                <span className={`mt-0.5 shrink-0 ${FOCUS_LEVEL_STYLE[focus.issue?.level ?? 'info'].text}`}>
+                  {FOCUS_LEVEL_STYLE[focus.issue?.level ?? 'info'].icon}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold leading-snug">
+                    {focus.issue?.message ?? 'Фигуры замечания на карте'}
+                  </p>
+                  {focus.issue?.hint && (
+                    <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                      {focus.issue.hint}
+                    </p>
+                  )}
+                  <div className="mt-2 rounded-lg border bg-muted/40 px-2 py-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Crosshair className="h-3.5 w-3.5 shrink-0 text-orange-500" />
+                      <span className="min-w-0 truncate text-xs font-medium">
+                        {focusNodes[focusIndex]?.name}
+                      </span>
+                      {focusNodes[focusIndex]?.code && (
+                        <span className="shrink-0 rounded bg-background px-1 py-0.5 text-[10px] tabular-nums text-muted-foreground">
+                          {focusNodes[focusIndex].code}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                      {[
+                        NODE_TYPE_LABELS[focusNodes[focusIndex].type],
+                        focusNodes[focusIndex].laneName || focusNodes[focusIndex].role,
+                        focusNodes[focusIndex].system,
+                        isTaskNode(focusNodes[focusIndex].type)
+                          ? slaLabel(focusNodes[focusIndex].slaMinutes)
+                          : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => onSelectNode(focusNodes[focusIndex])}
+                    >
+                      Открыть карточку шага
+                    </Button>
+                    {focusNodes.length > 1 && (
+                      <>
+                        <Button
+                          variant="outline" size="sm" className="h-7 w-7 p-0"
+                          aria-label="Предыдущая фигура замечания"
+                          onClick={() => goToFocusNode((focusIndex - 1 + focusNodes.length) % focusNodes.length)}
+                        >
+                          <ChevronLeft className="h-3.5 w-3.5" />
+                        </Button>
+                        <span className="text-[11px] tabular-nums text-muted-foreground">
+                          {focusIndex + 1} из {focusNodes.length}
+                        </span>
+                        <Button
+                          variant="outline" size="sm" className="h-7 w-7 p-0"
+                          aria-label="Следующая фигура замечания"
+                          onClick={() => goToFocusNode((focusIndex + 1) % focusNodes.length)}
+                        >
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost" size="sm" className="h-7 w-7 shrink-0 p-0"
+                  aria-label="Снять подсветку"
+                  onClick={onClearFocus}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Ничего не найдено — иначе после неудачного поиска остаётся пустой
             холст без объяснения, почему все фигуры погасли. */}
         {(searchQuery.trim() || activeFilter !== 'all') && visibleIds.size === 0 && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
-            <div className="pointer-events-auto max-w-xs rounded-xl border bg-card/95 p-4 text-center shadow-lg backdrop-blur">
+            <div data-canvas-overlay className="pointer-events-auto max-w-xs rounded-xl border bg-card/95 p-4 text-center shadow-lg backdrop-blur">
               <Search className="mx-auto h-5 w-5 text-muted-foreground" />
               <p className="mt-2 text-sm font-medium">Шаги не найдены</p>
               <p className="mt-1 text-xs text-muted-foreground">

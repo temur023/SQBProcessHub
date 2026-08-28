@@ -143,6 +143,47 @@ export async function createRegistryCaseApi(
   return null
 }
 
+/** Одно замечание к файлу выгрузки — тем же языком, каким о нём скажет PIX. */
+export interface ExportProblem {
+  level: 'error' | 'warning'
+  code: string
+  message: string
+  /** Идентификатор фигуры или связи в самом файле. */
+  where?: string | null
+}
+
+export interface ExportFormatCheck {
+  format: 'bpmn' | 'pmm'
+  ok: boolean
+  errors: number
+  warnings: number
+  problems: ExportProblem[]
+}
+
+export interface ExportCheckReport {
+  processId: string
+  ok: boolean
+  summary: string
+  formats: ExportFormatCheck[]
+}
+
+/**
+ * Проверка выгрузок правилами PIX — до того, как файл уедет в студию.
+ *
+ * Студия отвергает пакет целиком из-за одного дефекта и называет только код
+ * ошибки; здесь те же проверки делаются заранее и с указанием фигуры. Без
+ * бэкенда проверка недоступна: пакет .pmm собирает только он.
+ */
+export async function fetchExportCheck(processId: string): Promise<ExportCheckReport | null> {
+  try {
+    const res = await fetch(`${API_BASE}/import/${encodeURIComponent(processId)}/export/check`)
+    if (res.ok) return await res.json()
+  } catch {
+    // офлайн-режим: вызывающий код покажет, что проверка недоступна
+  }
+  return null
+}
+
 /**
  * BPMN в том виде, в каком его отдаст скачивание.
  * Клиентский генератор — двойник бэкендового, но источником истины остаётся

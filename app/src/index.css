@@ -161,6 +161,24 @@
   .snap-strip > * {
     scroll-snap-align: start;
   }
+
+  /* Кольцо вокруг фигуры, к которой привела проверка импорта. Пульсация висит
+     на группе, а не на каждом кольце: на карте с двумя сотнями подсвеченных
+     фигур отдельные анимации кладут вкладку. */
+  .sqb-focus-pulse {
+    animation: sqb-focus-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes sqb-focus-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -43,7 +43,7 @@ from app.services.layout import (
 
 _NCNAME = re.compile(r'^[A-Za-z_][A-Za-z0-9._-]*$')
 
-_GATEWAY_TYPES = ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway')
+_GATEWAY_TYPES = ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway')
 
 
 def escape_xml(value) -> str:
@@ -273,6 +273,8 @@ def _node_tag(node: ProcessNode, effective_type: str) -> str:
         return 'bpmn:parallelGateway'
     if effective_type == 'inclusiveGateway':
         return 'bpmn:inclusiveGateway'
+    if effective_type == 'complexGateway':
+        return 'bpmn:complexGateway'
     if effective_type == 'subProcess':
         return 'bpmn:subProcess'
     if effective_type == 'dataStore':
@@ -408,9 +410,14 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
 
     # Висячие связи и оформительские линии draw.io в схему не идут: у
     # annotationLine хотя бы один конец не опирается на шаг процесса.
+    # Петля из фигуры в саму себя тоже не идёт: спецификация её не допускает,
+    # а PIX Процессная студия из-за одной такой линии отказывается открыть всю
+    # карту («Connector source and target node cannot be the same»).
     edges = [
         e for e in process.edges
-        if e.kind != 'annotationLine' and e.sourceId in valid_ids and e.targetId in valid_ids
+        if e.kind != 'annotationLine'
+        and e.sourceId in valid_ids and e.targetId in valid_ids
+        and e.sourceId != e.targetId
     ]
     # messageFlow между двумя шагами одного пула спецификация запрещает: карта
     # SQB — один пул, поэтому такие связи выгружаются как поток управления.

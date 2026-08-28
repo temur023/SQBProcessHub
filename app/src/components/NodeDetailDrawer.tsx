@@ -145,6 +145,7 @@ export const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
                   'exclusiveGateway',
                   'parallelGateway',
                   'inclusiveGateway',
+                  'complexGateway',
                   'lane',
                 ])
                 let nextType = formData.type

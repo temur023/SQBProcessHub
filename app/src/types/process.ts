@@ -13,6 +13,7 @@ export type NodeType =
   | 'exclusiveGateway' // XOR
   | 'parallelGateway' // AND
   | 'inclusiveGateway' // OR
+  | 'complexGateway' // сложное условие: в draw.io — ромб со звёздочкой
   // Артефакты (2-ILOVA: Artefaktlar / Artifacts)
   | 'dataStore' // IABS, EHA, EDO — информационная система
   | 'dataObject' // Dalolatnoma, Yig'ma jild — документ
@@ -24,7 +25,7 @@ export type NodeType =
 export const FLOW_NODE_TYPES = [
   'startEvent', 'endEvent', 'intermediateTimerEvent', 'intermediateMessageEvent',
   'task', 'userTask', 'serviceTask', 'subProcess',
-  'exclusiveGateway', 'parallelGateway', 'inclusiveGateway',
+  'exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway',
 ] as const satisfies readonly NodeType[]
 
 /** Артефакты: соединяются только ассоциациями, шагами процесса не являются. */
@@ -33,8 +34,14 @@ export const ARTIFACT_NODE_TYPES = ['dataStore', 'dataObject', 'textAnnotation']
 /** Узлы, которые считаются шагами регламента (4-ILOVA). */
 export const TASK_NODE_TYPES = ['task', 'userTask', 'serviceTask', 'subProcess'] as const satisfies readonly NodeType[]
 
+/** Шлюзы: развилки потока, шагами регламента не являются. */
+export const GATEWAY_NODE_TYPES = [
+  'exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway',
+] as const satisfies readonly NodeType[]
+
 export const isTaskNode = (type: NodeType): boolean => (TASK_NODE_TYPES as readonly NodeType[]).includes(type)
 export const isArtifactNode = (type: NodeType): boolean => (ARTIFACT_NODE_TYPES as readonly NodeType[]).includes(type)
+export const isGatewayNode = (type: NodeType): boolean => (GATEWAY_NODE_TYPES as readonly NodeType[]).includes(type)
 
 /**
  * Вид соединения (2-ILOVA: Birlashtiruvchi elementlar / Flows).
@@ -135,6 +142,11 @@ export interface ProcessValidation {
   code?: string
   /** Имя фигуры на карте — чтобы сотрудник нашёл её без поиска по id. */
   nodeName?: string
+  /**
+   * Все фигуры, которых касается замечание: по нему платформа подсвечивает на
+   * карте не одну фигуру, а всю группу («расширены 226 фигур» — какие?).
+   */
+  nodeIds?: string[]
   /** Что с этим делать: замечание без подсказки бесполезно. */
   hint?: string
 }
@@ -224,6 +236,7 @@ export const NODE_TYPE_LABELS: Record<NodeType, string> = {
   exclusiveGateway: 'Шлюз «ИЛИ» (XOR)',
   parallelGateway: 'Шлюз «И» (AND)',
   inclusiveGateway: 'Шлюз «И/ИЛИ» (OR)',
+  complexGateway: 'Сложный шлюз',
   dataStore: 'Информационная система',
   dataObject: 'Документ / объект данных',
   textAnnotation: 'Примечание',

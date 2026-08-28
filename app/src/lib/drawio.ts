@@ -9,18 +9,30 @@ import type {
   ProcessPassport,
   PixRegistrySchema,
 } from '@/types/process'
-import { isArtifactNode, isTaskNode } from '@/types/process'
+import { GATEWAY_NODE_TYPES, isArtifactNode, isTaskNode } from '@/types/process'
 import { analyzeProcessConformance } from './conformance'
 import { normalizeLayout } from './layout'
 import { collectImportDiagnostics } from './diagnostics'
+import { parseBpmnMap } from './bpmn-import'
 
-/** Decodes HTML entities and tags in draw.io labels without executing markup */
+/** Теги, которые в draw.io означают перенос строки, а не оформление внутри неё. */
+const BLOCK_TAG_RE = /<\s*\/?\s*(?:br|div|p|li|ul|ol|tr|td|h[1-6])\b[^>]*>/gi
+
+/**
+ * Текст подписи фигуры без разметки draw.io.
+ *
+ * Блочные теги заменяются пробелом (это перенос строки), а строчные снимаются
+ * без пробела. Разница существенная: редактор режет подпись тегом `<span>`
+ * посреди слова, как только к части текста применили оформление, и пробел на
+ * этом месте разрывал число — «1 440 min» превращалось в «1 44» и «0 min»,
+ * а время шага уезжало с 1440 минут на 0.
+ */
 function cleanLabel(raw: string | null): string {
   if (!raw) return ''
   const stripped = raw
-    .replace(/<br\s*[\/]?>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/gi, ' ')
+    .replace(BLOCK_TAG_RE, ' ')
+    .replace(/<[^>]+>/g, '')
   const textarea = document.createElement('textarea')
   textarea.innerHTML = stripped
   return (textarea.value || '')
@@ -320,6 +332,44 @@ const CONDITION_TAGS = new Set([
   "garov obyekti qiymati mustaqil baholovchining hisoboti bilan mosligini o'rganish"
 ])
 
+/** Фигуры draw.io, которые импортёр разбирает по имени. */
+const KNOWN_SHAPE_RE =
+  /mxgraph\.bpmn\.|mxgraph\.flowchart\.annotation|^(?:datastore|dataobject|note|rhombus|ellipse|process|pool|swimlane|image)$/
+/** Виды шлюзов, у которых на карте банка есть свой смысл. */
+const KNOWN_GATEWAY_KINDS = new Set([
+  '', 'none', 'exclusive', 'xor', 'parallel', 'and', 'inclusive', 'or', 'complex', 'multiple',
+])
+/** Значки событий, которые модель различает. */
+const KNOWN_EVENT_SYMBOLS = new Set([
+  '', 'none', 'general', 'timer', 'message', 'terminate', 'terminate2',
+])
+
+/**
+ * Чего импортёр в фигуре не понял — строкой в винительном падеже, чтобы её
+ * можно было подставить в «Платформа не распознала …».
+ *
+ * Молча подставлять «ручную операцию» вместо незнакомой фигуры нельзя: аналитик
+ * рисует схему в draw.io и вправе считать, что видит на карте банка то же самое.
+ * Если фигура или её значок платформе неизвестны, она обязана сказать об этом,
+ * а не тихо заменить смысл ближайшим похожим.
+ */
+export function unsupportedShape(style: string): string | null {
+  const lowered = (style || '').toLowerCase()
+  if (lowered.includes('swimlane') || lowered.includes('shape=pool')) return null
+  const smap = parseStyleMap(style)
+  const shape = (smap.shape || '').toLowerCase()
+  if (shape && !KNOWN_SHAPE_RE.test(shape)) return `фигуру «${shape}»`
+  if (shape.includes('gateway')) {
+    const kind = (smap.gwtype || '').toLowerCase()
+    if (!KNOWN_GATEWAY_KINDS.has(kind)) return `шлюз «${kind}»`
+  }
+  if (shape.endsWith('.event')) {
+    const symbol = (smap.symbol || '').toLowerCase()
+    if (!KNOWN_EVENT_SYMBOLS.has(symbol)) return `событие со значком «${symbol}»`
+  }
+  return null
+}
+
 function isDecorationStyle(style: string): boolean {
   const s = style.toLowerCase()
   return (
@@ -340,8 +390,15 @@ function isDecorationStyle(style: string): boolean {
   )
 }
 
-/** «5 min», «0.5 daq», «120 мин», «Kutish vaqti 30 min» — длительность в подписи фигуры. */
-const DURATION_RE = /(\d+(?:[.,]\d+)?)\s*(?:min|daq|мин)[a-zа-я]*/i
+/** Число длительности: «5», «0.5», «1 440» (пробел — разделитель тысяч). */
+const DURATION_NUMBER = String.raw`\d{1,3}(?:[ \u00a0\u202f]\d{3})+|\d+(?:[.,]\d+)?`
+/** «5 min», «0.5 daq», «120 мин», «1 440 min» — длительность в подписи фигуры. */
+const DURATION_RE = new RegExp(`(${DURATION_NUMBER})\\s*(?:min|daq|мин)[a-zа-я]*`, 'i')
+/** Хвост подписи, начинающийся с длительности: в имя шага он не идёт. */
+const DURATION_TAIL_RE = new RegExp(
+  String.raw`\b(?:${DURATION_NUMBER})\s*(?:min|daq|минут|мин)\b.*$`,
+  'i',
+)
 /** Подпись, помечающая время ОЖИДАНИЯ (WT), а не выполнения (ST). */
 const WAIT_RE = /kutish\s+vaqti|время\s+ожидания|wait/i
 
@@ -349,7 +406,7 @@ export function durationMinutes(text: string | null | undefined): number | null 
   if (!text) return null
   const m = text.match(DURATION_RE)
   if (!m) return null
-  const value = parseFloat(m[1].replace(',', '.'))
+  const value = parseFloat(m[1].replace(/[ \u00a0\u202f]/g, '').replace(',', '.'))
   return Number.isFinite(value) ? value : null
 }
 
@@ -385,12 +442,20 @@ function distanceToBox(px: number, py: number, node: ProcessNode): number {
  * выбрасывали её целиком — на карте пропадали и потоки, и пунктирные
  * ассоциации к хранилищам данных.
  */
-function resolveFreeEndpoint(point: Pt | undefined, candidates: ProcessNode[]): string | undefined {
+function resolveFreeEndpoint(
+  point: Pt | undefined,
+  candidates: ProcessNode[],
+  excludeId?: string,
+): string | undefined {
   if (!point || candidates.length === 0) return undefined
   let bestId: string | undefined
   let bestDist = FREE_ENDPOINT_SNAP
   let bestArea = Infinity
   for (const node of candidates) {
+    // Второй конец той же линии уже занял эту фигуру: связь фигуры с самой
+    // собой не бывает ни в BPMN, ни в PIX — студия отказывается открывать
+    // карту целиком («Connector source and target node cannot be the same»).
+    if (excludeId !== undefined && node.id === excludeId) continue
     const dist = distanceToBox(point.x, point.y, node)
     if (dist > FREE_ENDPOINT_SNAP) continue
     // При равном расстоянии выигрывает меньшая фигура: точка внутри шага
@@ -435,11 +500,22 @@ function edgeKind(
 }
 
 /**
- * Убирает безымянные дорожки-баннеры и даёт позиционные имена остальным.
- * Настоящая безымянная дорожка содержит шаги; пустая рамка без подписи —
- * это оформление схемы, а не зона ответственности.
+ * Убирает безымянные дорожки-баннеры и даёт имена остальным.
+ *
+ * Настоящая безымянная дорожка содержит шаги; пустая рамка без подписи — это
+ * оформление схемы, а не зона ответственности. Уцелевшей дорожке сперва
+ * достаётся заголовок, набранный отдельным повёрнутым текстом внутри неё, и
+ * только потом — позиционное имя.
+ *
+ * Порядок важен: чистку делаем по собственной подписи дорожки. Заголовок схемы
+ * тоже лежит внутри пустой swimlane-рамки, и если сначала раздать заголовки,
+ * шапка схемы останется на карте как ещё одно подразделение.
  */
-function nameAndPruneLanes(lanes: ProcessNode[], flowNodes: ProcessNode[]): void {
+function nameAndPruneLanes(
+  lanes: ProcessNode[],
+  flowNodes: ProcessNode[],
+  laneTitles: Map<string, string> = new Map(),
+): void {
   const populated = new Set(flowNodes.map((n) => n.laneId).filter(Boolean) as string[])
   const doomed = new Set(
     lanes.filter((l) => !(l.name || '').trim() && !populated.has(l.id)).map((l) => l.id),
@@ -457,10 +533,9 @@ function nameAndPruneLanes(lanes: ProcessNode[], flowNodes: ProcessNode[]): void
   }
   const ordered = [...lanes].sort((a, b) => a.geometry.y - b.geometry.y || a.geometry.x - b.geometry.x)
   ordered.forEach((lane, index) => {
-    if (!(lane.name || '').trim()) {
-      lane.name = `Дорожка ${index + 1}`
-      lane.role = lane.name
-    }
+    if ((lane.name || '').trim()) return
+    lane.name = laneTitles.get(lane.id) || `Дорожка ${index + 1}`
+    lane.role = lane.name
   })
 }
 
@@ -534,6 +609,210 @@ function resolveArtifactLinks(flowNodes: ProcessNode[], edges: ProcessEdge[]): v
     if (linked?.length) node.system = linked.join(', ')
     if (inputs.get(node.id)?.length) node.inputArtifacts = inputs.get(node.id)
     if (outputs.get(node.id)?.length) node.outputArtifacts = outputs.get(node.id)
+  }
+}
+
+/**
+ * Картинка из библиотеки draw.io — украшение схемы, а не шаг процесса.
+ *
+ * На картах SQB встречаются иконки телефона, поезда, здания: аналитик ставит их
+ * рядом с шагом «для наглядности». Фигурой BPMN такая картинка не является
+ * никогда, но раньше безымянная иконка со случайной линией превращалась в
+ * полноценную «Операцию STEP-NN» и попадала в регламент.
+ */
+function isClipartStyle(style: string): boolean {
+  const s = (style || '').toLowerCase()
+  return (
+    s.startsWith('image;') ||
+    s.includes(';image=') ||
+    s.includes('shape=image') ||
+    s.includes('shape=mxgraph.signs')
+  )
+}
+
+/**
+ * Текстовая накладка draw.io: подпись поверх холста, а не фигура процесса.
+ *
+ * В draw.io стиль `text;` — это просто текст без рамки и заливки. На картах им
+ * подписывают безымянные шлюзы и документы, а в повёрнутом виде — саму дорожку.
+ * Обрамлённая врезка (`strokeColor` задан) — исключение: это примечание к
+ * процессу, его отбирает `isTextNote`.
+ */
+function isTextOverlay(style: string): boolean {
+  const s = (style || '').toLowerCase()
+  return s.includes('text;') && !s.includes('swimlane') && !s.includes('edgelabel')
+}
+
+/** Подпись дорожки из одних символов («+», «—») смыслом не является. */
+function isJunkLabel(text: string): boolean {
+  return !/[0-9A-Za-z\u0400-\u04FF]/.test(text || '')
+}
+
+/** Рамка на холсте в абсолютных координатах. */
+type Rect = { x: number; y: number; w: number; h: number }
+
+/** Зазор между двумя прямоугольниками (0 — если пересекаются). */
+function boxGap(a: Rect, b: Rect): number {
+  const dx = Math.max(b.x - (a.x + a.w), 0, a.x - (b.x + b.w))
+  const dy = Math.max(b.y - (a.y + a.h), 0, a.y - (b.y + b.h))
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
+/**
+ * Насколько близко текстовая накладка должна лежать к безымянной фигуре, px.
+ * На картах SQB подпись касается своего шлюза или документа (зазор 0-34 px), а
+ * до следующей безымянной фигуры не ближе ~100 px, поэтому порог однозначен.
+ */
+const TEXT_LABEL_SNAP = 60
+
+export interface TextOverlay {
+  id: string
+  text: string
+  box: Rect
+  /** Ячейка-родитель: у заголовка дорожки это сама дорожка. */
+  parentId: string
+}
+
+/**
+ * Раздаёт текстовые накладки безымянным фигурам и дорожкам.
+ *
+ * В draw.io подпись фигуры можно набрать отдельным текстовым блоком рядом —
+ * редактор рисует то же самое, но в модели у фигуры остаётся пустое `value`.
+ * Без этой привязки шлюз попадал в регламент как «Условие», документ — как
+ * «Документ», а сам текст либо терялся, либо становился отдельным шагом.
+ */
+export function attachTextOverlays(
+  overlays: TextOverlay[],
+  targets: { id: string; box: Rect }[],
+  namelessLaneIds: Set<string>,
+): { shapeLabels: Map<string, string>; laneTitles: Map<string, string> } {
+  const pairs: { gap: number; overlayId: string; targetId: string }[] = []
+  for (const overlay of overlays) {
+    for (const target of targets) {
+      const gap = boxGap(overlay.box, target.box)
+      if (gap <= TEXT_LABEL_SNAP) pairs.push({ gap, overlayId: overlay.id, targetId: target.id })
+    }
+  }
+  pairs.sort((a, b) => a.gap - b.gap || a.overlayId.localeCompare(b.overlayId) || a.targetId.localeCompare(b.targetId))
+
+  const textById = new Map(overlays.map((o) => [o.id, o.text]))
+  const shapeLabels = new Map<string, string>()
+  const used = new Set<string>()
+  for (const pair of pairs) {
+    if (used.has(pair.overlayId) || shapeLabels.has(pair.targetId)) continue
+    shapeLabels.set(pair.targetId, textById.get(pair.overlayId)!)
+    used.add(pair.overlayId)
+  }
+
+  // Накладка, не нашедшая фигуры, но лежащая в безымянной дорожке, — её
+  // заголовок: так подписаны вертикальные дорожки на картах SQB.
+  const laneTitles = new Map<string, string>()
+  for (const overlay of overlays) {
+    if (used.has(overlay.id) || !namelessLaneIds.has(overlay.parentId)) continue
+    if ((laneTitles.get(overlay.parentId) || '').length < overlay.text.length) {
+      laneTitles.set(overlay.parentId, overlay.text)
+    }
+  }
+  return { shapeLabels, laneTitles }
+}
+
+/** Условия-антонимы: подпись одной ветки развилки задаёт подпись второй. */
+const CONDITION_OPPOSITES: Record<string, string> = {
+  ha: "Yo'q", "yo'q": 'Ha', 'yo`q': 'Ha', 'yo’q': 'Ha',
+  да: 'Нет', нет: 'Да',
+  yes: 'No', no: 'Yes',
+  "to'liq": "To'liq emas", "to'liq emas": "To'liq",
+  'mos keldi': 'Mos kelmadi', 'mos kelmadi': 'Mos keldi',
+  ijobiy: 'Salbiy', salbiy: 'Ijobiy',
+  'qabul qilindi': 'Rad etildi', 'rad etildi': 'Qabul qilindi',
+}
+
+/** Развилка, вторая ветка которой подписана платформой. */
+export interface CompletedBranch {
+  gateway: ProcessNode
+  edge: ProcessEdge
+  condition: string
+}
+
+/**
+ * Достраивает подпись второй ветки развилки по подписи первой.
+ *
+ * У развилки «да/нет» аналитик часто подписывает только отрицательную ветку: на
+ * рисунке и так понятно, что вторая — «Ha». PIX BPM так не умеет: ветка без
+ * условия не автоматизируется, и шаг регламента упирается в неё.
+ *
+ * Достраиваем только там, где догадка однозначна: исключающий шлюз ровно с
+ * двумя исходящими ветками, подписана ровно одна, и её подпись входит в пару
+ * антонимов. Всё остальное остаётся ошибкой — угадывать смысл развилки на три
+ * ветки платформа не вправе.
+ */
+export function completeBinaryGatewayConditions(
+  flowNodes: ProcessNode[],
+  edges: ProcessEdge[],
+): CompletedBranch[] {
+  const outgoing = new Map<string, ProcessEdge[]>()
+  for (const edge of edges) {
+    if ((edge.kind ?? 'sequenceFlow') !== 'sequenceFlow' || !edge.sourceId) continue
+    outgoing.set(edge.sourceId, [...(outgoing.get(edge.sourceId) ?? []), edge])
+  }
+
+  const filled: CompletedBranch[] = []
+  for (const gateway of flowNodes) {
+    if (gateway.type !== 'exclusiveGateway') continue
+    const branches = outgoing.get(gateway.id) ?? []
+    if (branches.length !== 2) continue
+    const named = branches.filter((e) => (e.name || e.condition || '').trim())
+    const blank = branches.filter((e) => !(e.name || e.condition || '').trim())
+    if (named.length !== 1 || blank.length !== 1) continue
+    const known = (named[0].name || named[0].condition || '').trim().toLowerCase()
+    const opposite = CONDITION_OPPOSITES[known]
+    if (!opposite) continue
+    blank[0].name = opposite
+    blank[0].condition = opposite
+    filled.push({ gateway, edge: blank[0], condition: opposite })
+  }
+  return filled
+}
+
+/**
+ * Приводит тип события к его реальной степени на карте.
+ *
+ * Тип фигуры определяется до того, как разобраны связи: у линии draw.io конец
+ * может висеть в пустоте, и её притягивает к фигуре уже отдельный проход. До
+ * этого прохода промежуточное событие выглядит как висячее и получает тип
+ * `startEvent` — на карте вместо одного старта рисуется пять, а в отчёте
+ * появляется ложное «Стартовых событий: 5».
+ */
+export function reclassifyEvents(flowNodes: ProcessNode[], edges: ProcessEdge[]): void {
+  const incoming = new Set<string>()
+  const outgoing = new Set<string>()
+  for (const e of edges) {
+    if ((e.kind ?? 'sequenceFlow') !== 'sequenceFlow') continue
+    if (e.targetId) incoming.add(e.targetId)
+    if (e.sourceId) outgoing.add(e.sourceId)
+  }
+
+  for (const node of flowNodes) {
+    if (node.type !== 'startEvent' && node.type !== 'endEvent') continue
+    const hasIn = incoming.has(node.id)
+    const hasOut = outgoing.has(node.id)
+    let next: NodeType | null = null
+    if (hasIn && hasOut) {
+      const isTimer = (node.style || '').toLowerCase().includes('symbol=timer') || isWaitLabel(node.name)
+      next = isTimer ? 'intermediateTimerEvent' : 'intermediateMessageEvent'
+    } else if (hasIn && !hasOut && node.type === 'startEvent') {
+      next = 'endEvent'
+    } else if (hasOut && !hasIn && node.type === 'endEvent') {
+      next = 'startEvent'
+    }
+    if (!next) continue
+    const wasGenerated =
+      node.name === fallbackNodeName(node.type, node.code) ||
+      node.name === fallbackNodeName(node.type, null)
+    node.type = next
+    node.category = classifyCategory(next, node.name, node.style || '')
+    node.code = next === 'startEvent' ? 'START' : next === 'endEvent' ? 'END' : undefined
+    if (wasGenerated) node.name = fallbackNodeName(next, node.code)
   }
 }
 
@@ -627,7 +906,12 @@ function classifyVertex(
 
   if (s.includes('mxgraph.bpmn.gateway') || shape.endsWith('gateway2') || smap.gwtype) {
     const gw = (smap.gwtype || smap.symbol || '').toLowerCase()
-    if (gw === 'parallel' || gw === 'and' || gw === 'complex' || s.includes('outline=plus') || s.includes('parallel'))
+    // Сложный шлюз (звёздочка) — не то же самое, что параллельный (плюс): у
+    // параллельного срабатывают все ветки, у сложного условие задаётся отдельно.
+    // Раньше они сливались, и на карте звёздочка превращалась в плюс — аналитик
+    // видел не ту схему, что нарисовал.
+    if (gw === 'complex' || gw === 'multiple' || s.includes('outline=star')) return 'complexGateway'
+    if (gw === 'parallel' || gw === 'and' || s.includes('outline=plus') || s.includes('parallel'))
       return 'parallelGateway'
     if (gw === 'inclusive' || gw === 'or' || s.includes('inclusive') || s.includes('outline=circle'))
       return 'inclusiveGateway'
@@ -682,6 +966,8 @@ function classifyVertex(
     i.includes('_gw_')
 
   if (isGatewayShape) {
+    if (s.includes('complex') || l.trim() === '*' || l.trim() === '✳' || l.trim() === '✱')
+      return 'complexGateway'
     if (s.includes('outline=plus') || s.includes('parallel') || l.trim() === '+' || l.trim() === 'and' || l.trim() === 'и')
       return 'parallelGateway'
     if (s.includes('inclusive') || s.includes('outline=circle')) return 'inclusiveGateway'
@@ -806,11 +1092,13 @@ function extractSlaMinutes(rawText: string, category: StepCategory, type: NodeTy
     return minutes ? Math.max(1, Math.round(minutes)) : 30
   }
 
-  const match = rawText.match(/(\d+(?:\.\d+)?)\s*(?:min|daq|минут|мин|m\b)/i)
-  if (match) {
-    const val = parseFloat(match[1])
-    return Math.max(1, Math.round(val))
+  let minutes = durationMinutes(rawText)
+  if (minutes === null) {
+    // «15 m» без единицы целиком: отдельный случай, в бейджах не встречается.
+    const short = rawText.match(/(\d+(?:[.,]\d+)?)\s*m\b/i)
+    minutes = short ? parseFloat(short[1].replace(',', '.')) : null
   }
+  if (minutes !== null) return Math.max(1, Math.round(minutes))
 
   switch (category) {
     case 'rpa_bot':
@@ -869,6 +1157,7 @@ function parseBpmnXml(xmlText: string, fileName: string): BusinessProcess {
     else if (tagName === 'exclusivegateway') type = 'exclusiveGateway'
     else if (tagName === 'parallelgateway') type = 'parallelGateway'
     else if (tagName === 'inclusivegateway') type = 'inclusiveGateway'
+    else if (tagName === 'complexgateway') type = 'complexGateway'
 
     if (type) {
       const id = el.getAttribute('id') ?? `node_${crypto.randomUUID()}`
@@ -1017,7 +1306,15 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
   const { xml, isBpmn } = await extractGraphXml(text)
 
   if (isBpmn) {
-    return parseBpmnXml(xml, fileName)
+    // Полноценный читатель BPMN живёт в `bpmn-import`: он поднимает артефакты,
+    // промежуточные события, ассоциации и паспорт шага из `documentation`.
+    // Локальный `parseBpmnXml` знает только события, задачи и шлюзы, поэтому
+    // остаётся страховкой для обрывка схемы без <definitions>.
+    try {
+      return parseBpmnMap(xml, fileName)
+    } catch {
+      return parseBpmnXml(xml, fileName)
+    }
   }
 
   const doc = new DOMParser().parseFromString(xml, 'text/xml')
@@ -1051,6 +1348,8 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
   const originCache = new Map<string, { x: number; y: number }>()
   const orphanConditionLabels: { text: string; x: number; y: number }[] = []
   const durationBadges: { x: number; y: number; minutes: number; isWait: boolean }[] = []
+  /** Текстовые накладки: подписи, набранные отдельным блоком рядом с фигурой. */
+  const textOverlays: TextOverlay[] = []
 
   // ── Бейджи ST/WT ─────────────────────────────────────────────────────────
   // По Методике (4-ILOVA) время операции проставляется отдельной мелкой
@@ -1128,10 +1427,27 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     if (isTextNote(style, cleaned)) return
 
     // Condition 3: Text label overlay (e.g. node_start_label, gw_risk_label)
-    if (id.endsWith('_label') || (style.includes('text;') && !style.includes('swimlane') && (style.includes('strokecolor=none') || style.includes('fillcolor=none') || isNonTaskLabel(cleaned) || cleaned.length < 2))) {
+    if (id.endsWith('_label') || isTextOverlay(style)) {
       ignoreCellIds.add(id)
       const baseId = id.replace(/_label$/, '')
-      if (baseId && cleaned) labelMap.set(baseId, cleaned)
+      if (baseId !== id && cleaned) {
+        labelMap.set(baseId, cleaned)
+      } else if (cleaned && geo) {
+        // Подпись отдельным блоком: чью фигуру она называет, решаем по
+        // геометрии — соседство на холсте здесь и есть связь.
+        const o3 = parentOrigin(parentId, cellMap, originCache)
+        textOverlays.push({
+          id,
+          text: cleaned,
+          box: {
+            x: Number(geo.getAttribute('x') ?? 0) + o3.x,
+            y: Number(geo.getAttribute('y') ?? 0) + o3.y,
+            w: Number(geo.getAttribute('width') ?? 0),
+            h: Number(geo.getAttribute('height') ?? 0),
+          },
+          parentId,
+        })
+      }
       // Сохраняем условия Yo'q/Ha/To'liq как отдельные метки для привязки к ближайшему ребру
       if (CONDITION_TAGS.has(cleaned.toLowerCase()) && cleaned) {
         const geo2 = c.querySelector('mxGeometry')
@@ -1196,6 +1512,43 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
   const swimlaneIds = new Set(swimlaneCells.map((c) => c.getAttribute('id') || '').filter(Boolean))
   const containerIds = new Set<string>([...poolIds, ...swimlaneIds, '0', '1'])
 
+  // ── Подписи, набранные отдельным текстовым блоком ────────────────────────
+  // Их адресат определяется соседством на холсте, поэтому раздаём подписи
+  // после того, как собраны все фигуры и известно, у каких из них имени нет.
+  const unlabeledBoxes: { id: string; box: Rect }[] = []
+  for (const c of cells) {
+    const id = c.getAttribute('id') ?? ''
+    if (c.getAttribute('vertex') !== '1' || !id || ignoreCellIds.has(id)) continue
+    if (swimlaneIds.has(id) || poolIds.has(id) || labelMap.has(id)) continue
+    if (cleanLabel(c.getAttribute('value'))) continue
+    const geo4 = c.querySelector(':scope > mxGeometry') as Element | null
+    if (!geo4) continue
+    const o4 = parentOrigin(c.getAttribute('parent') ?? '', cellMap, originCache)
+    unlabeledBoxes.push({
+      id,
+      box: {
+        x: Number(geo4.getAttribute('x') ?? 0) + o4.x,
+        y: Number(geo4.getAttribute('y') ?? 0) + o4.y,
+        w: Number(geo4.getAttribute('width') ?? 0),
+        h: Number(geo4.getAttribute('height') ?? 0),
+      },
+    })
+  }
+  const namelessLaneIds = new Set(
+    swimlaneCells
+      .filter((c) => c.getAttribute('id') && isJunkLabel(cleanLabel(c.getAttribute('value'))))
+      .map((c) => c.getAttribute('id') as string),
+  )
+  const { shapeLabels: overlayLabels, laneTitles } = attachTextOverlays(
+    textOverlays,
+    unlabeledBoxes,
+    namelessLaneIds,
+  )
+  overlayLabels.forEach((text, targetId) => labelMap.set(targetId, text))
+
+  /** Иконки-украшения, снятые с карты: о них сотруднику тоже надо сказать. */
+  const skippedClipart: string[] = []
+
   const isArtifactShape = (s: string) => s.includes('datastore') || s.includes('dataobject') || s.includes('shape=note') || s.includes('shape=mxgraph.signs') || s.includes('shape=mxgraph.bpmn.annotation')
 
   const rawVertices = cells.filter((c) => {
@@ -1218,6 +1571,12 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     const h = Number(geo?.getAttribute('height') ?? 0)
     const unlabeled = !cleanLabel(c.getAttribute('value')) && !labelMap.has(id)
     const tiny = w > 0 && h > 0 && w <= 32 && h <= 32
+    // Безымянная картинка из библиотеки — украшение, даже если к ней подведена
+    // линия: шагом регламента иконка телефона не бывает.
+    if (isClipartStyle(style) && unlabeled) {
+      skippedClipart.push(parseStyleMap(style).shape || 'image')
+      return false
+    }
     if (isDecorationStyle(style) && (unlabeled || tiny) && !incoming.has(id) && !outgoing.has(id)) {
       return false
     }
@@ -1232,6 +1591,8 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
 
   /** Шаги, чьё время взято с карты, а не из эвристики по категории. */
   const timedStepIds = new Set<string>()
+  /** Фигуры, смысл которых импортёр не понял: описание -> подставленные узлы. */
+  const unsupported = new Map<string, ProcessNode[]>()
 
   for (const cell of rawVertices) {
     const id = cell.getAttribute('id') ?? `node_${crypto.randomUUID()}`
@@ -1265,12 +1626,18 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     // Extract explicit code or number (e.g. '1. Mijozni kutib olish' -> 'STEP-01', 'STEP-02')
     let code: string | undefined = undefined
     const codeMatch = (rawValue || rawCleaned).match(/\b(STEP[-_ ]?\d+|START|END|GW[-_ ]?\w+)\b/i)
-    const numPrefix = rawCleaned.match(/^(\d+)[.)]\s*/)
+    // Номер шага бывает составным («84.1.», «37.1.1») и не всегда кончается
+    // точкой. Берём его целиком: иначе шаг 84.1 получает код своего родителя
+    // STEP-84 и в регламенте эти строки не отличить. Одиночное число без
+    // разделителя номером не считаем — «2026 yil» не шаг №2026.
+    const numMatch = rawCleaned.match(/^(\d+(?:\.\d+)*)([.)]?)(?=\s)/)
+    const numPrefix = numMatch && (numMatch[2] || numMatch[1].includes('.')) ? numMatch : null
 
     if (codeMatch) {
       code = codeMatch[1].toUpperCase().replace(/_/g, '-')
     } else if (numPrefix && isTask) {
-      code = `STEP-${String(numPrefix[1]).padStart(2, '0')}`
+      const [head, ...rest] = numPrefix[1].split('.')
+      code = `STEP-${head.padStart(2, '0')}${rest.length ? `.${rest.join('.')}` : ''}`
     } else if (type === 'startEvent') {
       code = 'START'
     } else if (type === 'endEvent') {
@@ -1279,22 +1646,25 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       code = `STEP-${String(stepIndex++).padStart(2, '0')}`
     }
 
-    const rawText = `${rawValue || ''} ${rawCleaned}`
-    const slaMin = extractSlaMinutes(rawText, category, type)
-    if (durationMinutes(rawText) !== null) timedStepIds.add(id)
+    // Время ищем только в очищенной подписи: в сырой разметке draw.io лежат
+    // цвета вида «#000», и «0 min» из атрибута стиля забирал шагу его SLA.
+    const slaMin = extractSlaMinutes(rawCleaned, category, type)
+    if (durationMinutes(rawCleaned) !== null) timedStepIds.add(id)
 
-    // Clean human-friendly name (strip [PIX RPA], numbers, minutes)
+    // Номер шага остаётся в названии: на карте draw.io он написан перед текстом,
+    // по нему аналитик находит шаг в регламенте и в самой Методике. Снимаем
+    // только служебные пометки — тег вида «[PIX RPA]», машинный код «STEP-01:»
+    // и приписанное к подписи время.
     let cleanName = rawCleaned
       .replace(/^\[.*?\]\s*/gi, '')
       .replace(/^STEP[-_ ]?\d+[:\s-]*/gi, '')
-      .replace(/^[0-9]+[.)]\s*/gi, '')
-      .replace(/\b\d+(?:\.\d+)?\s*(?:min|daq|минут|мин)\b.*$/gi, '')
+      .replace(DURATION_TAIL_RE, '')
       .trim()
 
     if (!cleanName && type === 'lane') {
       // безымянная дорожка: имя присвоим позиционно после разбора
     } else if (!cleanName) {
-      cleanName = fallbackNodeName(type, code, `${rawValue || ''} ${rawCleaned}`)
+      cleanName = fallbackNodeName(type, code, rawCleaned)
     }
 
     // Guard against invisible boxes: разные минимумы по типу
@@ -1314,7 +1684,7 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
 
     const fotCost = category !== 'rpa_bot' ? slaMin * 1932 : 800
 
-    nodes.push({
+    const node: ProcessNode = {
       id,
       name: cleanName,
       type,
@@ -1331,7 +1701,10 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       slaMinutes: slaMin,
       costPerExecution: fotCost,
       automationPotential: category === 'rpa_bot' ? 95 : category === 'manual' ? 65 : 40,
-    })
+    }
+    const unknown = unsupportedShape(style)
+    if (unknown) unsupported.set(unknown, [...(unsupported.get(unknown) ?? []), node])
+    nodes.push(node)
   }
 
   // Identify lanes / swimlanes
@@ -1343,7 +1716,7 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     if (n.laneId && !laneIds.has(n.laneId)) n.laneId = undefined
   }
 
-  nameAndPruneLanes(lanes, flowNodes)
+  nameAndPruneLanes(lanes, flowNodes, laneTitles)
 
   // Geometry-based lane assignment fallback — учитываем ширину заголовка дорожки (44px)
   const laneById = new Map(lanes.map((l) => [l.id, l]))
@@ -1418,8 +1791,11 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
       const free = freeEndsOf(cell)
       let s: string | undefined = cell.getAttribute('source') ?? undefined
       let t: string | undefined = cell.getAttribute('target') ?? undefined
-      if (!s) s = resolveFreeEndpoint(free.sourcePoint, snapTargets)
-      if (!t) t = resolveFreeEndpoint(free.targetPoint, snapTargets)
+      // Конец без привязки притягиваем к ближайшей фигуре под ним, но не к
+      // той, на которой уже стоит второй конец: у линии, оба конца которой
+      // висят в пустоте рядом, иначе получалась петля из фигуры в себя.
+      if (!s) s = resolveFreeEndpoint(free.sourcePoint, snapTargets, t)
+      if (!t) t = resolveFreeEndpoint(free.targetPoint, snapTargets, s)
       const sOk = isKnown(s)
       const tOk = isKnown(t)
       // Линия без единой опоры на фигуру — мусор; с одной опорой — оформление.
@@ -1517,7 +1893,7 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
         const s = nodeById.get(e.sourceId || '')
         const t = nodeById.get(e.targetId || '')
         if (!s || !t) continue
-        const isGw = s.type === 'exclusiveGateway' || s.type === 'parallelGateway' || s.type === 'inclusiveGateway'
+        const isGw = (GATEWAY_NODE_TYPES as readonly NodeType[]).includes(s.type)
         // центр ребра (с учётом waypoints)
         let cx: number, cy: number
         if (e.points.length > 0) {
@@ -1558,6 +1934,10 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     // ignore
   }
 
+  // Связи разобраны и притянуты к фигурам — только теперь у события известна
+  // его настоящая степень, а значит и тип.
+  reclassifyEvents(flowNodes, edges)
+  const completedBranches = completeBinaryGatewayConditions(flowNodes, edges)
   for (const id of applyDurationBadges(flowNodes, durationBadges)) timedStepIds.add(id)
   resolveArtifactLinks(flowNodes, edges)
   // Геометрию правим до сбора замечаний: часть из них про размеры фигур.
@@ -1569,6 +1949,9 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     pageUsed: pages.used,
     timedStepIds,
     layoutReport,
+    unsupportedShapes: unsupported,
+    skippedClipart,
+    completedBranches,
   })
 
   const cleanTitle = diagramName || fileName.replace(/\.(drawio|xml)$/i, '')

@@ -28,12 +28,24 @@ from app.services.conformance_engine import analyze_process_conformance
 from app.services.diagnostics import collect_import_diagnostics
 from app.services.layout import normalize_layout
 
+#: Теги, которые в draw.io означают перенос строки, а не оформление внутри неё.
+_BLOCK_TAG_RE = re.compile(r'<\s*/?\s*(?:br|div|p|li|ul|ol|tr|td|h[1-6])\b[^>]*>', re.IGNORECASE)
+
+
 def clean_label(raw: Optional[str]) -> str:
+    """Текст подписи фигуры без разметки draw.io.
+
+    Блочные теги заменяются пробелом (это перенос строки), а строчные снимаются
+    без пробела. Разница существенная: редактор режет подпись тегом ``<span>``
+    посреди слова, как только к части текста применили оформление, и пробел на
+    этом месте разрывал число — «1 440 min» превращалось в «1 44» и «0 min»,
+    а время шага уезжало с 1440 минут на 0.
+    """
     if not raw:
         return ''
     text = raw.replace('&nbsp;', ' ')
-    text = re.sub(r'<br\s*/?>', ' ', text, flags=re.IGNORECASE)
-    text = re.sub(r'<[^>]+>', ' ', text)
+    text = _BLOCK_TAG_RE.sub(' ', text)
+    text = re.sub(r'<[^>]+>', '', text)
     text = (
         text.replace('&lt;', '<')
             .replace('&gt;', '>')
@@ -207,6 +219,78 @@ CONDITION_TAGS = {
     "garov obyekti qiymati mustaqil baholovchining hisoboti bilan mosligini o'rganish"
 }
 
+def is_clipart_style(style: str) -> bool:
+    """Картинка из библиотеки draw.io — украшение схемы, а не шаг процесса.
+
+    На картах SQB встречаются иконки телефона, поезда, здания: аналитик ставит
+    их рядом с шагом «для наглядности». Фигурой BPMN такая картинка не является
+    никогда, но раньше безымянная иконка со случайной линией превращалась в
+    полноценную «Операцию STEP-NN» и попадала в регламент.
+    """
+    s = (style or '').lower()
+    return (
+        s.startswith('image;')
+        or ';image=' in s
+        or 'shape=image' in s
+        or 'shape=mxgraph.signs' in s
+    )
+
+
+def is_text_overlay(style: str) -> bool:
+    """Текстовая накладка draw.io: подпись поверх холста, а не фигура процесса.
+
+    В draw.io стиль ``text;`` — это просто текст без рамки и заливки. На картах
+    им подписывают безымянные шлюзы и документы, а в повёрнутом виде — саму
+    дорожку. Обрамлённая врезка (``strokeColor`` задан) — исключение: это
+    примечание к процессу, его отбирает :func:`is_text_note`.
+    """
+    s = (style or '').lower()
+    return 'text;' in s and 'swimlane' not in s and 'edgelabel' not in s
+
+
+#: Фигуры draw.io, которые импортёр разбирает по имени.
+_KNOWN_SHAPE_RE = re.compile(
+    r'mxgraph\.bpmn\.'
+    r'|mxgraph\.flowchart\.annotation'
+    r'|^(?:datastore|dataobject|note|rhombus|ellipse|process|pool|swimlane|image)$'
+)
+#: Виды шлюзов, у которых на карте банка есть свой смысл.
+_KNOWN_GATEWAY_KINDS = frozenset({
+    '', 'none', 'exclusive', 'xor', 'parallel', 'and',
+    'inclusive', 'or', 'complex', 'multiple',
+})
+#: Значки событий, которые модель различает.
+_KNOWN_EVENT_SYMBOLS = frozenset({
+    '', 'none', 'general', 'timer', 'message', 'terminate', 'terminate2',
+})
+
+
+def unsupported_shape(style: str) -> Optional[str]:
+    """Чего импортёр в фигуре не понял — короткой строкой для отчёта.
+
+    Молча подставлять «ручную операцию» вместо незнакомой фигуры нельзя:
+    аналитик рисует схему в draw.io и вправе считать, что видит на карте банка
+    то же самое. Если фигура или её значок платформе неизвестны, она обязана
+    сказать об этом, а не тихо заменить смысл ближайшим похожим.
+    """
+    lowered = (style or '').lower()
+    if 'swimlane' in lowered or 'shape=pool' in lowered:
+        return None
+    smap = _style_map(style)
+    shape = (smap.get('shape') or '').lower()
+    if shape and not _KNOWN_SHAPE_RE.search(shape):
+        return f'фигуру «{shape}»'
+    if 'gateway' in shape:
+        kind = (smap.get('gwtype') or '').lower()
+        if kind not in _KNOWN_GATEWAY_KINDS:
+            return f'шлюз «{kind}»'
+    if shape.endswith('.event'):
+        symbol = (smap.get('symbol') or '').lower()
+        if symbol not in _KNOWN_EVENT_SYMBOLS:
+            return f'событие со значком «{symbol}»'
+    return None
+
+
 def is_decoration_style(style: str) -> bool:
     s = (style or '').lower()
     return (
@@ -227,8 +311,18 @@ def is_decoration_style(style: str) -> bool:
     )
 
 
-#: «5 min», «0.5 daq», «120 мин», «Kutish vaqti 30 min» — длительность в подписи фигуры.
-_DURATION_RE = re.compile(r'(\d+(?:[.,]\d+)?)\s*(?:min|daq|мин)[a-zа-я]*', re.IGNORECASE)
+#: Число длительности: «5», «0.5», «1 440» (пробел — разделитель тысяч).
+_DURATION_NUMBER = r'\d{1,3}(?:[ \u00a0\u202f]\d{3})+|\d+(?:[.,]\d+)?'
+#: «5 min», «0.5 daq», «120 мин», «1 440 min» — длительность в подписи фигуры.
+_DURATION_RE = re.compile(
+    rf'({_DURATION_NUMBER})\s*(?:min|daq|мин)[a-zа-я]*',
+    re.IGNORECASE,
+)
+#: Хвост подписи, начинающийся с длительности: в имя шага он не идёт.
+_DURATION_TAIL_RE = re.compile(
+    rf'\b(?:{_DURATION_NUMBER})\s*(?:min|daq|минут|мин)\b.*$',
+    re.IGNORECASE,
+)
 #: Подпись, помечающая время ОЖИДАНИЯ (WT), а не выполнения (ST).
 _WAIT_RE = re.compile(r"kutish\s+vaqti|время\s+ожидания|wait", re.IGNORECASE)
 
@@ -240,8 +334,9 @@ def duration_minutes(text: Optional[str]) -> Optional[float]:
     m = _DURATION_RE.search(text)
     if not m:
         return None
+    digits = re.sub(r'[ \u00a0\u202f]', '', m.group(1)).replace(',', '.')
     try:
-        return float(m.group(1).replace(',', '.'))
+        return float(digits)
     except ValueError:
         return None
 
@@ -383,7 +478,13 @@ def classify_vertex(style: str, label: str, has_incoming: bool, has_outgoing: bo
 
     if 'mxgraph.bpmn.gateway' in s or shape.endswith('gateway2') or 'gwtype' in smap:
         gw = (smap.get('gwtype') or smap.get('symbol') or '').lower()
-        if gw in ('parallel', 'and', 'complex') or 'outline=plus' in s or 'parallel' in s:
+        # Сложный шлюз (звёздочка) — не то же самое, что параллельный (плюс):
+        # у параллельного срабатывают все ветки, у сложного условие задаётся
+        # отдельно. Раньше они сливались, и на карте звёздочка превращалась
+        # в плюс — аналитик видел не ту схему, что нарисовал.
+        if gw in ('complex', 'multiple') or 'outline=star' in s:
+            return 'complexGateway'
+        if gw in ('parallel', 'and') or 'outline=plus' in s or 'parallel' in s:
             return 'parallelGateway'
         if gw in ('inclusive', 'or') or 'inclusive' in s or 'outline=circle' in s:
             return 'inclusiveGateway'
@@ -429,6 +530,8 @@ def classify_vertex(style: str, label: str, has_incoming: bool, has_outgoing: bo
         or '_gw_' in i
     )
     if is_gateway_shape:
+        if 'complex' in s or l.strip() in ('*', '✳', '✱'):
+            return 'complexGateway'
         if 'outline=plus' in s or 'parallel' in s or l.strip() in ('+', 'and', 'и'):
             return 'parallelGateway'
         if 'inclusive' in s or 'outline=circle' in s:
@@ -538,10 +641,13 @@ def extract_sla_minutes(raw_text: str, category: StepCategory, node_type: NodeTy
         minutes = duration_minutes(raw_text)
         return max(1, int(round(minutes))) if minutes else 30
 
-    match = re.search(r'(\d+(?:\.\d+)?)\s*(?:min|daq|минут|мин|m\b)', raw_text, re.IGNORECASE)
-    if match:
-        val = float(match.group(1))
-        return max(1, int(round(val)))
+    minutes = duration_minutes(raw_text)
+    if minutes is None:
+        # «15 m» без единицы целиком: отдельный случай, в бейджах не встречается.
+        short = re.search(r'(\d+(?:[.,]\d+)?)\s*m\b', raw_text, re.IGNORECASE)
+        minutes = float(short.group(1).replace(',', '.')) if short else None
+    if minutes is not None:
+        return max(1, int(round(minutes)))
 
     if category == 'rpa_bot':
         return 3
@@ -574,7 +680,7 @@ def fallback_node_name(node_type: NodeType, code: Optional[str], raw_text: str =
         return 'Старт'
     if node_type == 'endEvent':
         return 'Завершение'
-    if node_type in ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway'):
+    if node_type in ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway'):
         return 'Условие'
     if node_type == 'dataStore':
         return 'Информационная система'
@@ -585,6 +691,106 @@ def fallback_node_name(node_type: NodeType, code: Optional[str], raw_text: str =
     if node_type == 'subProcess':
         return f'Подпроцесс {code}' if code else 'Подпроцесс'
     return f'Операция {code}' if code else 'Операция'
+
+
+#: Элемент BPMN 2.0 -> тип узла карты. Список закрытый: всё, что сюда не
+#: попало (``laneSet``, ``participant``, ``documentation``), фигурой не является.
+BPMN_TYPE_MAP: Dict[str, NodeType] = {
+    'startevent': 'startEvent',
+    'endevent': 'endEvent',
+    'intermediatecatchevent': 'intermediateMessageEvent',  # уточняется по definition
+    'intermediatethrowevent': 'intermediateMessageEvent',
+    'boundaryevent': 'intermediateMessageEvent',
+    'task': 'userTask',
+    'usertask': 'userTask',
+    'manualtask': 'userTask',
+    'receivetask': 'userTask',
+    'sendtask': 'serviceTask',
+    'servicetask': 'serviceTask',
+    'scripttask': 'serviceTask',
+    'businessruletask': 'serviceTask',
+    'subprocess': 'subProcess',
+    'callactivity': 'subProcess',
+    'exclusivegateway': 'exclusiveGateway',
+    'eventbasedgateway': 'exclusiveGateway',
+    'parallelgateway': 'parallelGateway',
+    'inclusivegateway': 'inclusiveGateway',
+    'complexgateway': 'complexGateway',
+    'datastorereference': 'dataStore',
+    'dataobjectreference': 'dataObject',
+    'textannotation': 'textAnnotation',
+}
+
+
+#: Длительность в подписи значка — в тех единицах, в которых её пишет выгрузка.
+_BADGE_UNIT_RE = re.compile(
+    r'\d+(?:[.,]\d+)?\s*(?:мин|ч|дн|min|daq)\b', re.IGNORECASE,
+)
+#: Что может остаться от подписи значка длительности, кроме самого числа.
+_BADGE_RESIDUE_RE = re.compile(
+    r"[\s·,;:/–—-]+|ожидание|kutish\s*vaqti|wait", re.IGNORECASE,
+)
+
+
+def is_duration_badge_name(name: str) -> bool:
+    """Подпись «15 мин · ожидание 2 ч» — значок времени, а не имя события.
+
+    Выгрузка в BPMN вешает время шага граничным таймером: иначе Процессная
+    студия открывает карту без единой цифры. При обратном чтении такой таймер
+    обязан исчезнуть — время уже восстановлено из документации шага, а иначе
+    у каждого шага появлялось бы фантомное событие-двойник.
+    """
+    text = (name or '').strip()
+    if not text or not _BADGE_UNIT_RE.search(text):
+        return False
+    return not _BADGE_RESIDUE_RE.sub('', _BADGE_UNIT_RE.sub(' ', text)).strip()
+
+
+def _bpmn_documentation(el: ET.Element) -> Dict[str, str]:
+    """Паспорт шага из ``<documentation>``, который пишет наш же экспортёр.
+
+    Стандартный BPMN не хранит ни исполнителя, ни время операции, ни систему —
+    выгрузка складывает их в документацию строкой ``Role: …; ST: 15 min; …``.
+    Без обратного разбора карта, выгруженная и открытая заново, теряла и роли,
+    и SLA, и весь расчёт экономии.
+    """
+    meta: Dict[str, str] = {}
+    for child in el:
+        if _local_tag(child.tag).lower() != 'documentation':
+            continue
+        for chunk in (child.text or '').split(';'):
+            key, sep, value = chunk.partition(':')
+            if sep and value.strip():
+                meta[key.strip().lower()] = value.strip()
+        break
+    return meta
+
+
+def _apply_bpmn_documentation(node: ProcessNode, meta: Dict[str, str]) -> None:
+    if not meta:
+        return
+    if meta.get('code'):
+        node.code = meta['code']
+    if meta.get('role'):
+        node.role = meta['role']
+    if meta.get('lane'):
+        node.laneName = meta['lane']
+    if meta.get('system'):
+        node.system = meta['system']
+    for key, field in (('st', 'slaMinutes'), ('wt', 'waitMinutes')):
+        minutes = duration_minutes(meta.get(key))
+        if minutes is not None:
+            setattr(node, field, int(round(minutes)))
+    for key, field in (('in', 'inputArtifacts'), ('out', 'outputArtifacts')):
+        if meta.get(key):
+            setattr(node, field, [p.strip() for p in meta[key].split(',') if p.strip()])
+    category = meta.get('category')
+    if category in ('manual', 'rpa_bot', 'api_service', 'approval', 'validation', 'notification'):
+        node.category = category
+    potential = re.match(r'(\d+)', meta.get('rpa potential', ''))
+    if potential:
+        node.automationPotential = int(potential.group(1))
+    node.costPerExecution = 800 if node.category == 'rpa_bot' else (node.slaMinutes or 0) * 1932
 
 
 def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
@@ -620,27 +826,30 @@ def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
                 )
                 break
 
-    type_map = {
-        'startevent': 'startEvent',
-        'endevent': 'endEvent',
-        'usertask': 'userTask',
-        'task': 'userTask',
-        'servicetask': 'serviceTask',
-        'exclusivegateway': 'exclusiveGateway',
-        'parallelgateway': 'parallelGateway',
-        'inclusivegateway': 'inclusiveGateway',
-    }
-
     nodes: List[ProcessNode] = []
     step_index = 1
     for el in root.iter():
-        node_type = type_map.get(_local_tag(el.tag).lower())
+        tag = _local_tag(el.tag).lower()
+        node_type = BPMN_TYPE_MAP.get(tag)
         if not node_type:
             continue
         node_id = el.get('id') or f"node_{uuid.uuid4().hex[:8]}"
         raw_name = el.get('name') or ''
+        if tag == 'boundaryevent' and is_duration_badge_name(raw_name):
+            continue
+        if node_type == 'textAnnotation' and not raw_name:
+            for child in el:
+                if _local_tag(child.tag).lower() == 'text':
+                    raw_name = (child.text or '').strip()
+                    break
+        if tag == 'intermediatecatchevent':
+            has_timer = any(
+                _local_tag(child.tag).lower() == 'timereventdefinition' for child in el
+            )
+            node_type = 'intermediateTimerEvent' if has_timer else 'intermediateMessageEvent'
+        meta = _bpmn_documentation(el)
         category = classify_category(node_type, raw_name, '')
-        is_task = node_type in ('task', 'userTask', 'serviceTask')
+        is_task = node_type in TASK_NODE_TYPES
         if node_type == 'startEvent':
             code = 'START'
         elif node_type == 'endEvent':
@@ -655,7 +864,7 @@ def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
             x=100 + (step_index * 150), y=100, width=140, height=70
         )
         name = raw_name or fallback_node_name(node_type, code, raw_name)
-        nodes.append(ProcessNode(
+        node = ProcessNode(
             id=node_id,
             name=name,
             type=node_type,
@@ -667,7 +876,9 @@ def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
             costPerExecution=800 if category == 'rpa_bot' else sla * 1932,
             automationPotential=95 if category == 'rpa_bot' else 60,
             system=detect_system(name, ''),
-        ))
+        )
+        _apply_bpmn_documentation(node, meta)
+        nodes.append(node)
 
     if not nodes:
         raise ValueError('В BPMN-файле не найдено ни одного элемента процесса')
@@ -706,9 +917,17 @@ def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
                 node.role = node.role or lane.name
                 node.system = detect_system(node.name, lane.name)
 
+    # Ассоциации и сообщения — такие же связи карты, как переходы: без них с
+    # карты пропадают все системы и документы, привязанные к шагам.
+    edge_kinds: Dict[str, EdgeKind] = {
+        'sequenceflow': 'sequenceFlow',
+        'association': 'association',
+        'messageflow': 'messageFlow',
+    }
     edges: List[ProcessEdge] = []
     for el in root.iter():
-        if _local_tag(el.tag).lower() != 'sequenceflow':
+        kind = edge_kinds.get(_local_tag(el.tag).lower())
+        if not kind:
             continue
         source_id = el.get('sourceRef')
         target_id = el.get('targetRef')
@@ -727,12 +946,22 @@ def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
             name=edge_name,
             sourceId=source_id,
             targetId=target_id,
+            kind=kind,
             condition=cond_text or edge_name or None,
             points=[],
         ))
 
     title = process_name
-    total_hours = round(sum(n.slaMinutes or 0 for n in nodes) / 60, 1) or 8.0
+    # Паспорт считаем по тем же правилам, что и при импорте draw.io: только
+    # шаги регламента и вместе с ожиданием. Иначе карта, выгруженная и открытая
+    # заново, показывала SLA в разы больше — время событий и артефактов.
+    total_hours = round(
+        sum(
+            (n.slaMinutes or 0) + (n.waitMinutes or 0)
+            for n in nodes if n.type in TASK_NODE_TYPES
+        ) / 60,
+        1,
+    ) or 8.0
     passport_code = (
         process_id_attr if process_id_attr and process_id_attr.startswith('PRC-')
         else f"PRC-SQB-{uuid.uuid4().hex[:6].upper()}"
@@ -784,6 +1013,7 @@ def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
         ]
     )
 
+    _resolve_artifact_links(nodes, edges)
     validations = collect_import_diagnostics(nodes, lanes, edges)
     metrics = analyze_process_conformance(nodes, passport, len(registry.records))
 
@@ -807,12 +1037,21 @@ def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
 BADGE_ATTACH_RADIUS = 130.0
 
 
-def _name_and_prune_lanes(lanes: List[ProcessNode], flow_nodes: List[ProcessNode]) -> None:
-    """Убирает безымянные дорожки-баннеры и даёт позиционные имена остальным.
+def _name_and_prune_lanes(
+    lanes: List[ProcessNode],
+    flow_nodes: List[ProcessNode],
+    lane_titles: Optional[Dict[str, str]] = None,
+) -> None:
+    """Убирает безымянные дорожки-баннеры и даёт имена остальным.
 
     На картах SQB встречаются swimlane-рамки оформления (шапка схемы) — без
     подписи и без шагов внутри. Настоящая безымянная дорожка содержит шаги,
-    поэтому её сохраняем и называем по вертикальной позиции.
+    поэтому её сохраняем: сперва берём заголовок, набранный отдельным
+    повёрнутым текстом внутри дорожки, и только потом — позиционное имя.
+
+    Порядок важен: чистку делаем по собственной подписи дорожки. Заголовок
+    схемы тоже лежит внутри пустой swimlane-рамки, и если сначала раздать
+    заголовки, шапка схемы останется на карте как ещё одно подразделение.
     """
     populated = {n.laneId for n in flow_nodes if n.laneId}
     doomed = {
@@ -827,13 +1066,183 @@ def _name_and_prune_lanes(lanes: List[ProcessNode], flow_nodes: List[ProcessNode
                 node.laneName = None
 
     for index, lane in enumerate(sorted(lanes, key=lambda l: (l.geometry.y, l.geometry.x)), 1):
-        if not (lane.name or '').strip():
-            lane.name = f'Дорожка {index}'
-            lane.role = lane.name
+        if (lane.name or '').strip():
+            continue
+        lane.name = (lane_titles or {}).get(lane.id) or f'Дорожка {index}'
+        lane.role = lane.name
 
 
 #: Насколько близко свободный конец линии должен подойти к фигуре, px.
 FREE_ENDPOINT_SNAP = 30.0
+
+#: Насколько близко текстовая накладка должна лежать к безымянной фигуре, px.
+#: На картах SQB подпись касается своего шлюза или документа (зазор 0-34 px),
+#: а до следующей безымянной фигуры не ближе ~100 px, поэтому порог однозначен.
+TEXT_LABEL_SNAP = 60.0
+
+
+def _box_gap(a: Tuple[float, float, float, float], b: Tuple[float, float, float, float]) -> float:
+    """Зазор между двумя прямоугольниками (0 — если пересекаются)."""
+    dx = max(b[0] - (a[0] + a[2]), 0.0, a[0] - (b[0] + b[2]))
+    dy = max(b[1] - (a[1] + a[3]), 0.0, a[1] - (b[1] + b[3]))
+    return (dx * dx + dy * dy) ** 0.5
+
+
+#: Подпись дорожки из одних символов («+», «—») смыслом не является.
+_WORDY_RE = re.compile(r'[0-9A-Za-z\u0400-\u04FF]')
+
+
+def is_junk_label(text: str) -> bool:
+    """Подпись без единой буквы и цифры — оформление, а не имя."""
+    return not _WORDY_RE.search(text or '')
+
+
+def attach_text_overlays(
+    overlays: List[Tuple[str, str, Tuple[float, float, float, float], str]],
+    targets: List[Tuple[str, Tuple[float, float, float, float]]],
+    lane_of: Dict[str, str],
+) -> Tuple[Dict[str, str], Dict[str, str]]:
+    """Раздаёт текстовые накладки безымянным фигурам и дорожкам.
+
+    В draw.io подпись фигуры можно набрать отдельным текстовым блоком рядом —
+    редактор рисует то же самое, но в модели у фигуры остаётся пустое ``value``.
+    Без этой привязки шлюз попадал в регламент как «Условие», документ — как
+    «Документ», а сам текст либо терялся, либо становился отдельным шагом.
+
+    ``overlays`` — ``(id накладки, текст, рамка, id дорожки-родителя)``;
+    ``targets`` — рамки фигур, у которых своей подписи нет;
+    ``lane_of`` — дорожки без осмысленного имени: ``id -> id``.
+
+    Возвращает ``(подписи фигур, названия дорожек)``.
+    """
+    pairs: List[Tuple[float, str, str]] = []
+    for overlay_id, _text, box, _lane in overlays:
+        for target_id, target_box in targets:
+            gap = _box_gap(box, target_box)
+            if gap <= TEXT_LABEL_SNAP:
+                pairs.append((gap, overlay_id, target_id))
+    pairs.sort(key=lambda t: (t[0], t[1], t[2]))
+
+    text_by_overlay = {o[0]: o[1] for o in overlays}
+    shape_labels: Dict[str, str] = {}
+    used_overlays: Set[str] = set()
+    for _gap, overlay_id, target_id in pairs:
+        if overlay_id in used_overlays or target_id in shape_labels:
+            continue
+        shape_labels[target_id] = text_by_overlay[overlay_id]
+        used_overlays.add(overlay_id)
+
+    # Накладка, не нашедшая фигуры, но лежащая в безымянной дорожке, —
+    # её заголовок: так подписаны вертикальные дорожки на картах SQB.
+    lane_titles: Dict[str, str] = {}
+    for overlay_id, text, _box, lane_id in overlays:
+        if overlay_id in used_overlays or not lane_id or lane_id not in lane_of:
+            continue
+        current = lane_titles.get(lane_id, '')
+        if len(text) > len(current):
+            lane_titles[lane_id] = text
+    return shape_labels, lane_titles
+
+
+#: Условия-антонимы: подпись одной ветки развилки задаёт подпись второй.
+_CONDITION_OPPOSITES: Dict[str, str] = {
+    'ha': "Yo'q", "yo'q": 'Ha', 'yo`q': 'Ha', 'yo’q': 'Ha',
+    'да': 'Нет', 'нет': 'Да',
+    'yes': 'No', 'no': 'Yes',
+    "to'liq": "To'liq emas", "to'liq emas": "To'liq",
+    'mos keldi': 'Mos kelmadi', 'mos kelmadi': 'Mos keldi',
+    'ijobiy': 'Salbiy', 'salbiy': 'Ijobiy',
+    'qabul qilindi': 'Rad etildi', 'rad etildi': 'Qabul qilindi',
+}
+
+
+def complete_binary_gateway_conditions(
+    flow_nodes: List[ProcessNode],
+    edges: List[ProcessEdge],
+) -> List[Tuple[ProcessNode, ProcessEdge, str]]:
+    """Достраивает подпись второй ветки развилки по подписи первой.
+
+    У развилки «да/нет» аналитик часто подписывает только отрицательную ветку:
+    на рисунке и так понятно, что вторая — «Ha». PIX BPM так не умеет: ветка без
+    условия не автоматизируется, и шаг регламента упирается в неё.
+
+    Достраиваем только там, где догадка однозначна: исключающий шлюз ровно с
+    двумя исходящими ветками, подписана ровно одна, и её подпись входит в пару
+    антонимов. Всё остальное остаётся ошибкой — угадывать смысл развилки на
+    три ветки платформа не вправе.
+
+    Возвращает список ``(шлюз, ветка, подставленное условие)`` — о каждой
+    подстановке отчёт обязан сказать сотруднику.
+    """
+    outgoing: Dict[str, List[ProcessEdge]] = {}
+    for edge in edges:
+        if (edge.kind or 'sequenceFlow') == 'sequenceFlow' and edge.sourceId:
+            outgoing.setdefault(edge.sourceId, []).append(edge)
+
+    filled: List[Tuple[ProcessNode, ProcessEdge, str]] = []
+    for node in flow_nodes:
+        if node.type != 'exclusiveGateway':
+            continue
+        branches = outgoing.get(node.id, [])
+        if len(branches) != 2:
+            continue
+        named = [e for e in branches if (e.name or e.condition or '').strip()]
+        blank = [e for e in branches if not (e.name or e.condition or '').strip()]
+        if len(named) != 1 or len(blank) != 1:
+            continue
+        known = (named[0].name or named[0].condition or '').strip().lower()
+        opposite = _CONDITION_OPPOSITES.get(known)
+        if not opposite:
+            continue
+        blank[0].name = opposite
+        blank[0].condition = opposite
+        filled.append((node, blank[0], opposite))
+    return filled
+
+
+def reclassify_events(flow_nodes: List[ProcessNode], edges: List[ProcessEdge]) -> None:
+    """Приводит тип события к его реальной степени на карте.
+
+    Тип фигуры определяется до того, как разобраны связи: у линии draw.io конец
+    может висеть в пустоте, и её притягивает к фигуре уже отдельный проход. До
+    этого прохода промежуточное событие выглядит как висячее и получает тип
+    ``startEvent`` — на карте вместо одного старта рисуется пять, а в отчёте
+    появляется ложное «Стартовых событий: 5».
+    """
+    incoming: Set[str] = set()
+    outgoing: Set[str] = set()
+    for e in edges:
+        if (e.kind or 'sequenceFlow') != 'sequenceFlow':
+            continue
+        if e.targetId:
+            incoming.add(e.targetId)
+        if e.sourceId:
+            outgoing.add(e.sourceId)
+
+    for node in flow_nodes:
+        if node.type not in ('startEvent', 'endEvent'):
+            continue
+        has_in = node.id in incoming
+        has_out = node.id in outgoing
+        if has_in and has_out:
+            style_l = (node.style or '').lower()
+            is_timer = 'symbol=timer' in style_l or is_wait_label(node.name)
+            new_type = 'intermediateTimerEvent' if is_timer else 'intermediateMessageEvent'
+        elif has_in and not has_out and node.type == 'startEvent':
+            new_type = 'endEvent'
+        elif has_out and not has_in and node.type == 'endEvent':
+            new_type = 'startEvent'
+        else:
+            continue
+        was_generated = node.name in (
+            fallback_node_name(node.type, node.code),
+            fallback_node_name(node.type, None),
+        )
+        node.type = new_type
+        node.category = classify_category(new_type, node.name, node.style or '')
+        node.code = 'START' if new_type == 'startEvent' else 'END' if new_type == 'endEvent' else None
+        if was_generated:
+            node.name = fallback_node_name(new_type, node.code)
 
 
 def _distance_to_box(px: float, py: float, node: ProcessNode) -> float:
@@ -846,6 +1255,7 @@ def _distance_to_box(px: float, py: float, node: ProcessNode) -> float:
 def _resolve_free_endpoint(
     point: Optional[Tuple[float, float]],
     candidates: List[ProcessNode],
+    exclude_id: Optional[str] = None,
 ) -> Optional[str]:
     """Фигура под свободным концом линии draw.io.
 
@@ -859,6 +1269,11 @@ def _resolve_free_endpoint(
     best_id: Optional[str] = None
     best_key = (FREE_ENDPOINT_SNAP, float('inf'))
     for node in candidates:
+        # Второй конец той же линии уже занял эту фигуру: связь фигуры с самой
+        # собой не бывает ни в BPMN, ни в PIX — студия отказывается открывать
+        # карту целиком («Connector source and target node cannot be the same»).
+        if exclude_id is not None and node.id == exclude_id:
+            continue
         dist = _distance_to_box(point[0], point[1], node)
         # При равном расстоянии выигрывает меньшая фигура: точка внутри шага
         # лежит и внутри его дорожки, но связать её надо с шагом.
@@ -964,6 +1379,8 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
     ignore_cell_ids: Set[str] = set()
     origin_cache: Dict[str, Tuple[float, float]] = {}
     orphan_condition_labels: List[Tuple[str, float, float]] = []  # text, x, y
+    #: Текстовые накладки: (id, текст, рамка в абсолютных координатах, id родителя).
+    text_overlays: List[Tuple[str, str, Tuple[float, float, float, float], str]] = []
     # Бейджи длительности: (центр X, центр Y, минуты, это ожидание WT?)
     duration_badges: List[Tuple[float, float, float, bool]] = []
 
@@ -1062,11 +1479,31 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             continue
 
         # 3. Text label overlay
-        if c_id.endswith('_label') or ('text;' in style and 'swimlane' not in style and ('strokecolor=none' in style or 'fillcolor=none' in style or is_non_task_label(cleaned) or len(cleaned) < 2)):
+        if c_id.endswith('_label') or is_text_overlay(style):
             ignore_cell_ids.add(c_id)
             base_id = re.sub(r'_label$', '', c_id)
-            if base_id and cleaned:
+            if base_id != c_id and cleaned:
                 label_map[base_id] = cleaned
+            elif cleaned:
+                # Подпись отдельным блоком: чью фигуру она называет, решаем
+                # по геометрии — соседство на холсте здесь и есть связь.
+                g3 = c.find('mxGeometry')
+                if g3 is not None:
+                    try:
+                        ox3, oy3 = _parent_origin(c.get('parent'), cell_map, origin_cache)
+                        text_overlays.append((
+                            c_id,
+                            cleaned,
+                            (
+                                float(g3.get('x', '0') or 0) + ox3,
+                                float(g3.get('y', '0') or 0) + oy3,
+                                float(g3.get('width', '0') or 0),
+                                float(g3.get('height', '0') or 0),
+                            ),
+                            parent_id,
+                        ))
+                    except ValueError:
+                        pass
             if cleaned and cleaned.lower() in CONDITION_TAGS:
                 g2 = c.find('mxGeometry')
                 if g2 is not None:
@@ -1130,9 +1567,47 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
     swimlane_ids = {c.get('id', '') for c in swimlane_cells if c.get('id')}
     container_ids = set(pool_ids) | swimlane_ids | {'0', '1'}
 
+    # ── Подписи, набранные отдельным текстовым блоком ────────────────────────
+    # Их адресат определяется соседством на холсте, поэтому раздаём подписи
+    # после того, как собраны все фигуры и известно, у каких из них имени нет.
+    unlabeled_boxes: List[Tuple[str, Tuple[float, float, float, float]]] = []
+    for c in cells:
+        c_id = c.get('id', '')
+        if c.get('vertex') != '1' or not c_id or c_id in ignore_cell_ids:
+            continue
+        if c_id in swimlane_ids or c_id in pool_ids or c_id in label_map:
+            continue
+        if clean_label(c.get('value')):
+            continue
+        g4 = c.find('mxGeometry')
+        if g4 is None:
+            continue
+        try:
+            ox4, oy4 = _parent_origin(c.get('parent'), cell_map, origin_cache)
+            unlabeled_boxes.append((c_id, (
+                float(g4.get('x', '0') or 0) + ox4,
+                float(g4.get('y', '0') or 0) + oy4,
+                float(g4.get('width', '0') or 0),
+                float(g4.get('height', '0') or 0),
+            )))
+        except ValueError:
+            continue
+
+    nameless_lane_ids = {
+        c.get('id', ''): c.get('id', '')
+        for c in swimlane_cells
+        if c.get('id') and is_junk_label(clean_label(c.get('value')))
+    }
+    overlay_labels, lane_titles = attach_text_overlays(
+        text_overlays, unlabeled_boxes, nameless_lane_ids,
+    )
+    label_map.update(overlay_labels)
+
     def _is_artifact_shape(s: str) -> bool:
         return any(k in s for k in ('datastore', 'dataobject', 'shape=note', 'shape=mxgraph.signs', 'shape=mxgraph.bpmn.annotation'))
 
+    #: Иконки-украшения, снятые с карты: о них сотруднику тоже надо сказать.
+    skipped_clipart: List[str] = []
     raw_vertices = []
     for c in cells:
         if c.get('vertex') != '1':
@@ -1153,6 +1628,11 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         h = float(geo.get('height', '0')) if geo is not None else 0.0
         unlabeled = not clean_label(c.get('value')) and c_id not in label_map
         tiny = 0 < w <= 32 and 0 < h <= 32
+        # Безымянная картинка из библиотеки — украшение, даже если к ней
+        # подведена линия: шагом регламента иконка телефона не бывает.
+        if is_clipart_style(style) and unlabeled:
+            skipped_clipart.append(_style_map(style).get('shape') or 'image')
+            continue
         if is_decoration_style(style) and (unlabeled or tiny) and c_id not in incoming and c_id not in outgoing:
             continue
         if unlabeled and c_id not in incoming and c_id not in outgoing and tiny:
@@ -1163,6 +1643,8 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
     step_index = 1
     #: Шаги, чьё время взято с карты, а не из эвристики по категории.
     timed_step_ids: Set[str] = set()
+    #: Фигуры, смысл которых импортёр не понял: описание -> подставленные узлы.
+    unsupported: Dict[str, List[ProcessNode]] = {}
 
     for cell in raw_vertices:
         node_id = cell.get('id') or f"node_{uuid.uuid4().hex[:8]}"
@@ -1191,12 +1673,19 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
 
         code = None
         code_match = re.search(r'\b(STEP[-_ ]?\d+|START|END|GW[-_ ]?\w+)\b', f"{raw_val or ''} {raw_cleaned}", re.I)
-        num_prefix = re.match(r'^(\d+)[.)]\s*', raw_cleaned)
+        # Номер шага бывает составным («84.1.», «37.1.1») и не всегда кончается
+        # точкой. Берём его целиком: иначе шаг 84.1 получает код своего родителя
+        # STEP-84 и в регламенте эти строки не отличить. Одиночное число без
+        # разделителя номером не считаем — «2026 yil» не шаг №2026.
+        num_prefix = re.match(r'^(\d+(?:\.\d+)*)([.)]?)(?=\s)', raw_cleaned)
+        if num_prefix and not (num_prefix.group(2) or '.' in num_prefix.group(1)):
+            num_prefix = None
 
         if code_match:
             code = code_match.group(1).upper().replace('_', '-')
         elif num_prefix and is_task:
-            code = f"STEP-{int(num_prefix.group(1)):02d}"
+            head, _, rest = num_prefix.group(1).partition('.')
+            code = f"STEP-{int(head):02d}" + (f'.{rest}' if rest else '')
         elif node_type == 'startEvent':
             code = 'START'
         elif node_type == 'endEvent':
@@ -1206,20 +1695,25 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             step_index += 1
 
         raw_text = f"{raw_val or ''} {raw_cleaned}"
-        sla_min = extract_sla_minutes(raw_text, category, node_type)
-        if duration_minutes(raw_text) is not None:
+        # Время ищем только в очищенной подписи: в сырой разметке draw.io лежат
+        # цвета вида «#000», и «0 min» из атрибута стиля забирал шагу его SLA.
+        sla_min = extract_sla_minutes(raw_cleaned, category, node_type)
+        if duration_minutes(raw_cleaned) is not None:
             timed_step_ids.add(node_id)
 
+        # Номер шага остаётся в названии: на карте draw.io он написан перед
+        # текстом, по нему аналитик находит шаг в регламенте и в самой Методике.
+        # Снимаем только служебные пометки — тег вида «[PIX RPA]», машинный код
+        # «STEP-01:» и приписанное к подписи время.
         clean_name = raw_cleaned
         clean_name = re.sub(r'^\[.*?\]\s*', '', clean_name, flags=re.I)
         clean_name = re.sub(r'^STEP[-_ ]?\d+[:\s-]*', '', clean_name, flags=re.I)
-        clean_name = re.sub(r'^[0-9]+[.)]\s*', '', clean_name)
-        clean_name = re.sub(r'\b\d+(?:\.\d+)?\s*(?:min|daq|минут|мин)\b.*$', '', clean_name, flags=re.I).strip()
+        clean_name = _DURATION_TAIL_RE.sub('', clean_name).strip()
 
-        if not clean_name and node_type == 'lane':
-            pass  # безымянная дорожка: имя присвоим позиционно после разбора
+        if node_type == 'lane' and is_junk_label(clean_name):
+            clean_name = ''  # «+», «—»: имя присвоим позиционно после разбора
         elif not clean_name:
-            clean_name = fallback_node_name(node_type, code, f"{raw_val or ''} {raw_cleaned}")
+            clean_name = fallback_node_name(node_type, code, raw_cleaned)
 
         # Guard against zero/negative and invisible boxes (8px не читаемо)
         if node_type == 'lane':
@@ -1239,7 +1733,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
 
         fot_cost = (sla_min * 1932) if category != 'rpa_bot' else 800
 
-        nodes.append(ProcessNode(
+        node = ProcessNode(
             id=node_id,
             name=clean_name,
             type=node_type,
@@ -1251,7 +1745,11 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             slaMinutes=sla_min,
             costPerExecution=fot_cost,
             automationPotential=95 if category == 'rpa_bot' else (65 if category == 'manual' else 40)
-        ))
+        )
+        unknown = unsupported_shape(style)
+        if unknown:
+            unsupported.setdefault(unknown, []).append(node)
+        nodes.append(node)
 
     lanes = [n for n in nodes if n.type == 'lane']
     lane_ids = {l.id for l in lanes}
@@ -1261,7 +1759,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         if n.laneId and n.laneId not in lane_ids:
             n.laneId = None
 
-    _name_and_prune_lanes(lanes, flow_nodes)
+    _name_and_prune_lanes(lanes, flow_nodes, lane_titles)
 
     lane_by_id = {l.id: l for l in lanes}
 
@@ -1354,13 +1852,15 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
                 except ValueError:
                     continue
 
-        # Конец без привязки — притягиваем к ближайшей фигуре под ним.
+        # Конец без привязки — притягиваем к ближайшей фигуре под ним, но не к
+        # той, на которой уже стоит второй конец: у линии, оба конца которой
+        # висят в пустоте рядом, иначе получалась петля из фигуры в себя.
         if not s_id:
-            s_id = _resolve_free_endpoint(free_ends.get('sourcePoint'), snap_targets)
+            s_id = _resolve_free_endpoint(free_ends.get('sourcePoint'), snap_targets, t_id)
             if s_id:
                 snapped_edge_ids.append(cell.get('id') or '')
         if not t_id:
-            t_id = _resolve_free_endpoint(free_ends.get('targetPoint'), snap_targets)
+            t_id = _resolve_free_endpoint(free_ends.get('targetPoint'), snap_targets, s_id)
             if t_id and (cell.get('id') or '') not in snapped_edge_ids:
                 snapped_edge_ids.append(cell.get('id') or '')
 
@@ -1461,7 +1961,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
                 t = node_by_id.get(e.targetId or '')
                 if not s or not t:
                     continue
-                is_gw = s.type in ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway')
+                is_gw = s.type in ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway')
                 if e.points:
                     sx = s.geometry.x + s.geometry.width / 2
                     sy = s.geometry.y + s.geometry.height / 2
@@ -1482,6 +1982,10 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
                 best.name = text
                 best.condition = text
 
+    # Связи разобраны и притянуты к фигурам — только теперь у события известна
+    # его настоящая степень, а значит и тип.
+    reclassify_events(flow_nodes, edges)
+    completed_branches = complete_binary_gateway_conditions(flow_nodes, edges)
     badge_step_ids = _apply_duration_badges(flow_nodes, duration_badges)
     _resolve_artifact_links(flow_nodes, edges)
     # Геометрию правим до сбора замечаний: часть из них про размеры фигур.
@@ -1547,6 +2051,9 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         snapped_edges=snapped_edge_ids,
         layout_report=layout_report,
         timed_step_ids=timed_step_ids,
+        unsupported_shapes=unsupported,
+        skipped_clipart=skipped_clipart,
+        completed_branches=completed_branches,
     )
 
     metrics = analyze_process_conformance(flow_nodes, passport, len(registry.records))

@@ -31,7 +31,9 @@ import io
 import re
 import unicodedata
 import uuid
+import xml.etree.ElementTree as ET
 import zipfile
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -49,6 +51,51 @@ _NS_XSD = 'http://www.w3.org/2001/XMLSchema'
 _PIX_NS = uuid.UUID('8b2e0c5a-4d71-4f3a-9c1e-6a7f0d2b9e11')
 
 _CONFIGURATION_PATH = Path(__file__).resolve().parent.parent / 'resources' / 'pix_configuration.xml'
+
+#: Элемент нотации, по которому опознаётся набор BPMN в каталоге студии.
+_BPMN_PROBE_ELEMENT = 'gateway_xor'
+#: Куда падает тип, которого в каталоге студии не оказалось.
+_FALLBACK_ELEMENT = 'task'
+
+
+@lru_cache(maxsize=1)
+def bpmn_notation() -> Tuple[str, frozenset]:
+    """Имя BPMN-нотации в каталоге студии и её элементы.
+
+    Имя берём из самого каталога, а не пишем константой: студия ищет нотацию
+    по имени точь-в-точь, и написанное на глаз ``notation="bpmn"`` вместо
+    ``BPMN`` она не находит — а потом не может найти в ней и тип фигуры
+    («Notation element not found (Parameter 'type')») и отвергает весь пакет.
+    """
+    root = ET.fromstring(_CONFIGURATION_PATH.read_text(encoding='utf-8'))
+    for notation in root.iter('notation'):
+        elements = {e.get('name') for e in notation.findall('element') if e.get('name')}
+        if _BPMN_PROBE_ELEMENT in elements:
+            return notation.get('name') or 'BPMN', frozenset(elements)
+    raise ValueError('В каталоге PIX нет нотации BPMN')
+
+
+def notation_categories(config: ET.Element, notation: str) -> Dict[str, str]:
+    """Категория каждого элемента нотации («Задачи», «Шлюзы», «Участники»…).
+
+    Каталог студии делит элементы на группы, и по группе видно, чему положено
+    содержать вложенные фигуры: дорожка и пул — «Участники».
+    """
+    return {
+        e.get('name'): e.get('type') or ''
+        for n in config.iter('notation') if n.get('name') == notation
+        for e in n.findall('element') if e.get('name')
+    }
+
+
+def pix_element(kind: str) -> str:
+    """Тип фигуры, который студия точно знает.
+
+    Незнакомый тип валит импорт всего пакета, поэтому лучше отдать обычную
+    задачу: карта откроется, а о подмене аналитик уже предупреждён отчётом
+    о качестве импорта.
+    """
+    return kind if kind in bpmn_notation()[1] else _FALLBACK_ELEMENT
 
 #: Ширина заголовочной плашки карты; в эталоне PIX — 1988 px.
 _TITLE_POOL_WIDTH = 1988
@@ -115,7 +162,15 @@ def map_slug(process: BusinessProcess) -> str:
 
 
 def pix_type(node: ProcessNode) -> str:
-    """Тип узла в словаре нотации BPMN Процессной студии (pm/configuration.xml)."""
+    """Тип узла в словаре нотации BPMN Процессной студии (pm/configuration.xml).
+
+    Результат обязательно сверяется с каталогом: студия не открывает пакет
+    целиком, если встретит хоть один тип, которого в её нотации нет.
+    """
+    return pix_element(_pix_type_raw(node))
+
+
+def _pix_type_raw(node: ProcessNode) -> str:
     style = (node.style or '').lower()
     kind = node.type
 
@@ -141,6 +196,8 @@ def pix_type(node: ProcessNode) -> str:
         return 'gateway_parallel'
     if kind == 'inclusiveGateway':
         return 'gateway_or'
+    if kind == 'complexGateway':
+        return 'gateway_complex'
     if kind == 'subProcess':
         return 'sub_process'
     if kind == 'dataStore':
@@ -157,7 +214,7 @@ def pix_type(node: ProcessNode) -> str:
 
 
 def _node_extra(node: ProcessNode) -> str:
-    if node.type in ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway'):
+    if node.type in ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway'):
         return ' labelPlacement="Left" font_size="16"'
     return ''
 
@@ -272,7 +329,18 @@ def polyline(
     ``step``, и диагональные изломы в них выглядели бы чужеродно.
     """
     route = orthogonal_waypoints(edge, src, tgt, placed)
-    return route if len(route) >= 2 else []
+    if len(route) >= 2:
+        return route
+    # Маршрут не построился (у связи нет обеих опор или они совпали по центру):
+    # отдаём хотя бы прямой отрезок между центрами. Связь без единой точки
+    # студия рисует по-своему, и на плотной карте это лишний пересекающий луч.
+    if src is None or tgt is None:
+        return []
+    def _centre(node: ProcessNode) -> Tuple[float, float]:
+        x, y = (placed or {}).get(node.id, (node.geometry.x, node.geometry.y))
+        return x + node.geometry.width / 2, y + node.geometry.height / 2
+    start, end = _centre(src), _centre(tgt)
+    return [start, end] if start != end else []
 
 
 def _coord(value: float) -> str:
@@ -296,7 +364,8 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
         '<?xml version="1.0" encoding="utf-8"?>',
         (
             f'<Map xmlns:xsi="{_NS_XSI}" xmlns:xsd="{_NS_XSD}" '
-            f'name="{escape_xml(slug)}" notation="bpmn" paperEnabled="false" paperType="0">'
+            f'name="{escape_xml(slug)}" notation="{escape_xml(bpmn_notation()[0])}" '
+            'paperEnabled="false" paperType="0">'
         ),
     ]
 
@@ -380,6 +449,10 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
         if not edge.sourceId or not edge.targetId:
             continue
         if edge.sourceId not in id_map or edge.targetId not in id_map:
+            continue
+        # Петля из фигуры в саму себя: студия из-за одной такой линии
+        # отказывается открыть всю карту целиком.
+        if edge.sourceId == edge.targetId:
             continue
 
         src_node = node_by_id.get(edge.sourceId)

@@ -46,7 +46,7 @@ const MAX_GATEWAY_SIDE = 60
 const EVENT_TYPES = [
   'startEvent', 'endEvent', 'intermediateTimerEvent', 'intermediateMessageEvent',
 ] as const
-const GATEWAY_TYPES = ['exclusiveGateway', 'parallelGateway', 'inclusiveGateway'] as const
+const GATEWAY_TYPES = ['exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway'] as const
 
 const NARROW = new Set(" iljtfrI.,:;|!'`()[]{}/\\-".split(''))
 const WIDE = new Set('mwMWШЩЮЫФ@%'.split(''))

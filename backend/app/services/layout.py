@@ -54,7 +54,7 @@ MAX_GATEWAY_SIDE = 60
 _EVENT_TYPES = (
     'startEvent', 'endEvent', 'intermediateTimerEvent', 'intermediateMessageEvent',
 )
-_GATEWAY_TYPES = ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway')
+_GATEWAY_TYPES = ('exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway')
 
 #: Ширина символа в долях кегля (Arial/Helvetica, латиница и кириллица).
 _NARROW = set(" iljtfrI.,:;|!'`()[]{}/\\-")

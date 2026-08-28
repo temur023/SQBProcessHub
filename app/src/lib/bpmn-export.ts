@@ -29,7 +29,7 @@ import {
 
 const NCNAME = /^[A-Za-z_][A-Za-z0-9._-]*$/
 
-const GATEWAY_TYPES: NodeType[] = ['exclusiveGateway', 'parallelGateway', 'inclusiveGateway']
+const GATEWAY_TYPES: NodeType[] = ['exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway']
 
 /** Эффективный тип узла в выгрузке: может отличаться от модельного после нормализации. */
 type EffectiveType = NodeType | 'intermediateThrowEvent'
@@ -236,6 +236,8 @@ function nodeTag(node: ProcessNode, effective: EffectiveType): string {
       return 'bpmn:parallelGateway'
     case 'inclusiveGateway':
       return 'bpmn:inclusiveGateway'
+    case 'complexGateway':
+      return 'bpmn:complexGateway'
     case 'subProcess':
       return 'bpmn:subProcess'
     case 'dataStore':
@@ -352,11 +354,15 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
     return !!other && INTERACTION_TYPES.includes(other.type)
   })
 
-  // Висячие связи и оформительские линии draw.io в схему не идут.
+  // Висячие связи и оформительские линии draw.io в схему не идут. Петля из
+  // фигуры в саму себя тоже: спецификация её не допускает, а PIX Процессная
+  // студия из-за одной такой линии отказывается открыть всю карту
+  // («Connector source and target node cannot be the same»).
   const edges = process.edges.filter(
     (e) =>
       e.kind !== 'annotationLine' &&
-      e.sourceId && e.targetId && nodeById.has(e.sourceId) && nodeById.has(e.targetId),
+      e.sourceId && e.targetId && nodeById.has(e.sourceId) && nodeById.has(e.targetId) &&
+      e.sourceId !== e.targetId,
   )
   // messageFlow между двумя шагами одного пула спецификация запрещает: карта
   // SQB — один пул, поэтому такие связи выгружаются как поток управления.

@@ -10,6 +10,12 @@ from app.services.drawio_parser import parse_drawio_xml
 from app.services.bpmn_exporter import generate_bpmn_xml
 from app.services.pmm_exporter import generate_pmm_zip
 from app.services.exporters import generate_event_log_csv, generate_regulation_csv
+from app.services.export_validation import (
+    ExportCheck,
+    summary_line,
+    validate_bpmn_xml,
+    validate_pmm_package,
+)
 from app.models.process import BusinessProcess
 from app.routers.processes import get_store, _persist_store, _store_lock
 
@@ -44,6 +50,19 @@ def attachment_headers(filename: str) -> dict:
 class XmlImportBody(BaseModel):
     xml: str
     fileName: str = "Pasted_Process.drawio"
+
+
+def _check_headers(check: ExportCheck, base: dict) -> dict:
+    """Итог проверки файла — в заголовках ответа рядом с самим файлом.
+
+    Скачивание не блокируем: файл нужен сотруднику в любом случае, а если в нём
+    что-то не так, платформа скажет об этом раньше, чем PIX, — и адресно.
+    """
+    return {
+        **base,
+        'X-Export-Check': summary_line([check]),
+        'X-Export-Check-Errors': str(len(check.errors)),
+    }
 
 
 # ──────────── Import ────────────
@@ -123,7 +142,7 @@ def export_bpmn(process_id: str):
     return Response(
         content=xml.encode('utf-8'),
         media_type='application/xml',
-        headers=attachment_headers(filename)
+        headers=_check_headers(validate_bpmn_xml(xml), attachment_headers(filename)),
     )
 
 
@@ -141,7 +160,7 @@ def export_pmm(process_id: str):
     return Response(
         content=payload,
         media_type='application/zip',
-        headers=attachment_headers(filename)
+        headers=_check_headers(validate_pmm_package(payload), attachment_headers(filename)),
     )
 
 
@@ -179,6 +198,44 @@ def export_regulation(process_id: str):
         media_type='text/csv',
         headers=attachment_headers(filename)
     )
+
+
+@router.get(
+    "/{process_id}/export/check",
+    summary="Проверить выгрузки процесса теми же правилами, по которым их читает PIX"
+)
+def check_exports(process_id: str):
+    """Отчёт о готовности файлов к загрузке в PIX Процессную студию.
+
+    Студия отвергает пакет целиком из-за одного дефекта и называет только код
+    ошибки. Здесь те же проверки делаются заранее и с указанием фигуры.
+    """
+    process = get_store().get(process_id)
+    if not process:
+        raise HTTPException(404, f"Process '{process_id}' not found")
+
+    checks = [
+        validate_bpmn_xml(generate_bpmn_xml(process)),
+        validate_pmm_package(generate_pmm_zip(process)),
+    ]
+    return {
+        'processId': process_id,
+        'ok': all(c.ok for c in checks),
+        'summary': summary_line(checks),
+        'formats': [
+            {
+                'format': c.format,
+                'ok': c.ok,
+                'errors': len(c.errors),
+                'warnings': len(c.warnings),
+                'problems': [
+                    {'level': p.level, 'code': p.code, 'message': p.message, 'where': p.where}
+                    for p in c.problems
+                ],
+            }
+            for c in checks
+        ],
+    }
 
 
 @router.get(

@@ -1,11 +1,21 @@
 import React, { useMemo, useState } from 'react'
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Info, XCircle } from 'lucide-react'
-import type { BusinessProcess, ProcessNode, ProcessValidation } from '@/types/process'
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Crosshair, Info, XCircle } from 'lucide-react'
+import type { BusinessProcess, ProcessValidation } from '@/types/process'
+import { issueKey, issueNodeIds } from '@/lib/diagnostics'
 
 interface ImportReportProps {
   process: BusinessProcess
-  /** Клик по замечанию открывает карточку шага, к которому оно относится. */
-  onSelectNode?: (node: ProcessNode) => void
+  /**
+   * Клик по замечанию наводит карту на его фигуры и подсвечивает их.
+   *
+   * Отдаёт и само замечание (его текст показывается подсказкой над холстом),
+   * и список фигур, и ключ строки. Ключ считает отчёт, а не вызывающий код:
+   * строки отсортированы по важности, и порядковый номер в исходном списке
+   * замечаний уже другой.
+   */
+  onFocusIssue?: (issue: ProcessValidation, nodeIds: string[], key: string) => void
+  /** Замечание, подсвеченное на карте прямо сейчас. */
+  activeIssueKey?: string
 }
 
 /** «1 ошибка», «2 ошибки», «5 ошибок» — иначе заголовок читается как машинный. */
@@ -56,7 +66,11 @@ const LEVEL_STYLE: Record<ProcessValidation['level'], { text: string; chip: stri
  * а не обнаружить в выгрузке для PIX: замечание без адресата бесполезно,
  * поэтому каждая строка ведёт к конкретной фигуре на карте.
  */
-export const ImportReport: React.FC<ImportReportProps> = ({ process, onSelectNode }) => {
+export const ImportReport: React.FC<ImportReportProps> = ({
+  process,
+  onFocusIssue,
+  activeIssueKey,
+}) => {
   const [expanded, setExpanded] = useState(false)
 
   const issues = useMemo(
@@ -72,10 +86,11 @@ export const ImportReport: React.FC<ImportReportProps> = ({ process, onSelectNod
     return acc
   }, [issues])
 
-  const nodeById = useMemo(
-    () => new Map(process.nodes.map((n) => [n.id, n])),
-    [process.nodes],
-  )
+  const nodeIdSet = useMemo(() => new Set(process.nodes.map((n) => n.id)), [process.nodes])
+
+  /** Фигуры замечания, которые действительно остались на карте. */
+  const shapesOf = (issue: ProcessValidation): string[] =>
+    issueNodeIds(issue).filter((id) => nodeIdSet.has(id))
 
   if (!issues.length) {
     return (
@@ -149,36 +164,60 @@ export const ImportReport: React.FC<ImportReportProps> = ({ process, onSelectNod
                 </div>
                 <ul className="space-y-1">
                   {issues
-                    .filter((issue) => issue.level === level)
-                    .map((issue, index) => {
-                      const node = issue.nodeId ? nodeById.get(issue.nodeId) : undefined
-                      const clickable = Boolean(node && onSelectNode)
+                    .map((issue, index) => ({ issue, key: issueKey(issue, index) }))
+                    .filter(({ issue }) => issue.level === level)
+                    .map(({ issue, key }) => {
+                      const shapes = shapesOf(issue)
+                      const clickable = Boolean(shapes.length && onFocusIssue)
+                      const active = clickable && activeIssueKey === key
                       return (
-                        <li
-                          key={`${issue.code ?? level}-${index}`}
-                          className={`rounded border border-border/60 bg-background/60 px-2.5 py-1.5 ${
-                            clickable ? 'cursor-pointer hover:border-border' : ''
-                          }`}
-                          onClick={() => node && onSelectNode?.(node)}
-                        >
-                          <div className="flex items-start gap-2">
-                            <span className={`mt-0.5 ${LEVEL_STYLE[level].text}`}>
-                              {LEVEL_STYLE[level].icon}
-                            </span>
-                            <div className="min-w-0">
-                              <div className="text-xs leading-snug">{issue.message}</div>
-                              {issue.hint && (
-                                <div className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                                  {issue.hint}
-                                </div>
-                              )}
-                              {clickable && (
-                                <div className="text-[10px] text-muted-foreground/80 mt-0.5">
-                                  Открыть шаг на карте →
-                                </div>
-                              )}
+                        <li key={key}>
+                          {/* Кнопка, а не кликабельный <li>: строку отчёта надо
+                              уметь выбрать с клавиатуры — иначе замечание
+                              недоступно тем, кто не работает мышью. */}
+                          <button
+                            type="button"
+                            disabled={!clickable}
+                            aria-pressed={active}
+                            onClick={() => {
+                              // Панель сворачивается: развёрнутый список
+                              // занимает треть экрана, и подсвеченный шаг
+                              // оставался за нижним краем карты. Текст
+                              // замечания сотрудник тут же видит на самой
+                              // карте — подсказкой рядом с фигурой.
+                              setExpanded(false)
+                              onFocusIssue?.(issue, shapes, key)
+                            }}
+                            className={`w-full rounded border px-2.5 py-1.5 text-left transition-colors ${
+                              active
+                                ? 'border-orange-500/70 bg-orange-500/10'
+                                : 'border-border/60 bg-background/60'
+                            } ${clickable ? 'cursor-pointer hover:border-border' : 'cursor-default'}`}
+                          >
+                            <div className="flex items-start gap-2">
+                              <span className={`mt-0.5 ${LEVEL_STYLE[level].text}`}>
+                                {LEVEL_STYLE[level].icon}
+                              </span>
+                              <div className="min-w-0">
+                                <div className="text-xs leading-snug">{issue.message}</div>
+                                {issue.hint && (
+                                  <div className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                                    {issue.hint}
+                                  </div>
+                                )}
+                                {clickable && (
+                                  <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground/80">
+                                    <Crosshair className="h-3 w-3 shrink-0" />
+                                    {active
+                                      ? 'Подсвечено на карте'
+                                      : shapes.length > 1
+                                      ? `Показать на карте (${shapes.length} фигур)`
+                                      : 'Показать на карте'}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
+                          </button>
                         </li>
                       )
                     })}

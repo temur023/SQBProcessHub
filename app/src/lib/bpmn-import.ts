@@ -49,7 +49,7 @@ const NODE_TAGS: Record<string, NodeType> = {
   exclusivegateway: 'exclusiveGateway',
   parallelgateway: 'parallelGateway',
   inclusivegateway: 'inclusiveGateway',
-  complexgateway: 'inclusiveGateway',
+  complexgateway: 'complexGateway',
   eventbasedgateway: 'exclusiveGateway',
   datastorereference: 'dataStore',
   dataobjectreference: 'dataObject',
@@ -402,6 +402,7 @@ function defaultName(type: NodeType, index: number): string {
     case 'exclusiveGateway':
     case 'parallelGateway':
     case 'inclusiveGateway':
+    case 'complexGateway':
       return 'Условие'
     case 'dataStore':
       return 'Информационная система'

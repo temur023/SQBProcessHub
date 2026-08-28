@@ -8,6 +8,7 @@ import { PixRegistryView } from '@/components/PixRegistryView'
 import { ProcessetAnalyticsView } from '@/components/ProcessetAnalyticsView'
 import { ProcessImportModal } from '@/components/ProcessImportModal'
 import { ImportReport } from '@/components/ImportReport'
+import type { CanvasFocus } from '@/components/ProcessVisualizer'
 import { NodeDetailDrawer } from '@/components/NodeDetailDrawer'
 import { ExportDrawer } from '@/components/ExportDrawer'
 import { ExportViewerModal } from '@/components/ExportViewerModal'
@@ -27,6 +28,9 @@ export default function Home() {
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [isViewerOpen, setIsViewerOpen] = useState(false)
   const [selectedNode, setSelectedNode] = useState<ProcessNode | null>(null)
+  /** Замечание, на фигуры которого сейчас наведена карта. */
+  const [canvasFocus, setCanvasFocus] = useState<CanvasFocus | null>(null)
+  const [activeIssueKey, setActiveIssueKey] = useState<string>('')
   const [backendProcesses, setBackendProcesses] = useState<Array<{id: string, name: string}>>([])
   const [selectedBackendProcess, setSelectedBackendProcess] = useState<string>('')
 
@@ -53,6 +57,9 @@ export default function Home() {
   const handleProcessLoaded = (newProcess: BusinessProcess) => {
     setCurrentProcess(newProcess)
     setSelectedNode(null)
+    // Подсветка привязана к фигурам прошлой карты: на новой её id ничего не значат.
+    setCanvasFocus(null)
+    setActiveIssueKey('')
     void saveProcessToBackend(newProcess)
     const issues = newProcess.validation ?? []
     const errors = issues.filter((i) => i.level === 'error').length
@@ -174,12 +181,21 @@ export default function Home() {
         </div>
       )}
 
-      {/* Отчёт о качестве импортированной карты */}
+      {/* Отчёт о качестве импортированной карты. Клик по замечанию не открывает
+          карточку шага сразу: сотруднику сначала надо увидеть, ГДЕ на карте
+          проблема, а карточка закрыла бы половину холста. */}
       <ImportReport
         process={currentProcess}
-        onSelectNode={(node) => {
+        activeIssueKey={activeIssueKey}
+        onFocusIssue={(issue, nodeIds, key) => {
           setActiveTab('visualizer')
-          setSelectedNode(node)
+          setSelectedNode(null)
+          setActiveIssueKey(key)
+          setCanvasFocus((prev) => ({
+            nodeIds,
+            issue,
+            nonce: (prev?.nonce ?? 0) + 1,
+          }))
         }}
       />
 
@@ -196,6 +212,11 @@ export default function Home() {
             process={currentProcess}
             onSelectNode={(node) => setSelectedNode(node)}
             selectedNodeId={selectedNode?.id}
+            focus={canvasFocus ?? undefined}
+            onClearFocus={() => {
+              setCanvasFocus(null)
+              setActiveIssueKey('')
+            }}
           />
         )}
 

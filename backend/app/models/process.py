@@ -16,6 +16,7 @@ NodeType = Literal[
     'exclusiveGateway',          # XOR
     'parallelGateway',           # AND
     'inclusiveGateway',          # OR
+    'complexGateway',            # сложное условие: в draw.io — ромб со звёздочкой
     # Артефакты (2-ILOVA: Artefaktlar / Artifacts)
     'dataStore',                 # IABS, EHA, EDO — информационная система
     'dataObject',                # Dalolatnoma, Yig'ma jild — документ
@@ -24,11 +25,32 @@ NodeType = Literal[
     'lane'                       # Swimlane
 ]
 
+#: Как тип фигуры называется в интерфейсе и в отчёте о качестве импорта.
+#: Двойник `NODE_TYPE_LABELS` из `app/src/types/process.ts`.
+NODE_TYPE_LABELS: Dict[str, str] = {
+    'startEvent': 'Стартовое событие',
+    'endEvent': 'Завершение процесса',
+    'intermediateTimerEvent': 'Ожидание (таймер)',
+    'intermediateMessageEvent': 'Промежуточное событие-сообщение',
+    'task': 'Пользовательская задача',
+    'userTask': 'Ручная операция',
+    'serviceTask': 'PIX RPA / Сервис АБС',
+    'subProcess': 'Подпроцесс',
+    'exclusiveGateway': 'Шлюз «ИЛИ» (XOR)',
+    'parallelGateway': 'Шлюз «И» (AND)',
+    'inclusiveGateway': 'Шлюз «И/ИЛИ» (OR)',
+    'complexGateway': 'Сложный шлюз',
+    'dataStore': 'Информационная система',
+    'dataObject': 'Документ / объект данных',
+    'textAnnotation': 'Примечание',
+    'lane': 'Дорожка / Подразделение',
+}
+
 #: Узлы, которые участвуют в потоке управления (могут иметь sequenceFlow).
 FLOW_NODE_TYPES = (
     'startEvent', 'endEvent', 'intermediateTimerEvent', 'intermediateMessageEvent',
     'task', 'userTask', 'serviceTask', 'subProcess',
-    'exclusiveGateway', 'parallelGateway', 'inclusiveGateway',
+    'exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway',
 )
 
 #: Узлы-артефакты: соединяются только ассоциациями, шагами процесса не являются.
@@ -128,6 +150,9 @@ class ProcessValidation(BaseModel):
     code: Optional[str] = None
     #: Имя фигуры на карте — чтобы сотрудник нашёл её без поиска по id.
     nodeName: Optional[str] = None
+    #: Все фигуры, которых касается замечание: по нему платформа подсвечивает
+    #: на карте не одну фигуру, а всю группу («расширены 226 фигур» — какие?).
+    nodeIds: Optional[List[str]] = None
     #: Что с этим делать: замечание без подсказки бесполезно.
     hint: Optional[str] = None
 

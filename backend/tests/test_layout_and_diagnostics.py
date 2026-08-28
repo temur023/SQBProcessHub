@@ -265,9 +265,19 @@ class ImportDiagnosticsTest(unittest.TestCase):
             if issue.level in ('error', 'warning'):
                 self.assertTrue(issue.hint, f'{issue.code}: нет подсказки, что делать')
 
-    def test_unlabeled_gateway_branch_is_an_error(self):
-        self.assertIn('gateway_branch_unlabeled', self.by_code)
-        self.assertEqual(self.by_code['gateway_branch_unlabeled'][0].level, 'error')
+    def test_second_branch_of_a_binary_gateway_is_completed(self):
+        # У развилки «да/нет» аналитик подписывает одну ветку: на рисунке и так
+        # понятно, что вторая — противоположная. PIX так не умеет, поэтому
+        # условие подставляется, а сотруднику об этом говорится.
+        self.assertNotIn('gateway_branch_unlabeled', self.by_code)
+        issue = self.by_code['gateway_branch_completed'][0]
+        self.assertEqual(issue.level, 'warning')
+        self.assertIn("To'liq emas", issue.message)
+
+    def test_completed_condition_reaches_the_branch(self):
+        branch = next(e for e in self.process.edges if e.id == 'f4')
+        self.assertEqual(branch.name, "To'liq emas")
+        self.assertEqual(branch.condition, "To'liq emas")
 
     def test_step_without_a_timer_badge_is_reported(self):
         self.assertIn('no_step_time', self.by_code)

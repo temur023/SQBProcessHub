@@ -143,7 +143,7 @@ def create_case(process_id: str, body: CreateCaseBody):
     # Выбираем первый исполняемый шаг (только задачи), исключаем lane/start/end/gateway
     first_step = next((n for n in proc.nodes if n.type in ('userTask', 'serviceTask', 'task')), None)
     if not first_step:
-        first_step = next((n for n in proc.nodes if n.type not in ('lane', 'startEvent', 'endEvent', 'exclusiveGateway', 'parallelGateway', 'inclusiveGateway')), None)
+        first_step = next((n for n in proc.nodes if n.type not in ('lane', 'startEvent', 'endEvent', 'exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway')), None)
     record = PixRegistryRecord(
         id=f"rec-{uuid.uuid4().hex[:8]}",
         caseId=body.caseId,

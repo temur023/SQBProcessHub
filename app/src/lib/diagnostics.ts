@@ -1,5 +1,5 @@
 import type { ProcessEdge, ProcessNode, ProcessValidation } from '@/types/process'
-import { ARTIFACT_NODE_TYPES, TASK_NODE_TYPES } from '@/types/process'
+import { ARTIFACT_NODE_TYPES, NODE_TYPE_LABELS, TASK_NODE_TYPES } from '@/types/process'
 
 /**
  * Замечания к импортированной карте — то, что показывается сотруднику.
@@ -12,7 +12,21 @@ import { ARTIFACT_NODE_TYPES, TASK_NODE_TYPES } from '@/types/process'
  * должен увидеть, где карта неполна и что платформа достроила за него.
  */
 
-const GATEWAY_TYPES = ['exclusiveGateway', 'parallelGateway', 'inclusiveGateway']
+/**
+ * Устойчивый ключ строки отчёта: у замечаний нет собственных id, а UI должен
+ * помнить, какое из них подсвечено на карте прямо сейчас.
+ */
+export function issueKey(issue: ProcessValidation, index: number): string {
+  return `${issue.code ?? issue.level}-${index}`
+}
+
+/** Фигуры замечания: одиночное `nodeId` — та же группа, только из одной фигуры. */
+export function issueNodeIds(issue: ProcessValidation): string[] {
+  if (issue.nodeIds?.length) return issue.nodeIds
+  return issue.nodeId ? [issue.nodeId] : []
+}
+
+const GATEWAY_TYPES = ['exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway']
 
 /** Имена, которые платформа придумывает сама (см. `fallbackNodeName`). */
 const GENERATED_NAME_PREFIXES = [
@@ -29,6 +43,12 @@ export interface ImportDiagnosticsInput {
   /** Шаги, чьё время взято с карты, а не из эвристики по категории. */
   timedStepIds?: Set<string>
   layoutReport?: { squared: string[]; fitted: string[]; moved: string[] }
+  /** Фигуры, смысл которых импортёр не понял: описание -> подставленные узлы. */
+  unsupportedShapes?: Map<string, ProcessNode[]>
+  /** Иконки-украшения, снятые с карты. */
+  skippedClipart?: string[]
+  /** Развилки, вторую ветку которых платформа подписала сама. */
+  completedBranches?: { gateway: ProcessNode; condition: string }[]
 }
 
 function isGeneratedName(name: string): boolean {
@@ -48,11 +68,30 @@ export function collectImportDiagnostics(
     message: string,
     hint?: string,
     node?: ProcessNode,
+    nodeIds?: string[],
   ) => {
-    issues.push({ level, code, message, hint, nodeId: node?.id, nodeName: node?.name })
+    // Одна фигура — тоже группа из одной: UI подсвечивает список целиком и не
+    // должен знать, пришло замечание про шаг или про две сотни фигур.
+    const ids = nodeIds?.length ? nodeIds : node ? [node.id] : []
+    issues.push({
+      level,
+      code,
+      message,
+      hint,
+      nodeId: node?.id ?? (ids.length === 1 ? ids[0] : undefined),
+      nodeName: node?.name,
+      nodeIds: ids.length ? ids : undefined,
+    })
   }
-  const cap = (code: string, total: number, tail: (n: number) => string) => {
-    if (total > MAX_PER_CODE) add('info', `${code}_more`, tail(total - MAX_PER_CODE))
+  /**
+   * Свернуть хвост однотипных замечаний в одну строку со счётчиком.
+   * Свёрнутые фигуры остаются адресуемыми: строка «Ещё 12 шагов…» подсвечивает
+   * на карте те самые двенадцать, иначе её невозможно раскрыть.
+   */
+  const cap = (code: string, total: number, tail: (n: number) => string, rest: ProcessNode[] = []) => {
+    if (total > MAX_PER_CODE) {
+      add('info', `${code}_more`, tail(total - MAX_PER_CODE), undefined, undefined, rest.map((n) => n.id))
+    }
   }
 
   const steps = flowNodes.filter((n) => (TASK_NODE_TYPES as readonly string[]).includes(n.type))
@@ -84,38 +123,54 @@ export function collectImportDiagnostics(
       'Добавьте кружок начала процесса — без него выгрузка в BPMN невалидна.')
   } else if (starts.length > 1) {
     add('warning', 'many_start_events', `Стартовых событий: ${starts.length}.`,
-      'В одном процессе должен быть один вход; лишние обычно оказываются промежуточными событиями.')
+      'В одном процессе должен быть один вход; лишние обычно оказываются промежуточными событиями.',
+      undefined, starts.map((n) => n.id))
   }
   if (!ends.length) {
     add('error', 'no_end_event', 'На карте нет события завершения процесса.',
       'Добавьте кружок конца процесса хотя бы для успешного сценария.')
   }
 
-  let deadEnds = 0
-  for (const node of flowNodes) {
-    if (isArtifact(node) || node.type === 'startEvent') continue
-    if (!(incoming.get(node.id) ?? []).length) {
-      deadEnds += 1
-      if (deadEnds <= MAX_PER_CODE) {
-        add('error', 'no_incoming', `В шаг «${node.name}» не входит ни одна связь.`,
-          'Шаг недостижим: соедините его с предыдущим шагом.', node)
-      }
-    }
+  // Фигура, у которой нет НИ входящих, НИ исходящих связей, — отдельный случай:
+  // это не разрыв цепочки, а забытая на холсте фигура. Раньше о ней сообщалось
+  // дважды («нет входящих» и «нет исходящих»), и было неясно, что соединять —
+  // на самом деле её надо либо вписать в поток, либо убрать.
+  const isolated = flowNodes.filter(
+    (n) => !isArtifact(n) && !(incoming.get(n.id) ?? []).length && !(outgoing.get(n.id) ?? []).length,
+  )
+  const isolatedIds = new Set(isolated.map((n) => n.id))
+  for (const node of isolated.slice(0, MAX_PER_CODE)) {
+    add('error', 'isolated_node',
+      `Фигура «${node.name}» не соединена ни с чем: ни входящих связей, ни исходящих.`,
+      'Либо впишите её в поток — линия от предыдущего шага и линия к следующему, — ' +
+        'либо уберите с карты: в BPMN и PIX такая фигура попадёт в регламент отдельной ' +
+        'строкой, до которой процесс не доходит.',
+      node)
   }
-  cap('no_incoming', deadEnds, (n) => `Ещё ${n} шагов без входящих связей.`)
+  cap('isolated_node', isolated.length, (n) => `Ещё ${n} фигур не соединены ни с чем.`,
+    isolated.slice(MAX_PER_CODE))
 
-  let hanging = 0
-  for (const node of flowNodes) {
-    if (isArtifact(node) || node.type === 'endEvent') continue
-    if (!(outgoing.get(node.id) ?? []).length) {
-      hanging += 1
-      if (hanging <= MAX_PER_CODE) {
-        add('warning', 'no_outgoing', `Из шага «${node.name}» не выходит ни одна связь.`,
-          'Процесс обрывается: доведите ветку до следующего шага или до события завершения.', node)
-      }
-    }
+  const deadEnds = flowNodes.filter(
+    (n) => !isArtifact(n) && n.type !== 'startEvent' &&
+      !(incoming.get(n.id) ?? []).length && !isolatedIds.has(n.id),
+  )
+  for (const node of deadEnds.slice(0, MAX_PER_CODE)) {
+    add('error', 'no_incoming', `В шаг «${node.name}» не входит ни одна связь.`,
+      'Шаг недостижим: соедините его с предыдущим шагом.', node)
   }
-  cap('no_outgoing', hanging, (n) => `Ещё ${n} шагов без исходящих связей.`)
+  cap('no_incoming', deadEnds.length, (n) => `Ещё ${n} шагов без входящих связей.`,
+    deadEnds.slice(MAX_PER_CODE))
+
+  const hanging = flowNodes.filter(
+    (n) => !isArtifact(n) && n.type !== 'endEvent' &&
+      !(outgoing.get(n.id) ?? []).length && !isolatedIds.has(n.id),
+  )
+  for (const node of hanging.slice(0, MAX_PER_CODE)) {
+    add('warning', 'no_outgoing', `Из шага «${node.name}» не выходит ни одна связь.`,
+      'Процесс обрывается: доведите ветку до следующего шага или до события завершения.', node)
+  }
+  cap('no_outgoing', hanging.length, (n) => `Ещё ${n} шагов без исходящих связей.`,
+    hanging.slice(MAX_PER_CODE))
 
   // ── Шлюзы ─────────────────────────────────────────────────────────────────
   for (const node of flowNodes) {
@@ -134,6 +189,14 @@ export function collectImportDiagnostics(
     }
   }
 
+  for (const { gateway, condition } of input.completedBranches ?? []) {
+    add('warning', 'gateway_branch_completed',
+      `У шлюза «${gateway.name}» вторая ветка была без подписи — подставлено «${condition}».`,
+      'Условие взято как противоположное подписанной ветке: без него PIX BPM не ' +
+        'автоматизирует развилку. Подпишите ветку в draw.io, если смысл другой.',
+      gateway)
+  }
+
   // ── Подписи фигур ─────────────────────────────────────────────────────────
   // У таймера подпись — это его длительность, и «Ожидание 10 мин» дефектом не
   // является. Спрашиваем только там, где имя несёт смысл.
@@ -144,14 +207,16 @@ export function collectImportDiagnostics(
       'Назовите фигуру в draw.io: сгенерированное имя попадёт в регламент и в выгрузку как есть.',
       node)
   }
-  cap('generated_name', generated.length, (n) => `Ещё ${n} фигур без подписи.`)
+  cap('generated_name', generated.length, (n) => `Ещё ${n} фигур без подписи.`,
+    generated.slice(MAX_PER_CODE))
 
   const seen = new Map<string, number>()
   for (const step of steps) seen.set(step.name, (seen.get(step.name) ?? 0) + 1)
   for (const [name, count] of seen) {
     if (count > 1 && name) {
       add('info', 'duplicate_step_name', `Шаг «${name}» встречается на карте несколько раз.`,
-        'В регламенте такие строки не отличить друг от друга — уточните формулировки.')
+        'В регламенте такие строки не отличить друг от друга — уточните формулировки.',
+        undefined, steps.filter((s) => s.name === name).map((s) => s.id))
     }
   }
 
@@ -164,7 +229,8 @@ export function collectImportDiagnostics(
       'Поставьте рядом с шагом бейдж-таймер («5 min»): по нему считается SLA процесса и экономия от роботизации.',
       node)
   }
-  cap('no_step_time', noTime.length, (n) => `Ещё ${n} шагов без времени выполнения.`)
+  cap('no_step_time', noTime.length, (n) => `Ещё ${n} шагов без времени выполнения.`,
+    noTime.slice(MAX_PER_CODE))
 
   // ── Дорожки и роли ────────────────────────────────────────────────────────
   const homeless = flowNodes.filter((n) => !n.laneId && !isArtifact(n))
@@ -172,13 +238,32 @@ export function collectImportDiagnostics(
     add('warning', 'step_without_lane', `Шаг «${node.name}» не лежит ни в одной дорожке.`,
       'Без дорожки у шага нет исполнителя: перетащите фигуру внутрь дорожки подразделения.', node)
   }
-  cap('step_without_lane', homeless.length, (n) => `Ещё ${n} шагов вне дорожек.`)
+  cap('step_without_lane', homeless.length, (n) => `Ещё ${n} шагов вне дорожек.`,
+    homeless.slice(MAX_PER_CODE))
   if (!lanes.length) {
     add('warning', 'no_lanes', 'На карте нет дорожек подразделений.',
       'Без дорожек в регламенте не заполнится колонка «Исполнитель».')
   }
 
   // ── Связи и артефакты ─────────────────────────────────────────────────────
+  // Связь фигуры с самой собой рисуется в draw.io без возражений, но ни BPMN,
+  // ни PIX её не принимают: Процессная студия отказывается открыть карту
+  // целиком («Connector source and target node cannot be the same»).
+  const nodeById = new Map(flowNodes.map((n) => [n.id, n]))
+  const loops = edges.filter(
+    (e) => e.sourceId && e.sourceId === e.targetId && e.kind !== 'annotationLine',
+  )
+  for (const edge of loops.slice(0, MAX_PER_CODE)) {
+    const node = nodeById.get(edge.sourceId!)
+    add('error', 'self_loop',
+      `Связь у ${node ? `«${node.name}»` : 'фигуры'} начинается и заканчивается на одной и той же фигуре.`,
+      'В выгрузку такая линия не идёт: BPMN и PIX её не принимают. ' +
+        'Доведите линию до следующей фигуры или удалите её с карты.',
+      node)
+  }
+  cap('self_loop', loops.length, (n) => `Ещё ${n} связей замкнуты на самих себя.`,
+    loops.slice(MAX_PER_CODE).map((e) => nodeById.get(e.sourceId!)).filter((n): n is ProcessNode => Boolean(n)))
+
   const decoration = edges.filter((e) => e.kind === 'annotationLine')
   if (decoration.length) {
     add('warning', 'decoration_line', `Линий, не опирающихся на фигуры: ${decoration.length}.`,
@@ -195,22 +280,55 @@ export function collectImportDiagnostics(
       'Проведите пунктирную линию от неё к шагу — иначе в регламенте не заполнится колонка системы или документа.',
       node)
   }
+  cap('artifact_not_linked', lonely.length,
+    (n) => `Ещё ${n} систем и документов без связи с шагом.`, lonely.slice(MAX_PER_CODE))
+
+  // ── Фигуры, которых платформа не знает ────────────────────────────────────
+  // Незнакомую фигуру импортёр всё равно во что-то превращает, иначе карта
+  // порвётся. Но подменять смысл молча нельзя: аналитик рисовал одно, а в
+  // регламент и в PIX уедет другое, и заметит он это уже в Процессной студии.
+  const unsupportedEntries: [string, ProcessNode[]][] = [...(input.unsupportedShapes ?? new Map())]
+  unsupportedEntries.sort((a, b) => a[0].localeCompare(b[0]))
+  for (const [description, unknownNodes] of unsupportedEntries) {
+    if (!unknownNodes.length) continue
+    const shown = unknownNodes.slice(0, 3).map((n) => `«${n.name}»`).join(', ')
+    const tail = unknownNodes.length > 3 ? ` и ещё ${unknownNodes.length - 3}` : ''
+    const message =
+      unknownNodes.length === 1
+        ? `Платформа не распознала ${description}: «${unknownNodes[0].name}».`
+        : `Платформа не распознала ${description} — фигур на карте: ${unknownNodes.length} (${shown}${tail}).`
+    add('warning', 'unsupported_shape', message,
+      `Платформа подставила ближайший тип (${NODE_TYPE_LABELS[unknownNodes[0].type]}), и в регламент ` +
+        'уйдёт именно он. Перерисуйте фигуру набором BPMN 2.0 из draw.io — «События», ' +
+        '«Действия», «Шлюзы» — или проверьте шаг вручную.',
+      undefined, unknownNodes.map((n) => n.id))
+  }
+
+  const clipart = input.skippedClipart ?? []
+  if (clipart.length) {
+    add('info', 'clipart_skipped', `Иконок из библиотеки draw.io пропущено: ${clipart.length}.`,
+      'Картинки (телефон, здание, транспорт) — оформление схемы, а не шаги процесса: ' +
+        'на карту банка и в выгрузку они не идут.')
+  }
 
   // ── Что платформа поправила сама ──────────────────────────────────────────
   const report = input.layoutReport
   if (report?.squared.length) {
     add('info', 'geometry_squared',
       `Событиям и шлюзам вернули квадратную рамку: ${report.squared.length} фигур.`,
-      'В draw.io они нарисованы с фиксированной пропорцией, а импортёр BPMN растянул бы круг в эллипс вместе со значком таймера.')
+      'В draw.io они нарисованы с фиксированной пропорцией, а импортёр BPMN растянул бы круг в эллипс вместе со значком таймера.',
+      undefined, report.squared)
   }
   if (report?.fitted.length) {
     add('info', 'geometry_fitted', `Фигуры расширены под подпись: ${report.fitted.length}.`,
-      'В draw.io текст свободно выходит за рамку, а bpmn.io и Процессная студия обрезают его по фигуре.')
+      'В draw.io текст свободно выходит за рамку, а bpmn.io и Процессная студия обрезают его по фигуре.',
+      undefined, report.fitted)
   }
   if (report?.moved.length) {
     add('info', 'geometry_moved',
       `Артефакты сдвинуты, чтобы не лежать поверх шагов: ${report.moved.length}.`,
-      'На карте они перекрывали подпись шага.')
+      'На карте они перекрывали подпись шага.',
+      undefined, report.moved)
   }
 
   return issues

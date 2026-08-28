@@ -45,6 +45,7 @@ const PIX_TYPES: Record<string, NodeType> = {
   gateway_xor: 'exclusiveGateway',
   gateway_parallel: 'parallelGateway',
   gateway_or: 'inclusiveGateway',
+  gateway_complex: 'complexGateway',
   sub_process: 'subProcess',
   datastorage: 'dataStore',
   dataobject: 'dataObject',

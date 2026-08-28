@@ -115,7 +115,7 @@ def generate_regulation_csv(process: BusinessProcess) -> str:
     idx = 1
     # В регламент идут только операции: дорожки, шлюзы и артефакты
     # (хранилища данных, документы, примечания) шагами процесса не являются.
-    skip = ('lane', 'exclusiveGateway', 'parallelGateway', 'inclusiveGateway') + ARTIFACT_NODE_TYPES
+    skip = ('lane', 'exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway') + ARTIFACT_NODE_TYPES
     for node in process.nodes:
         if node.type in skip:
             continue

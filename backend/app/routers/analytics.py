@@ -60,7 +60,7 @@ def get_rpa_candidates(process_id: str):
             "annualSavingsUzs": (n.costPerExecution or 0) * 22 * 12  # estimate: 22 cases/month
         }
         for n in process.nodes
-        if n.type not in ('lane', 'startEvent', 'endEvent', 'exclusiveGateway', 'parallelGateway', 'inclusiveGateway')
+        if n.type not in ('lane', 'startEvent', 'endEvent', 'exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway')
         and (n.automationPotential or 0) >= 50
     ]
     candidates.sort(key=lambda x: x["automationPotential"], reverse=True)
