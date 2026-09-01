@@ -8,6 +8,7 @@ import {
   Database,
   Sparkles,
   Package,
+  Share2,
   ShieldCheck,
   ShieldAlert,
   Loader2,
@@ -120,7 +121,7 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
   onOpenChange,
   process,
 }) => {
-  const [activeTab, setActiveTab] = useState<'bpmn' | 'pmm' | 'logs' | 'pix' | 'excel'>('bpmn')
+  const [activeTab, setActiveTab] = useState<'bpmn' | 'pmm' | 'xpdl' | 'logs' | 'pix' | 'excel'>('bpmn')
   const [copied, setCopied] = useState(false)
   // Предпросмотр обязан совпадать с тем, что реально скачается: берём BPMN с
   // бэкенда, а клиентский генератор оставляем только для офлайн-режима.
@@ -167,12 +168,32 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
     'Проверить файл, не выходя из системы, можно кнопкой «Просмотр BPMN / PMM».',
   ].join('\n')
 
+  const xpdlNote = [
+    `${process.passport.code}_Process.xpdl`,
+    '',
+    'Запасной формат обмена: WfMC XPDL 2.2 — опубликованный стандарт с тем же',
+    'набором понятий, что и BPMN (пул, дорожки, активности, переходы, координаты).',
+    '',
+    'Когда пригодится: студия не приняла ни .bpmn, ни .pmm. Карту можно открыть',
+    'сторонним средством моделирования (Bizagi, ADONIS, Together Workflow),',
+    'сохранить оттуда в BPMN и внести уже проверенным путём.',
+    '',
+    'Важно: приём XPDL самой PIX Процессной студией НЕ подтверждён — эталонного',
+    'файла студии в этом формате у платформы нет. Считайте его средством',
+    'переноса, а не вторым официальным каналом, пока не удастся пробная загрузка.',
+    '',
+    'Время шага едет штатным полем SimulationInformation/TimeEstimation,',
+    'роль исполнителя — Performers, ветки шлюзов — условиями переходов.',
+  ].join('\n')
+
   const getCurrentContent = () => {
     switch (activeTab) {
       case 'bpmn':
         return { content: bpmnXml, filename: `${process.passport.code}_PIX_Map.bpmn`, mime: 'application/xml', exportType: 'bpmn' as const }
       case 'pmm':
         return { content: pmmManifest, filename: `${process.passport.code}_PIX_Map.pmm`, mime: 'application/zip', exportType: 'pmm' as const }
+      case 'xpdl':
+        return { content: xpdlNote, filename: `${process.passport.code}_Process.xpdl`, mime: 'application/xml', exportType: 'xpdl' as const }
       case 'logs':
         return { content: logsCsv, filename: `${process.passport.code}_EventLogs.csv`, mime: 'text/csv', exportType: 'event-log' as const }
       case 'pix':
@@ -183,7 +204,7 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
   }
 
   const handleCopy = () => {
-    if (activeTab === 'pmm') return
+    if (activeTab === 'pmm' || activeTab === 'xpdl') return
     const { content } = getCurrentContent()
     navigator.clipboard.writeText(content)
     setCopied(true)
@@ -224,7 +245,7 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1 sm:grid-cols-3 lg:grid-cols-5">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1 sm:grid-cols-3 lg:grid-cols-6">
             <TabsTrigger value="bpmn" className="text-[11px]">
               <FileCode className="w-3.5 h-3.5 mr-1 text-indigo-500" />
               BPMN 2.0
@@ -232,6 +253,10 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
             <TabsTrigger value="pmm" className="text-[11px]">
               <Package className="w-3.5 h-3.5 mr-1 text-sky-500" />
               PMM (PIX)
+            </TabsTrigger>
+            <TabsTrigger value="xpdl" className="text-[11px]">
+              <Share2 className="w-3.5 h-3.5 mr-1 text-amber-500" />
+              XPDL 2.2
             </TabsTrigger>
             <TabsTrigger value="logs" className="text-[11px]">
               <Sparkles className="w-3.5 h-3.5 mr-1 text-purple-500" />
@@ -272,6 +297,19 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
             </div>
             <div className="max-h-[360px] flex-1 overflow-auto rounded-lg border bg-slate-50 p-3 font-mono text-[11px] text-slate-800 dark:bg-slate-950 dark:text-slate-200">
               <pre>{pmmManifest}</pre>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="xpdl" className="flex-1 flex flex-col overflow-hidden mt-3 space-y-2">
+            <div className="flex flex-col items-start justify-between gap-2 rounded-lg bg-muted/60 p-2.5 text-xs sm:flex-row sm:items-center">
+              <span>
+                Запасной канал обмена в стандарте <strong>WfMC XPDL 2.2</strong> на случай,
+                когда студия не приняла ни .bpmn, ни .pmm. Приём XPDL самой PIX не подтверждён.
+              </span>
+              <Badge className="shrink-0 bg-amber-600 text-[10px] text-white">XPDL 2.2</Badge>
+            </div>
+            <div className="max-h-[360px] flex-1 overflow-auto rounded-lg border bg-slate-50 p-3 font-mono text-[11px] text-slate-800 dark:bg-slate-950 dark:text-slate-200">
+              <pre>{xpdlNote}</pre>
             </div>
           </TabsContent>
 
@@ -324,7 +362,7 @@ export const ExportDrawer: React.FC<ExportDrawerProps> = ({
             Файл: <strong className="text-foreground">{getCurrentContent().filename}</strong>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {activeTab !== 'pmm' && (
+            {activeTab !== 'pmm' && activeTab !== 'xpdl' && (
             <Button variant="outline" size="sm" onClick={handleCopy} className="flex-1 gap-1.5 text-xs sm:flex-none">
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
               <span>{copied ? 'Скопировано!' : 'Копировать код'}</span>

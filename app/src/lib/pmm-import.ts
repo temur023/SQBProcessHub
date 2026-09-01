@@ -10,7 +10,7 @@ import { isTaskNode } from '@/types/process'
 import { classifyCategory, detectSystem } from './drawio'
 import { assembleOpenedProcess } from './opened-process'
 import { parseDurationText } from './bpmn-import'
-import { readZip, ZipError, type ZipEntry } from './zip'
+import { ZipError, type ZipEntry } from './zip'
 
 /**
  * Чтение нативного пакета PIX Процессной студии (`.pmm`) — для просмотра
@@ -305,11 +305,4 @@ export function parsePmmMapXml(xmlText: string, fileName: string): BusinessProce
     lanes,
     edges,
   })
-}
-
-/** Открывает пакет `.pmm` целиком: распаковка плюс разбор карты. */
-export async function parsePmmPackage(buffer: ArrayBuffer, fileName: string): Promise<BusinessProcess> {
-  const entries = await readZip(buffer)
-  const part = findMapPart(entries)
-  return parsePmmMapXml(part.xml, fileName)
 }

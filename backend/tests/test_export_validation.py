@@ -118,9 +118,17 @@ class PmmDefectTests(unittest.TestCase):
         self.assertIn('pmm_node_type_unknown', self._codes(broken))
 
     def test_unknown_notation_name_is_caught(self):
-        broken = _repack(self.pmm, {'notation="BPMN"': 'notation="bpmn"'})
+        broken = _repack(self.pmm, {'notation="bpmn"': 'notation="BPMN 2.0"'})
         codes = self._codes(broken)
         self.assertIn('pmm_notation_unknown', codes)
+
+    def test_notation_name_is_matched_regardless_of_case(self):
+        # Каталог объявляет «BPMN», студия пишет «bpmn» — обе записи означают
+        # одну нотацию, и проверка, различающая их, забраковала бы выгрузку
+        # самой студии (tests/fixtures/sap.pmm).
+        for spelling in ('BPMN', 'bpmn', 'BpMn'):
+            repacked = _repack(self.pmm, {'notation="bpmn"': f'notation="{spelling}"'})
+            self.assertNotIn('pmm_notation_unknown', self._codes(repacked), spelling)
 
     def test_self_referencing_connector_is_caught(self):
         # Ровно то, на чём студия говорит «Connector source and target node

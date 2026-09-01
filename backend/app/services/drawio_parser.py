@@ -419,23 +419,40 @@ def _style_float(style_map: Dict[str, str], key: str) -> Optional[float]:
         return None
 
 
-def _parent_origin(cell_id: Optional[str], cell_map: Dict[str, ET.Element], cache: Dict[str, Tuple[float, float]]) -> Tuple[float, float]:
+def _parent_origin(
+    cell_id: Optional[str],
+    cell_map: Dict[str, ET.Element],
+    cache: Dict[str, Tuple[float, float]],
+    _chain: Optional[Set[str]] = None,
+) -> Tuple[float, float]:
     """Absolute top-left of a cell's parent chain.
 
     mxGraph semantics: children of a swimlane are positioned relative to the
     swimlane's FULL origin (including the title/startSize area) — verified by
     pool/lane geometry fitting exactly (lane y+h == pool h). Therefore we add
     only geo.x/geo.y of ancestors, no startSize shift.
+
+    ``_chain`` — идентификаторы, уже пройденные на этом спуске. Файл с
+    повторяющимися id (обычная история при склейке двух схем) даёт ячейку,
+    которая оказывается сама себе предком, и обход уходил в бесконечную
+    рекурсию: импорт падал с RecursionError, то есть пятисотой ошибкой без
+    единого понятного слова для сотрудника. Цикл разрываем на первом же
+    повторе; сам дефект ловит и объясняет предпроверка (``drawio_precheck``).
     """
     if not cell_id or cell_id in ('0', '1'):
         return 0.0, 0.0
     if cell_id in cache:
         return cache[cell_id]
+    if _chain and cell_id in _chain:
+        cache[cell_id] = (0.0, 0.0)
+        return 0.0, 0.0
     cell = cell_map.get(cell_id)
     if cell is None:
         cache[cell_id] = (0.0, 0.0)
         return 0.0, 0.0
-    px, py = _parent_origin(cell.get('parent'), cell_map, cache)
+    px, py = _parent_origin(
+        cell.get('parent'), cell_map, cache, (_chain or set()) | {cell_id}
+    )
     geo = cell.find('mxGeometry')
     # Relative geometries (edge labels, edge frames) do not shift the coordinate space.
     if geo is not None and geo.get('relative') != '1':
@@ -1751,6 +1768,23 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             unsupported.setdefault(unknown, []).append(node)
         nodes.append(node)
 
+    # ── Идентификаторы фигур уникальны ──────────────────────────────────────
+    # Инвариант модели, а не удобство экспортёра: и BPMN (xsd:ID), и .pmm
+    # требуют уникальности, а карта, склеенная из двух файлов, приносит по два
+    # `id="node1"`. Раньше такие фигуры доезжали до выгрузки как есть, и студия
+    # отвергала весь пакет. Первое вхождение сохраняет идентификатор — на него
+    # уже ссылаются связи, — последующие получают суффикс.
+    seen_ids: Set[str] = set()
+    for n in nodes:
+        if n.id not in seen_ids:
+            seen_ids.add(n.id)
+            continue
+        suffix = 2
+        while f'{n.id}__dup{suffix}' in seen_ids:
+            suffix += 1
+        n.id = f'{n.id}__dup{suffix}'
+        seen_ids.add(n.id)
+
     lanes = [n for n in nodes if n.type == 'lane']
     lane_ids = {l.id for l in lanes}
     flow_nodes = [n for n in nodes if n.type != 'lane']
@@ -2042,6 +2076,20 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             )
         ]
     )
+
+    # Идентификаторы связей живут в том же пространстве, что и фигуры: в .pmm
+    # `id` связи и `id` фигуры лежат в одной карте, а в BPMN оба попадают в
+    # xsd:ID. Совпадение здесь так же ломает импорт, как два одинаковых шага.
+    taken_ids: Set[str] = {n.id for n in nodes}
+    for e in edges:
+        if e.id not in taken_ids:
+            taken_ids.add(e.id)
+            continue
+        suffix = 2
+        while f'{e.id}__dup{suffix}' in taken_ids:
+            suffix += 1
+        e.id = f'{e.id}__dup{suffix}'
+        taken_ids.add(e.id)
 
     page_used, pages_skipped = page_report(content)
     validations = collect_import_diagnostics(

@@ -48,6 +48,14 @@ _BPMN_FLOW_NODES = {
 #: xsd:ID: имя XML, а не произвольная строка. bpmn.io и PIX на этом спотыкаются.
 _NCNAME_RE = re.compile(r'^[A-Za-z_][\w.\-]*$')
 
+#: Символы, которых нет в XML 1.0: файл с ними не разберёт ни один импортёр.
+_CONTROL_CHARS_RE = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f]')
+
+#: Пространства имён, без которых импортёр не поймёт ни модель, ни диаграмму.
+_NS_MODEL = 'http://www.omg.org/spec/BPMN/20100524/MODEL'
+_NS_DI = 'http://www.omg.org/spec/BPMN/20100524/DI'
+_NS_DC = 'http://www.omg.org/spec/DD/20100524/DC'
+
 
 @dataclass(frozen=True)
 class Problem:
@@ -181,8 +189,15 @@ def _validate_pmm_package(payload: bytes) -> ExportCheck:
         n.get('name'): {e.get('name') for e in n.findall('element') if e.get('name')}
         for n in config.iter('notation') if n.get('name')
     }
+    # Регистр имени нотации не значит ничего: каталог объявляет её как ``BPMN``,
+    # сама студия пишет в карту ``bpmn`` (tests/fixtures/sap.pmm). Сверяем без
+    # учёта регистра, а по каталогу дальше ходим каноническим именем — иначе не
+    # найдутся ни категории, ни ``canHaveChildren``, и дорожка с шагами внутри
+    # выглядела бы недопустимым вложением.
     notation = map_root.get('notation') or ''
-    elements = notations.get(notation)
+    canonical = {name.lower(): name for name in notations}
+    notation_name = canonical.get(notation.lower())
+    elements = notations.get(notation_name) if notation_name else None
     if elements is None:
         add('error', 'pmm_notation_unknown',
             f'Нотация «{notation}» не объявлена в каталоге студии. Известные: '
@@ -190,11 +205,12 @@ def _validate_pmm_package(payload: bytes) -> ExportCheck:
             map_part)
         elements = set()
 
-    categories = notation_categories(config, notation)
+    lookup = notation_name or notation
+    categories = notation_categories(config, lookup)
     containers = {name for name, kind in categories.items() if kind == _CONTAINER_CATEGORY}
     with_children = {
         e.get('name')
-        for n in config.iter('notation') if n.get('name') == notation
+        for n in config.iter('notation') if n.get('name') == lookup
         for e in n.findall('element') if e.get('canHaveChildren') == 'true'
     }
 
@@ -309,6 +325,14 @@ def _validate_bpmn_xml(xml: str) -> ExportCheck:
         Problem(level, code, message, where)
     )
 
+    # Управляющие символы ломают разбор ещё до всякой семантики. Ищем их до
+    # ET.fromstring, чтобы сказать «в подписи мусор из Word», а не «not well-formed».
+    control = _CONTROL_CHARS_RE.search(xml)
+    if control:
+        add('error', 'bpmn_control_chars',
+            f'В файле есть символ, недопустимый в XML (код {ord(control.group())}, '
+            f'позиция {control.start()}).')
+
     try:
         root = ET.fromstring(xml.encode('utf-8'))
     except ET.ParseError as exc:
@@ -317,6 +341,17 @@ def _validate_bpmn_xml(xml: str) -> ExportCheck:
     if _local(root.tag) != 'definitions':
         add('error', 'bpmn_root', f'Корень — <{root.tag}>, ожидался <definitions>.')
         return check
+
+    # ── Пространства имён ───────────────────────────────────────────────────
+    # Импортёр опознаёт элементы по namespace, а не по имени тега: <definitions>
+    # без объявленного MODEL для него не BPMN, а безымянный XML.
+    if not root.tag.startswith(f'{{{_NS_MODEL}}}'):
+        add('error', 'bpmn_namespace',
+            f'<definitions> объявлен не в пространстве имён BPMN MODEL '
+            f'({_NS_MODEL}) — импортёр не опознает файл как BPMN 2.0.')
+    if not (root.get('targetNamespace') or '').strip():
+        add('error', 'bpmn_target_namespace',
+            'У <definitions> не задан targetNamespace — он обязателен по схеме.')
 
     ids: Set[str] = set()
     by_id: Dict[str, ET.Element] = {}
@@ -418,6 +453,123 @@ def _validate_bpmn_xml(xml: str) -> ExportCheck:
         if eid not in drawn:
             add('warning', 'bpmn_shape_missing',
                 f'У фигуры «{_label(eid)}» нет BPMNShape — импортёр может её не нарисовать.', eid)
+
+    # ── Поток управления не пересекает границу пула ─────────────────────────
+    # Спецификация допускает sequenceFlow только внутри одного процесса: между
+    # пулами ходит messageFlow. Импортёр на таком переходе спотыкается, потому
+    # что не может решить, в чей процесс класть связь.
+    process_of: Dict[str, str] = {}
+    processes = [el for el in root.iter() if _local(el.tag) == 'process']
+    for proc in processes:
+        for el in proc.iter():
+            if el.get('id'):
+                process_of[el.get('id')] = proc.get('id') or ''
+    for flow in root.iter():
+        if _local(flow.tag) != 'sequenceflow':
+            continue
+        src, tgt = flow.get('sourceRef') or '', flow.get('targetRef') or ''
+        home, away = process_of.get(src), process_of.get(tgt)
+        if home and away and home != away:
+            add('error', 'bpmn_flow_crosses_pool',
+                f'Переход соединяет «{_label(src)}» и «{_label(tgt)}» из разных пулов — '
+                'между пулами допустим только messageFlow.', flow.get('id'))
+
+    # ── Дорожка перечисляет узлы своего процесса ────────────────────────────
+    for lane in root.iter():
+        if _local(lane.tag) != 'lane':
+            continue
+        lane_home = process_of.get(lane.get('id') or '')
+        for ref_el in lane:
+            if _local(ref_el.tag) != 'flownoderef':
+                continue
+            ref = (ref_el.text or '').strip()
+            if ref and process_of.get(ref) and process_of.get(ref) != lane_home:
+                add('error', 'bpmn_lane_foreign_node',
+                    f'Дорожка перечисляет «{_label(ref)}» из другого процесса.',
+                    lane.get('id'))
+            target = by_id.get(ref)
+            if target is not None and _local(target.tag) in _BPMN_ARTIFACTS:
+                add('error', 'bpmn_lane_artifact',
+                    f'Дорожка перечисляет артефакт «{_label(ref)}»: '
+                    'элементом потока он не является.', lane.get('id'))
+
+    # ── Участник ссылается на существующий процесс ──────────────────────────
+    for participant in root.iter():
+        if _local(participant.tag) != 'participant':
+            continue
+        ref = participant.get('processRef')
+        if ref and (ref not in by_id or _local(by_id[ref].tag) != 'process'):
+            add('error', 'bpmn_participant_process',
+                f'Участник «{_label(participant.get("id") or "")}» ссылается на {ref}, '
+                'а такого <process> в файле нет.', participant.get('id'))
+
+    # ── Граничное событие держится за активность ────────────────────────────
+    for boundary in root.iter():
+        if _local(boundary.tag) != 'boundaryevent':
+            continue
+        host = boundary.get('attachedToRef')
+        bid = boundary.get('id')
+        if not host:
+            add('error', 'bpmn_boundary_detached',
+                f'У граничного события «{_label(bid or "")}» не задан attachedToRef.', bid)
+        elif process_of.get(host) != process_of.get(bid or ''):
+            add('error', 'bpmn_boundary_foreign_host',
+                f'Граничное событие «{_label(bid or "")}» прицеплено к активности '
+                'из другого процесса.', bid)
+
+    # ── Диаграмма ───────────────────────────────────────────────────────────
+    # Требование задания «обязательное наличие корректного блока BPMNDI»: без
+    # плоскости импортёр открывает файл пустым холстом, а фигура без Bounds или
+    # связь с одной точкой роняют разбор диаграммы целиком.
+    planes = [el for el in root.iter() if _local(el.tag) == 'bpmnplane']
+    if not any(_local(el.tag) == 'bpmndiagram' for el in root.iter()):
+        add('error', 'bpmn_no_diagram',
+            'В файле нет <BPMNDiagram> — импортёр не получит ни одной координаты.')
+    elif not planes:
+        add('error', 'bpmn_no_plane', 'В <BPMNDiagram> нет <BPMNPlane>.')
+    for plane in planes:
+        anchor = plane.get('bpmnElement')
+        if not anchor:
+            add('error', 'bpmn_plane_anchor',
+                'У <BPMNPlane> не задан bpmnElement.', plane.get('id'))
+        elif anchor not in ids:
+            add('error', 'bpmn_plane_anchor',
+                f'<BPMNPlane> ссылается на несуществующий {anchor}.', plane.get('id'))
+
+    drawn_twice: Dict[str, int] = {}
+    for el in root.iter():
+        tag = _local(el.tag)
+        if tag not in ('bpmnshape', 'bpmnedge'):
+            continue
+        anchor = el.get('bpmnElement') or ''
+        drawn_twice[anchor] = drawn_twice.get(anchor, 0) + 1
+        if tag == 'bpmnshape':
+            bounds = [c for c in el if _local(c.tag) == 'bounds']
+            if not bounds:
+                add('error', 'bpmn_shape_no_bounds',
+                    f'У фигуры «{_label(anchor)}» нет <dc:Bounds>.', anchor)
+                continue
+            box = bounds[0]
+            if not all(_number_ok(box.get(a)) for a in ('x', 'y', 'width', 'height')):
+                add('error', 'bpmn_shape_bounds_broken',
+                    f'У фигуры «{_label(anchor)}» в <dc:Bounds> не все координаты числа.',
+                    anchor)
+            elif float(box.get('width')) <= 0 or float(box.get('height')) <= 0:
+                add('error', 'bpmn_shape_zero_size',
+                    f'У фигуры «{_label(anchor)}» нулевой размер.', anchor)
+        else:
+            points = [c for c in el if _local(c.tag) == 'waypoint']
+            if len(points) < 2:
+                add('error', 'bpmn_edge_waypoints',
+                    f'У связи «{_label(anchor)}» {len(points)} точек маршрута, нужно минимум две.',
+                    anchor)
+            elif not all(_number_ok(w.get('x')) and _number_ok(w.get('y')) for w in points):
+                add('error', 'bpmn_edge_waypoint_broken',
+                    f'У связи «{_label(anchor)}» точка маршрута без координат.', anchor)
+    for anchor, times in drawn_twice.items():
+        if times > 1:
+            add('error', 'bpmn_di_duplicate',
+                f'Элемент «{_label(anchor)}» нарисован на диаграмме {times} раза.', anchor)
 
     if not any(_local(el.tag) == 'process' for el in root.iter()):
         add('error', 'bpmn_no_process', 'В файле нет ни одного <process>.')

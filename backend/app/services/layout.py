@@ -397,9 +397,16 @@ def choose_label_box(candidates: List[Box], obstacles: Iterable[Box]) -> Box:
     """
     obstacles = list(obstacles)
     best: Optional[Box] = None
-    best_area = None
+    best_area: Optional[float] = None
     for box in candidates:
-        area = sum(_overlap_area(box, o) for o in obstacles)
+        # Как только позиция проиграла лучшей из уже проверенных, досчитывать
+        # её перекрытия незачем: на карте в сотни фигур перебор «каждый
+        # кандидат против каждого препятствия» занимал секунды.
+        area = 0.0
+        for obstacle in obstacles:
+            area += _overlap_area(box, obstacle)
+            if best_area is not None and area >= best_area:
+                break
         if area == 0:
             return box
         if best_area is None or area < best_area:
@@ -511,15 +518,8 @@ def node_obstacles(nodes: Iterable[ProcessNode], skip_id: str = '') -> List[Box]
     ]
 
 
-def external_label_box(
-    node: ProcessNode,
-    nodes: Iterable[ProcessNode],
-    extra_obstacles: Iterable[Box] = (),
-) -> Box:
-    """Рамка выносной подписи фигуры, разведённая с соседями."""
-    obstacles = node_obstacles(nodes, node.id) + list(extra_obstacles)
-    return choose_label_box(external_label_candidates(node), obstacles)
-
+#: Отступы подписи от линии связи: вплотную, затем в стороне.
+EDGE_LABEL_GAPS = (4, 26)
 
 #: Доли длины ломаной, около которых можно поставить подпись связи. Середина
 #: предпочтительна, но на плотной карте там бывает занято — тогда подпись
@@ -573,11 +573,15 @@ def edge_label_candidates(route: Sequence[Tuple[int, int]], text: str) -> List[B
             cx, cy, vertical = _point_at(points, fraction)
             x = int(round(cx - width / 2))
             y = int(round(cy - height / 2))
-            above: Box = (x, int(round(cy - height - 4)), width, height)
-            below: Box = (x, int(round(cy + 4)), width, height)
-            right: Box = (int(round(cx + 8)), y, width, height)
-            left: Box = (int(round(cx - 8 - width)), y, width, height)
-            out.extend([right, left, above, below] if vertical else [above, below, right, left])
+            # Два кольца отступов: сперва вплотную к линии, потом на ширину
+            # фигуры в стороне. На тесной карте место у самой линии занято
+            # соседним шагом, и подпись садилась ему прямо на текст.
+            for gap in EDGE_LABEL_GAPS:
+                above: Box = (x, int(round(cy - height - gap)), width, height)
+                below: Box = (x, int(round(cy + gap)), width, height)
+                right: Box = (int(round(cx + gap + 4)), y, width, height)
+                left: Box = (int(round(cx - gap - 4 - width)), y, width, height)
+                out.extend([right, left, above, below] if vertical else [above, below, right, left])
 
     seen: List[Box] = []
     for box in out:

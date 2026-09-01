@@ -456,15 +456,16 @@ class TestSQBProcessHubApi(unittest.TestCase):
 
         root = ET.fromstring(map_xml)
         self.assertEqual(root.tag, "Map")
-        # Имя нотации должно совпадать с каталогом студии буква в букву:
-        # написанное на глаз «bpmn» вместо «BPMN» студия не находит и отвергает
-        # весь пакет («Notation element not found (Parameter 'type')»).
+        # Нотация карты должна быть одной из объявленных в каталоге. Регистр
+        # при этом свой у каждой стороны: каталог объявляет «BPMN», а сама
+        # студия пишет в карту «bpmn» (tests/fixtures/sap.pmm) — пишем как она.
         notation_names = {n.get("name") for n in conf.findall("notation")}
-        self.assertIn(root.get("notation"), notation_names)
+        self.assertEqual(root.get("notation"), "bpmn")
+        self.assertIn(root.get("notation").lower(), {n.lower() for n in notation_names})
         allowed = {
             e.get("name")
             for n in conf.findall("notation")
-            if n.get("name") == root.get("notation")
+            if (n.get("name") or "").lower() == root.get("notation").lower()
             for e in n.findall("element")
         }
         used_types = {node.get("type") for node in root.iter("node")}
@@ -501,17 +502,20 @@ class TestSQBProcessHubApi(unittest.TestCase):
         connectors = root.findall("connector")
         self.assertGreaterEqual(len(connectors), 5)
         self.assertTrue(all(c.get("type") == "step" for c in connectors))
-        # Якорь связи больше не захардкожен: PIX сама трассирует связь, если
-        # sourcePoint/targetPoint не заданы (в эталоне так у 30 связей из 50).
-        self.assertTrue(all(c.get("targetPoint") is None for c in connectors))
+        # Якорь пишем только тем граням, чей номер называет выгрузка самой
+        # студии (tests/fixtures/sap.pmm); для остальных атрибута нет, и PIX
+        # трассирует связь сама — в эталоне так у 30 связей из 50.
+        self.assertTrue(all(
+            c.get("sourcePoint") in {None, "0", "6"} for c in connectors))
+        self.assertTrue(all(
+            c.get("targetPoint") in {None, "1", "3", "4", "6"} for c in connectors))
         self.assertTrue(any(c.get("lineStyle") == "dotted" for c in connectors))
         dotted = next(c for c in connectors if c.get("lineStyle") == "dotted")
-        # Маркер конца — из словаря React Flow, на котором построен холст студии:
-        # нестандартное значение она молча отбрасывает вместе со связью.
-        self.assertEqual(dotted.findtext("MarkerEnd"), "arrow")
-        # Стиль линии дублируется дочерним элементом рядом с color/fontSize —
-        # как атрибут студия его не читала, и пунктир приходил сплошным.
-        self.assertEqual(dotted.findtext("lineStyle"), "dotted")
+        # Маркер конца — из словаря студии: `arrow` в её выгрузке не встречается
+        # ни разу, а незнакомый маркер она молча отбрасывает вместе со связью.
+        self.assertEqual(dotted.findtext("MarkerEnd"), "arrowLine")
+        # Стиль линии — только атрибут; дочернего <lineStyle> у студии нет.
+        self.assertIsNone(dotted.find("lineStyle"))
         solid = next(c for c in connectors if c.get("lineStyle") == "solid")
         self.assertEqual(solid.findtext("MarkerStart"), "line")
         self.assertEqual(solid.findtext("MarkerEnd"), "arrowclosed")

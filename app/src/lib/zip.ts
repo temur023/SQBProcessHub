@@ -83,10 +83,3 @@ export async function readZip(buffer: ArrayBuffer): Promise<ZipEntry[]> {
   }
   return entries
 }
-
-/** Текст части архива по имени; регистр и ведущий слэш роли не играют. */
-export function zipText(entries: ZipEntry[], name: string): string | null {
-  const want = name.replace(/^\//, '').toLowerCase()
-  const hit = entries.find((e) => e.name.replace(/^\//, '').toLowerCase() === want)
-  return hit ? new TextDecoder('utf-8').decode(hit.data as BufferSource) : null
-}

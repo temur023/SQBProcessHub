@@ -159,15 +159,54 @@ export function markerBox(marker: DurationMarker): Box {
   return { x: marker.cx - half, y: marker.cy - half, width: EVENT_SIDE, height: EVENT_SIDE }
 }
 
-/** Куда положить время: под часами, затем правее, левее и выше. */
+/**
+ * Куда положить время: под часами, затем правее, левее, выше и по углам.
+ *
+ * Четырёх сторон на плотной карте не хватает: если все они заняты, выбор
+ * падает на «наименее конфликтную» позицию, и время печатается поверх текста
+ * самого шага. Диагонали и вторая полка дают запас.
+ */
 function durationLabelCandidates(marker: DurationMarker): Box[] {
   const { width, height } = labelSize(marker.text)
   const half = EVENT_SIDE / 2
+  const cx = marker.cx
+  const cy = marker.cy
+  const near = half + 4
+  const far = half + 6 + height
+  const mid = Math.round(cx - width / 2)
+  const at = (x: number, y: number): Box => ({ x: Math.round(x), y: Math.round(y), width, height })
   return [
-    { x: Math.round(marker.cx - width / 2), y: Math.round(marker.cy + half + 2), width, height },
-    { x: Math.round(marker.cx + half + 4), y: Math.round(marker.cy - height / 2), width, height },
-    { x: Math.round(marker.cx - half - 4 - width), y: Math.round(marker.cy - height / 2), width, height },
-    { x: Math.round(marker.cx - width / 2), y: Math.round(marker.cy - half - 2 - height), width, height },
+    at(mid, cy + half + 2),
+    at(cx + near, cy - height / 2),
+    at(cx - near - width, cy - height / 2),
+    at(mid, cy - half - 2 - height),
+    at(cx + near, cy + half + 2),
+    at(cx - near - width, cy + half + 2),
+    at(cx + near, cy - half - 2 - height),
+    at(cx - near - width, cy - half - 2 - height),
+    at(mid, cy + far),
+    at(mid, cy - far - height),
+  ]
+}
+
+/** Полоса с названием дорожки внутри пула — bpmn.io рисует её той же ширины. */
+const LANE_HEADER = 30
+/** Толщина рамки дорожки: подпись, севшая на разделитель, читается перечёркнутой. */
+const LANE_BORDER = 4
+
+/**
+ * Заголовок дорожки и её рамка — места, куда подпись класть нельзя.
+ *
+ * В полосе слева bpmn.io печатает повёрнутое название дорожки, а по контуру
+ * рисует линию. Подпись, попавшая туда, ложится либо поверх названия, либо
+ * ровно на разделитель между дорожками — ровно то, что видно в выгрузке.
+ */
+function bandBoxes(x: number, y: number, width: number, height: number, header: number): Box[] {
+  const b = LANE_BORDER
+  return [
+    { x, y, width: header, height },
+    { x, y: y - b, width, height: 2 * b },
+    { x, y: y + height - b, width, height: 2 * b },
   ]
 }
 
@@ -602,6 +641,21 @@ export function generateBpmn2Xml(process: BusinessProcess): string {
   }
 
   const takenBoxes: Box[] = nodeObstacles(allNodes)
+  // Заголовки дорожек и пулов — тоже занятое место: в них печатается
+  // повёрнутое название, и подпись, попавшая туда, ложится прямо на него.
+  if (useCollab) {
+    takenBoxes.push({ x: pool.x, y: pool.y, width: POOL_HEADER, height: pool.height })
+    for (const lane of externalLanes) {
+      const g = lane.geometry
+      takenBoxes.push(...bandBoxes(g.x, g.y, g.width, g.height, POOL_HEADER))
+    }
+  }
+  for (const lane of lanes) {
+    const g = lane.geometry
+    const laneX = useCollab ? pool.x + POOL_HEADER : g.x
+    const laneW = useCollab ? Math.max(pool.width - POOL_HEADER, 80) : g.width
+    takenBoxes.push(...bandBoxes(laneX, g.y, laneW, g.height, LANE_HEADER))
+  }
   // Часы у шага занимают место на карте так же, как фигура: подпись связи,
   // положенная на них, скрывает цифру.
   for (const m of markers) takenBoxes.push(markerBox(m))

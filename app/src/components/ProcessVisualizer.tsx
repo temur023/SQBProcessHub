@@ -8,9 +8,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useIsDark } from '@/hooks/use-dark-mode'
-import type { BusinessProcess, NodeType, ProcessEdge, ProcessNode, ProcessValidation } from '@/types/process'
+import type { BusinessProcess, NodeType, ProcessNode, ProcessValidation } from '@/types/process'
 import { NODE_TYPE_LABELS, isGatewayNode, isTaskNode } from '@/types/process'
-import { orthogonalizePath } from '@/lib/edge-routing'
+import { routeEdges, type EdgeEnd, type EdgeRouteRequest } from '@/lib/canvas-routing'
 import { formatDuration } from '@/lib/bpmn-export'
 
 /**
@@ -49,8 +49,6 @@ const MIN_ZOOM = 0.08
 const MAX_ZOOM = 3.0
 const LANE_HEAD_DEFAULT = 44
 const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif'
-/** Допуск выравнивания линии по осям на холсте, px. */
-const CANVAS_SNAP = 7
 /** Шаг от двух часов и дольше подсвечивается как узкое место. */
 const SLOW_STEP_MINUTES = 120
 
@@ -218,7 +216,9 @@ function anchorStub(id: string, at: { x: number; y: number }): ProcessNode {
     id,
     name: '',
     type: 'textAnnotation',
-    geometry: { x: at.x, y: at.y, width: 1, height: 1 },
+    // Рамка вокруг точки, а не от неё: центр подставной фигуры обязан совпасть
+    // с самой точкой, иначе связь придёт на пару пикселей мимо.
+    geometry: { x: at.x - 4, y: at.y - 4, width: 8, height: 8 },
     style: '',
   }
 }
@@ -236,13 +236,39 @@ function rawBox(n: ProcessNode): Box {
   }
 }
 
-function isEventNode(n: ProcessNode): boolean {
+/**
+ * Конец связи, висящий на дорожке внешнего участника.
+ *
+ * Полоса тянется на всю ширину карты, поэтому её центр как якорь не годится:
+ * линия ушла бы через полсхемы. Берём проекцию второй фигуры на ближнюю грань
+ * полосы — ровно так эту связь рисует и draw.io.
+ */
+/**
+ * У ромба шлюза и у окружности события прямых граней нет: якорь такой фигуры
+ * обязан сидеть ровно в вершине рамки, иначе линия начнётся в пустоте рядом.
+ */
+function isCenteredShape(node: ProcessNode): boolean {
   return (
-    n.type === 'startEvent' ||
-    n.type === 'endEvent' ||
-    n.type === 'intermediateTimerEvent' ||
-    n.type === 'intermediateMessageEvent'
+    isGatewayNode(node.type) ||
+    node.type === 'startEvent' ||
+    node.type === 'endEvent' ||
+    node.type === 'intermediateTimerEvent' ||
+    node.type === 'intermediateMessageEvent'
   )
+}
+
+function laneEndSpec(node: ProcessNode, box: Box, other: Box): EdgeEnd {
+  if (node.type !== 'lane') return { box, id: node.id, centered: isCenteredShape(node) }
+  const above = other.cy < box.cy
+  return {
+    box,
+    id: node.id,
+    pinned: {
+      x: Math.max(box.x, Math.min(other.cx, box.x + box.w)),
+      y: above ? box.y : box.y + box.h,
+    },
+    side: above ? 'top' : 'bottom',
+  }
 }
 
 function parseStyleMap(style: string): Record<string, string> {
@@ -262,47 +288,6 @@ function parseStyleMap(style: string): Record<string, string> {
 function styleNum(map: Record<string, string>, key: string, fallback = 0): number {
   const n = Number(map[key])
   return Number.isFinite(n) ? n : fallback
-}
-
-/** Perimeter point from mxGraph exitX/exitY (0..1 of the box). */
-function constraintPoint(box: Box, fx?: number, fy?: number): Pt | null {
-  if (fx == null || fy == null || Number.isNaN(fx) || Number.isNaN(fy)) return null
-  return { x: box.x + fx * box.w, y: box.y + fy * box.h }
-}
-
-function isGatewayShape(n: ProcessNode): boolean {
-  return isGatewayNode(n.type)
-}
-
-// Точный ромб-пересечение (gateway)
-function intersectRhombus(box: Box, toward: Pt): Pt {
-  const dx = toward.x - box.cx
-  const dy = toward.y - box.cy
-  if (dx === 0 && dy === 0) return { x: box.x + box.w, y: box.cy }
-  const hw = box.w / 2
-  const hh = box.h / 2
-  const t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh || 1)
-  return { x: box.cx + dx * t, y: box.cy + dy * t }
-}
-
-/** Intersection of the ray from the box centre toward `toward` with the shape border. */
-function intersectBorder(box: Box, toward: Pt, circular: boolean, isGateway = false): Pt {
-  if (isGateway) return intersectRhombus(box, toward)
-  const dx = toward.x - box.cx
-  const dy = toward.y - box.cy
-  if (dx === 0 && dy === 0) return { x: box.x + box.w, y: box.cy }
-  if (circular) {
-    const r = Math.max(4, Math.min(box.w, box.h) / 2)
-    const len = Math.hypot(dx, dy) || 1
-    return { x: box.cx + (dx / len) * r, y: box.cy + (dy / len) * r }
-  }
-  // Прямоугольник
-  const hw = box.w / 2
-  const hh = box.h / 2
-  const sx = dx === 0 ? Infinity : hw / Math.abs(dx)
-  const sy = dy === 0 ? Infinity : hh / Math.abs(dy)
-  const t = Math.min(sx, sy)
-  return { x: box.cx + dx * t, y: box.cy + dy * t }
 }
 
 function labelT(x?: number): number {
@@ -340,124 +325,6 @@ function pointAlong(pts: Pt[], t: number, perp = 0): Pt {
     return { x: x + (nx / nl) * perp, y: y + (ny / nl) * perp }
   }
   return { ...pts[pts.length - 1] }
-}
-
-function isOrthogonalEdge(edge: ProcessEdge): boolean {
-  const s = (edge.style || '').toLowerCase()
-  const es = (edge.edgeStyle || '').toLowerCase()
-  return s.includes('orthogonal') || es.includes('orthogonal')
-}
-
-function buildOrthogonalPts(start: Pt, end: Pt, wp: Pt[], edge: ProcessEdge, src?: ProcessNode, tgt?: ProcessNode): Pt[] {
-  if (wp.length > 0) return [start, ...wp, end]
-  const dx = end.x - start.x
-  const dy = end.y - start.y
-  const adx = Math.abs(dx)
-  const ady = Math.abs(dy)
-  if (adx < 8 || ady < 8) return [start, end]
-
-  // Для разных дорожек — делаем 3-сегментный маршрут через середину, чтобы не резать узлы
-  const differentLanes = src?.laneId && tgt?.laneId && src.laneId !== tgt.laneId
-  if (differentLanes) {
-    const midY = Math.round((start.y + end.y) / 2)
-    // Вертикально выйти, горизонтально пройти по межполосью, вертикально войти
-    const pts: Pt[] = [start, { x: start.x, y: midY }, { x: end.x, y: midY }, end]
-    return pts.filter((p, i, arr) => i === 0 || p.x !== arr[i-1].x || p.y !== arr[i-1].y)
-  }
-
-  let horizontalFirst: boolean
-  if (edge.exitX === 0 || edge.exitX === 1) horizontalFirst = true
-  else if (edge.exitY === 0 || edge.exitY === 1) horizontalFirst = false
-  else if (edge.entryX === 0 || edge.entryX === 1) horizontalFirst = true
-  else if (edge.entryY === 0 || edge.entryY === 1) horizontalFirst = false
-  else horizontalFirst = adx > ady * 0.7
-
-  const jetty = 12
-  let sx = start.x
-  let sy = start.y
-  let ex = end.x
-  let ey = end.y
-
-  if (edge.exitX != null && edge.exitY != null) {
-    if (edge.exitX === 1) sx += jetty
-    else if (edge.exitX === 0) sx -= jetty
-    else if (edge.exitY === 0) sy -= jetty
-    else if (edge.exitY === 1) sy += jetty
-  }
-  if (edge.entryX != null && edge.entryY != null) {
-    if (edge.entryX === 1) ex += jetty
-    else if (edge.entryX === 0) ex -= jetty
-    else if (edge.entryY === 0) ey -= jetty
-    else if (edge.entryY === 1) ey += jetty
-  }
-
-  const hasJetty = edge.exitX != null || edge.entryX != null
-  if (hasJetty) {
-    const mid = horizontalFirst ? { x: ex, y: sy } : { x: sx, y: ey }
-    const pts: Pt[] = [start]
-    if (Math.hypot(sx - start.x, sy - start.y) > 2) pts.push({ x: sx, y: sy })
-    pts.push(mid)
-    if (Math.hypot(ex - mid.x, ey - mid.y) > 2) pts.push({ x: ex, y: ey })
-    pts.push(end)
-    return pts.filter((p, i, arr) => i === 0 || p.x !== arr[i-1].x || p.y !== arr[i-1].y)
-  }
-
-  const mid = horizontalFirst ? { x: end.x, y: start.y } : { x: start.x, y: end.y }
-  return [start, mid, end]
-}
-
-function edgePath(
-  src: ProcessNode,
-  tgt: ProcessNode,
-  srcBox: Box,
-  tgtBox: Box,
-  edge: ProcessEdge,
-): { d: string; lx: number; ly: number; pts: Pt[] } {
-  const wp = edge.points || []
-  const startToward = wp[0] || { x: tgtBox.cx, y: tgtBox.cy }
-  const endToward = wp.length ? wp[wp.length - 1] : { x: srcBox.cx, y: srcBox.cy }
-  const isSrcLane = src.type === 'lane'
-  const isTgtLane = tgt.type === 'lane'
-  const start = isSrcLane
-    ? {
-        x: Math.max(srcBox.x, Math.min(tgtBox.cx, srcBox.x + srcBox.w)),
-        y: tgtBox.cy < srcBox.cy ? srcBox.y : srcBox.y + srcBox.h,
-      }
-    : constraintPoint(srcBox, edge.exitX, edge.exitY) ||
-      intersectBorder(srcBox, startToward, isEventNode(src), isGatewayShape(src))
-  const end = isTgtLane
-    ? {
-        x: Math.max(tgtBox.x, Math.min(srcBox.cx, tgtBox.x + tgtBox.w)),
-        y: srcBox.cy < tgtBox.cy ? tgtBox.y : tgtBox.y + tgtBox.h,
-      }
-    : constraintPoint(tgtBox, edge.entryX, edge.entryY) ||
-      intersectBorder(tgtBox, endToward, isEventNode(tgt), isGatewayShape(tgt))
-
-  let pts: Pt[]
-  if (wp.length > 0) {
-    // Изломы из draw.io нельзя соединять напрямую: редактор ведёт линию между
-    // ними по осям, а прямое соединение даёт диагонали.
-    pts = orthogonalizePath([start, ...wp, end], edge, CANVAS_SNAP)
-  } else if (isOrthogonalEdge(edge)) {
-    pts = buildOrthogonalPts(start, end, wp, edge, src, tgt)
-  } else {
-    const dx = end.x - start.x
-    const dy = end.y - start.y
-    if (Math.abs(dx) < 8 || Math.abs(dy) < 8) pts = [start, end]
-    else pts = buildOrthogonalPts(start, end, wp, edge, src, tgt)
-  }
-  // Концы линии лежат на границе фигуры (у событий — на окружности), поэтому
-  // финальное выравнивание по осям делаем с допуском в несколько пикселей.
-  pts = orthogonalizePath(pts, edge, CANVAS_SNAP)
-  if (pts.length < 2) pts = [start, end]
-
-  // Скругление как в draw.io: вместо резких углов используем небольшие дуги через path
-  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
-  // Метка ребра: если labelY задан — используем его, иначе -8 только для длинных ребер
-  const rawLabelY = edge.labelY
-  const perp = rawLabelY != null ? rawLabelY : (pts.length > 2 ? -8 : -10)
-  const label = pointAlong(pts, labelT(edge.labelX), perp)
-  return { d, lx: label.x, ly: label.y, pts }
 }
 
 function wrapText(text: string, maxChars: number): string[] {
@@ -695,6 +562,55 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
     for (const n of process.nodes) map.set(n.id, rawBox(n))
     return map
   }, [process.nodes])
+
+  /**
+   * Маршруты всех связей карты, посчитанные разом.
+   *
+   * Разом — потому что развести связи, легшие в один коридор, можно только
+   * видя схему целиком: поодиночке каждая линия выглядит правильной, а вместе
+   * они сливаются в одну. Заодно уходит двойной счёт: раньше ломаная считалась
+   * отдельно для линии и отдельно для её подписи.
+   */
+  const edgeRoutes = useMemo(() => {
+    const byId = new Map<string, ProcessNode>()
+    for (const n of process.nodes) byId.set(n.id, n)
+    for (const l of process.lanes) byId.set(l.id, l as ProcessNode)
+
+    const requests: EdgeRouteRequest[] = []
+    for (const edge of process.edges) {
+      let src = byId.get(edge.sourceId || '')
+      let tgt = byId.get(edge.targetId || '')
+      // Оформительская линия draw.io: конец не привязан к фигуре, а задан
+      // точкой. Без подставной фигуры такие линии просто исчезали с холста.
+      const freeSrc = !src ? edge.sourcePoint : undefined
+      const freeTgt = !tgt ? edge.targetPoint : undefined
+      if (freeSrc) src = anchorStub(`${edge.id}-src`, freeSrc)
+      if (freeTgt) tgt = anchorStub(`${edge.id}-tgt`, freeTgt)
+      if (!src || !tgt) continue
+      const sb = nodeBoxes.get(src.id) || rawBox(src)
+      const tb = nodeBoxes.get(tgt.id) || rawBox(tgt)
+      const from: EdgeEnd = freeSrc ? { box: sb, id: src.id, pinned: freeSrc } : laneEndSpec(src, sb, tb)
+      const to: EdgeEnd = freeTgt ? { box: tb, id: tgt.id, pinned: freeTgt } : laneEndSpec(tgt, tb, sb)
+      requests.push({ edge, from, to })
+    }
+
+    const obstacles: Box[] = []
+    for (const n of process.nodes) obstacles.push(nodeBoxes.get(n.id) || rawBox(n))
+    const paths = routeEdges(requests, obstacles)
+
+    const map = new Map<string, { d: string; lx: number; ly: number }>()
+    for (const { edge } of requests) {
+      const pts = paths.get(edge.id)
+      if (!pts || pts.length < 2) continue
+      const d = pts.map((pt, i) => `${i === 0 ? 'M' : 'L'}${pt.x},${pt.y}`).join(' ')
+      // Подпись: если автор задал смещение — уважаем его, иначе отводим линию
+      // на пару пикселей вверх, чтобы текст не лежал прямо на связи.
+      const perp = edge.labelY != null ? edge.labelY : pts.length > 2 ? -8 : -10
+      const label = pointAlong(pts, labelT(edge.labelX), perp)
+      map.set(edge.id, { d, lx: label.x, ly: label.y })
+    }
+    return map
+  }, [process.edges, process.lanes, process.nodes, nodeBoxes])
 
   const visibleIds = useMemo(() => {
     let list = process.nodes
@@ -1199,24 +1115,15 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
 
             {/* Рёбра — только линии, лейблы отдельным слоем поверх узлов */}
             {process.edges.map(edge => {
-              let src: ProcessNode | undefined = process.nodes.find(n => n.id === edge.sourceId)
-              let tgt: ProcessNode | undefined = process.nodes.find(n => n.id === edge.targetId)
-              if (!src) src = process.lanes.find(l => l.id === edge.sourceId) as ProcessNode | undefined
-              if (!tgt) tgt = process.lanes.find(l => l.id === edge.targetId) as ProcessNode | undefined
-              // Оформительская линия draw.io: конец не привязан к фигуре, а задан
-              // точкой. Без этого такие линии просто исчезали с холста.
-              if (!src && edge.sourcePoint) src = anchorStub(`${edge.id}-src`, edge.sourcePoint)
-              if (!tgt && edge.targetPoint) tgt = anchorStub(`${edge.id}-tgt`, edge.targetPoint)
-              if (!src || !tgt) return null
+              const route = edgeRoutes.get(edge.id)
+              if (!route) return null
               if (activeFilter !== 'all' || searchQuery.trim()) {
                 // Свободный конец и дорожка «видимы» всегда: фильтр отсеивает шаги.
                 const endVisible = (id?: string) =>
                   !id || visibleIds.has(id) || process.lanes.some(l => l.id === id)
                 if (!endVisible(edge.sourceId) || !endVisible(edge.targetId)) return null
               }
-              const sb = nodeBoxes.get(src.id) || rawBox(src)
-              const tb = nodeBoxes.get(tgt.id) || rawBox(tgt)
-              const { d } = edgePath(src, tgt, sb, tb, edge)
+              const d = route.d
               const hi = Boolean(selectedNodeId && (edge.sourceId === selectedNodeId || edge.targetId === selectedNodeId))
               const isDashed = edge.dashed || Boolean(edge.dashPattern)
               let dashArray: string | undefined
@@ -1521,11 +1428,8 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
               type Lbl = { id: string; lx: number; ly: number; lw: number; cap: { lines: string[]; fontSize: number } }
               const labels: Lbl[] = []
               for (const edge of process.edges) {
-                let src: ProcessNode | undefined = process.nodes.find(n => n.id === edge.sourceId)
-                let tgt: ProcessNode | undefined = process.nodes.find(n => n.id === edge.targetId)
-                if (!src) src = process.lanes.find(l => l.id === edge.sourceId) as ProcessNode | undefined
-                if (!tgt) tgt = process.lanes.find(l => l.id === edge.targetId) as ProcessNode | undefined
-                if (!src || !tgt) continue
+                const route = edgeRoutes.get(edge.id)
+                if (!route) continue
                 if (activeFilter !== 'all' || searchQuery.trim()) {
                   if (!visibleIds.has(edge.sourceId!) || !visibleIds.has(edge.targetId!)) {
                     if (!process.lanes.find(l => l.id === edge.targetId) || !visibleIds.has(edge.sourceId!)) continue
@@ -1533,9 +1437,7 @@ export const ProcessVisualizer: React.FC<ProcessVisualizerProps> = ({
                 }
                 const raw = (edge.name || '').trim()
                 if (!raw) continue
-                const sb = nodeBoxes.get(src.id) || rawBox(src)
-                const tb = nodeBoxes.get(tgt.id) || rawBox(tgt)
-                const { lx, ly } = edgePath(src, tgt, sb, tb, edge)
+                const { lx, ly } = route
                 const cap = fitCaption(raw, 90, 1)
                 if (!cap) continue
                 const lw = Math.min(96, Math.max(28, cap.lines[0].length * cap.fontSize * 0.58 + 10))

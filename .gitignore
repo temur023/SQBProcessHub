@@ -10,3 +10,8 @@ __pycache__/
 # Секреты и локальное состояние
 .env
 backend/app/data/process_store.json
+
+# Результаты опытов с импортом в PIX: снимки журналов машины аналитика,
+# в репозитории им не место. Сам набор проб генерируется скриптом.
+backend/scripts/pix_probe/probe_results/
+backend/scripts/pix_probe/pix_test_suite/

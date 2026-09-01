@@ -480,17 +480,27 @@ class PmmExportTest(unittest.TestCase):
         self.assertTrue(any(c.get("Text") == "Ha" for c in connectors))
         self.assertTrue(all(c.get("label") is None for c in connectors))
 
-    def test_connector_anchor_is_left_to_the_studio(self):
+    def test_connector_anchors_use_only_numbers_the_studio_confirmed(self):
+        # Номера якорей сняты с выгрузки самой студии (tests/fixtures/sap.pmm).
+        # Список якорей фигуры по одному эталону не восстанавливается целиком —
+        # у грани их несколько, — поэтому для неподтверждённых граней атрибут
+        # не пишем вовсе: студия выберет точку примыкания сама, как делает и в
+        # собственной выгрузке.
         for c in self.root.findall("connector"):
-            self.assertIsNone(c.get("targetPoint"))
-            self.assertIsNone(c.get("sourcePoint"))
+            self.assertIn(c.get("sourcePoint"), {None, "0", "6"}, c.get("id"))
+            self.assertIn(c.get("targetPoint"), {None, "1", "3", "4", "6"}, c.get("id"))
 
     def test_artifact_links_are_dotted(self):
         dotted = [c for c in self.root.findall("connector") if c.get("lineStyle") == "dotted"]
         self.assertEqual(len(dotted), 3, "оформительская линия e11 в карту не идёт, ассоциации идут")
         for c in dotted:
-            self.assertEqual(c.findtext("MarkerEnd"), "arrow")
-            self.assertEqual(c.findtext("lineStyle"), "dotted")
+            # `arrow` в выгрузке студии не встречается ни разу: пунктирным
+            # связям там отвечает `arrowLine`, а незнакомый маркер студия
+            # отбрасывает вместе со связью.
+            self.assertEqual(c.findtext("MarkerEnd"), "arrowLine")
+            # Стиль линии живёт только в атрибуте: дочернего <lineStyle>
+            # у студии нет ни у одной связи.
+            self.assertIsNone(c.find("lineStyle"))
 
     def test_nodes_are_clamped_into_their_lane(self):
         for road in self.roads:
@@ -756,8 +766,13 @@ class ClientTouchpointTest(unittest.TestCase):
             c for c in self.map.findall("connector")
             if client.get("id") in (c.get("sourceNodeId"), c.get("targetNodeId"))
         ]
-        self.assertEqual(len(touching), 1, "пунктир к полосе клиента потерян")
-        self.assertEqual(touching[0].get("lineStyle"), "dotted")
+        self.assertEqual(len(touching), 1, "линия к полосе клиента потеряна")
+        # Точка контакта с клиентом — поток сообщений, и студия рисует его
+        # так же, как BPMN: штриховая линия, кружок в начале, открытая
+        # стрелка в конце (единственная dashed-связь в tests/fixtures/sap.pmm).
+        self.assertEqual(touching[0].get("lineStyle"), "dashed")
+        self.assertEqual(touching[0].findtext("MarkerStart"), "circle")
+        self.assertEqual(touching[0].findtext("MarkerEnd"), "arrowEmpty")
         self.assertIsNotNone(touching[0].find("waypoint"))
 
     def test_every_connector_carries_its_own_polyline(self):

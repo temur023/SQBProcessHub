@@ -3,7 +3,9 @@ import type { ProcessEdge, ProcessNode } from '@/types/process'
 /**
  * Ортогональная трассировка связей — как рисует draw.io.
  *
- * Клиентский двойник `backend/app/services/edge_routing.py`.
+ * Клиентский двойник `backend/app/services/edge_routing.py`: обслуживает
+ * выгрузку в BPMN, где ломаная обязана совпасть с файлом. Холст рисует
+ * линии по-своему — `canvas-routing.ts`.
  *
  * draw.io ведёт связи стилем `edgeStyle=orthogonalEdgeStyle`: линия выходит из
  * фигуры перпендикулярно грани и идёт только по осям. В файле при этом хранятся
@@ -165,39 +167,6 @@ function snapToPixelGrid(points: Point[], tolerance = 1): Point[] {
     else if (dx <= tolerance) snapped[i] = { x: prev.x, y: cur.y }
   }
   return simplify(snapped)
-}
-
-/**
- * Делает ортогональной уже посчитанную ломаную.
- *
- * Нужна холсту: там концы линии считаются по границе фигуры (и по границе
- * дорожки для линий-разделителей), а изломы берутся из draw.io — соединять их
- * напрямую нельзя, иначе появляются диагонали.
- *
- * `tolerance` — на сколько пикселей допустимо подвинуть точку ради выравнивания
- * по оси. Для холста порог больше единицы: конец линии лежит на окружности
- * события, и его дробная координата даёт едва заметный скос последнего отрезка.
- */
-export function orthogonalizePath(points: Point[], edge?: ProcessEdge, tolerance = 1): Point[] {
-  if (points.length < 2) return points
-  const first = points[0]
-  const second = points[1]
-  const beforeLast = points[points.length - 2]
-  const last = points[points.length - 1]
-
-  const d0 =
-    sideDirection(edge?.exitX, edge?.exitY) ??
-    (Math.abs(second.x - first.x) >= Math.abs(second.y - first.y)
-      ? { dx: second.x >= first.x ? 1 : -1, dy: 0 }
-      : { dx: 0, dy: second.y >= first.y ? 1 : -1 })
-  const entrySide = sideDirection(edge?.entryX, edge?.entryY)
-  const d1 = entrySide
-    ? { dx: -entrySide.dx, dy: -entrySide.dy }
-    : Math.abs(last.x - beforeLast.x) >= Math.abs(last.y - beforeLast.y)
-    ? { dx: last.x >= beforeLast.x ? 1 : -1, dy: 0 }
-    : { dx: 0, dy: last.y >= beforeLast.y ? 1 : -1 }
-
-  return snapToPixelGrid(routeThroughBends(points, d0, d1), tolerance)
 }
 
 /** Полная ломаная связи в абсолютных координатах карты. */

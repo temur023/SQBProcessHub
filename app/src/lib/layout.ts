@@ -341,8 +341,14 @@ export function chooseLabelBox(candidates: Box[], obstacles: Box[]): Box {
   let best: Box | null = null
   let bestArea = Number.POSITIVE_INFINITY
   for (const box of candidates) {
+    // Как только позиция проиграла лучшей из уже проверенных, досчитывать её
+    // перекрытия незачем: на карте в сотни фигур перебор «каждый кандидат
+    // против каждого препятствия» занимал секунды.
     let area = 0
-    for (const o of obstacles) area += overlapArea(box, o)
+    for (const o of obstacles) {
+      area += overlapArea(box, o)
+      if (area >= bestArea) break
+    }
     if (area === 0) return box
     if (area < bestArea) {
       best = box
@@ -450,6 +456,9 @@ export function nodeObstacles(nodes: ProcessNode[], skipId = ''): Box[] {
  * предпочтительна, но на плотной карте там бывает занято — тогда подпись
  * сдвигается вдоль своей же линии, а не садится на чужую фигуру.
  */
+/** Отступы подписи от линии связи: вплотную, затем в стороне. */
+const EDGE_LABEL_GAPS = [4, 26]
+
 const EDGE_LABEL_FRACTIONS = [0.5, 0.4, 0.6, 0.28, 0.72, 0.15, 0.85]
 
 /** Точка на ломаной по доле её длины и ориентация отрезка в этом месте. */
@@ -504,11 +513,16 @@ export function edgeLabelCandidates(route: { x: number; y: number }[], text: str
       const { x: cx, y: cy, vertical } = pointAt(points, fraction)
       const x = Math.round(cx - size.width / 2)
       const y = Math.round(cy - size.height / 2)
-      const above = { x, y: Math.round(cy - size.height - 4), ...size }
-      const below = { x, y: Math.round(cy + 4), ...size }
-      const right = { x: Math.round(cx + 8), y, ...size }
-      const left = { x: Math.round(cx - 8 - size.width), y, ...size }
-      out.push(...(vertical ? [right, left, above, below] : [above, below, right, left]))
+      // Два кольца отступов: сперва вплотную к линии, потом на ширину фигуры
+      // в стороне. На тесной карте место у самой линии занято соседним шагом,
+      // и подпись садилась ему прямо на текст.
+      for (const gap of EDGE_LABEL_GAPS) {
+        const above = { x, y: Math.round(cy - size.height - gap), ...size }
+        const below = { x, y: Math.round(cy + gap), ...size }
+        const right = { x: Math.round(cx + gap + 4), y, ...size }
+        const left = { x: Math.round(cx - gap - 4 - size.width), y, ...size }
+        out.push(...(vertical ? [right, left, above, below] : [above, below, right, left]))
+      }
     }
   }
   const seen: Box[] = []

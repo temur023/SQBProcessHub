@@ -394,10 +394,13 @@ class PixNotationTests(unittest.TestCase):
         cls.name, cls.elements = bpmn_notation()
         cls.process = parse_drawio_xml(LOOSE_LABELS_MAP, 'loose.drawio')
 
-    def test_notation_name_matches_the_catalogue_exactly(self):
-        # Регистр важен: студия ищет нотацию по имени точь-в-точь, и
-        # написанное на глаз «bpmn» вместо «BPMN» она не находит.
-        self.assertEqual(_pmm_map(self.process).get('notation'), self.name)
+    def test_notation_name_is_written_the_way_the_studio_writes_it(self):
+        # Каталог объявляет нотацию как «BPMN», а сама студия пишет в карту
+        # «bpmn» (tests/fixtures/sap.pmm) — регистр она не различает. Держимся
+        # её написания: расходиться с эталоном на первом атрибуте карты незачем.
+        notation = _pmm_map(self.process).get('notation')
+        self.assertEqual(notation, 'bpmn')
+        self.assertEqual(notation.lower(), self.name.lower())
 
     def test_every_node_type_exists_in_the_notation(self):
         used = {n.get('type') for n in _pmm_map(self.process).iter('node')}

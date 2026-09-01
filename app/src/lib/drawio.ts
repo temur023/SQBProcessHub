@@ -1897,10 +1897,10 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
         // центр ребра (с учётом waypoints)
         let cx: number, cy: number
         if (e.points.length > 0) {
-          let sx = s.geometry.x + s.geometry.width / 2
-          let sy = s.geometry.y + s.geometry.height / 2
-          let ex = t.geometry.x + t.geometry.width / 2
-          let ey = t.geometry.y + t.geometry.height / 2
+          const sx = s.geometry.x + s.geometry.width / 2
+          const sy = s.geometry.y + s.geometry.height / 2
+          const ex = t.geometry.x + t.geometry.width / 2
+          const ey = t.geometry.y + t.geometry.height / 2
           const pts = [{ x: sx, y: sy }, ...e.points, { x: ex, y: ey }]
           let tx = 0, ty = 0
           for (const p of pts) { tx += p.x; ty += p.y }

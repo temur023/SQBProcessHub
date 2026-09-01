@@ -1,5 +1,6 @@
 import io
 import re
+from typing import Optional
 from urllib.parse import quote
 
 from fastapi import APIRouter, File, UploadFile, HTTPException, Body
@@ -7,6 +8,11 @@ from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel
 
 from app.services.drawio_parser import parse_drawio_xml
+from app.services.drawio_precheck import (
+    DrawioPrecheckError,
+    PrecheckResult,
+    precheck_drawio,
+)
 from app.services.bpmn_exporter import generate_bpmn_xml
 from app.services.pmm_exporter import generate_pmm_zip
 from app.services.exporters import generate_event_log_csv, generate_regulation_csv
@@ -16,6 +22,12 @@ from app.services.export_validation import (
     validate_bpmn_xml,
     validate_pmm_package,
 )
+from app.services.pix_spec_checker import (
+    validate_bpmn_for_pix,
+    validate_pmm_for_pix,
+    validate_xpdl,
+)
+from app.services.xpdl_exporter import generate_xpdl
 from app.models.process import BusinessProcess
 from app.routers.processes import get_store, _persist_store, _store_lock
 
@@ -52,17 +64,82 @@ class XmlImportBody(BaseModel):
     fileName: str = "Pasted_Process.drawio"
 
 
-def _check_headers(check: ExportCheck, base: dict) -> dict:
+def _check_headers(check: ExportCheck, base: dict,
+                   pix: Optional[ExportCheck] = None) -> dict:
     """Итог проверки файла — в заголовках ответа рядом с самим файлом.
 
     Скачивание не блокируем: файл нужен сотруднику в любом случае, а если в нём
     что-то не так, платформа скажет об этом раньше, чем PIX, — и адресно.
+
+    Заголовков два, потому что и вопросов два: ``X-Export-Check`` отвечает
+    «файл соответствует стандарту», ``X-Pix-Check`` — «файл откроется именно в
+    Процессной студии». Второй строже, и путать их нельзя: файл, валидный по
+    BPMN 2.0, студия всё ещё может не принять.
     """
-    return {
+    headers = {
         **base,
         'X-Export-Check': summary_line([check]),
         'X-Export-Check-Errors': str(len(check.errors)),
     }
+    if pix is not None:
+        headers['X-Pix-Check'] = summary_line([pix])
+        headers['X-Pix-Check-Errors'] = str(len(pix.errors))
+    return headers
+
+
+def _guarded_parse(text: str, filename: str) -> BusinessProcess:
+    """Предпроверка исходника, затем разбор. Единая дверь для обоих импортов.
+
+    Порядок именно такой: сначала смотрим на файл, который прислал сотрудник, и
+    только потом строим модель. Схему с дефектом, из-за которого Процессная
+    студия откажется открыть пакет, разбирать незачем — сотрудник всё равно
+    вернётся к draw.io, и лучше он узнает об этом сразу и с адресом проблемы,
+    а не после выгрузки и неудачного импорта в PIX.
+
+    Замечания без блокировки (потеря содержимого, нераспознанные фигуры) не
+    теряются: они доезжают до карточки «Проверка импорта» тем же списком,
+    которым парсер уже сообщает о своих находках.
+    """
+    try:
+        precheck = precheck_drawio(text, filename)
+    except Exception:  # noqa: BLE001 — предпроверка не имеет права ронять импорт
+        precheck = None
+
+    if precheck is not None and precheck.blocking():
+        raise HTTPException(422, precheck.message())
+
+    try:
+        process = parse_drawio_xml(text, filename)
+    except Exception as exc:
+        raise HTTPException(422, f"Ошибка парсинга: {exc}")
+
+    if precheck is not None:
+        process.validation = _precheck_notes(precheck) + list(process.validation or [])
+    return process
+
+
+def _precheck_notes(precheck: PrecheckResult) -> list:
+    """Замечания предпроверки в том виде, в каком их показывает интерфейс."""
+    from app.models.process import ProcessValidation
+
+    notes = []
+    for problem in precheck.problems:
+        if problem.level == 'error':
+            level = 'error'
+        elif problem.loses_data:
+            # Потеря содержимого — не косметика: в списке она должна стоять
+            # рядом с ошибками, а не теряться среди информационных строк.
+            level = 'warning'
+        else:
+            level = 'info'
+        notes.append(ProcessValidation(
+            level=level,
+            code=f'source_{problem.code}',
+            message=problem.message[0].upper() + problem.message[1:],
+            hint=problem.hint,
+            nodeId=problem.where,
+        ))
+    return notes
 
 
 # ──────────── Import ────────────
@@ -93,10 +170,7 @@ async def import_file(file: UploadFile = File(...)):
     if not text.strip():
         raise HTTPException(400, "Uploaded file is empty")
 
-    try:
-        process = parse_drawio_xml(text, file.filename or 'process.drawio')
-    except Exception as e:
-        raise HTTPException(422, f"Ошибка парсинга: {str(e)}")
+    process = _guarded_parse(text, file.filename or 'process.drawio')
 
     # Auto-save to in-memory store с персистом
     with _store_lock:
@@ -115,10 +189,7 @@ def import_xml(body: XmlImportBody):
         raise HTTPException(400, "XML body is empty")
     if len(body.xml.encode('utf-8')) > MAX_UPLOAD_BYTES:
         raise HTTPException(413, "XML слишком большой (макс. 10 МБ)")
-    try:
-        process = parse_drawio_xml(body.xml, body.fileName)
-    except Exception as e:
-        raise HTTPException(422, f"Ошибка парсинга: {str(e)}")
+    process = _guarded_parse(body.xml, body.fileName)
 
     with _store_lock:
         get_store()[process.id] = process
@@ -142,7 +213,8 @@ def export_bpmn(process_id: str):
     return Response(
         content=xml.encode('utf-8'),
         media_type='application/xml',
-        headers=_check_headers(validate_bpmn_xml(xml), attachment_headers(filename)),
+        headers=_check_headers(validate_bpmn_xml(xml), attachment_headers(filename),
+                               validate_bpmn_for_pix(xml)),
     )
 
 
@@ -160,7 +232,33 @@ def export_pmm(process_id: str):
     return Response(
         content=payload,
         media_type='application/zip',
-        headers=_check_headers(validate_pmm_package(payload), attachment_headers(filename)),
+        headers=_check_headers(validate_pmm_package(payload), attachment_headers(filename),
+                               validate_pmm_for_pix(payload)),
+    )
+
+
+@router.get(
+    "/{process_id}/export/xpdl",
+    summary="Export process map as WfMC XPDL 2.2 (fallback interchange format)"
+)
+def export_xpdl(process_id: str):
+    """Запасной формат обмена, когда студия не приняла ни .bpmn, ни .pmm.
+
+    XPDL 2.2 — опубликованный стандарт WfMC с тем же набором понятий (пул,
+    дорожки, активности, переходы, координаты). Что его читает именно PIX, не
+    подтверждено; ценность в том, что карту можно открыть сторонним средством
+    моделирования и внести оттуда уже проверенным путём.
+    """
+    process = get_store().get(process_id)
+    if not process:
+        raise HTTPException(404, f"Process '{process_id}' not found")
+
+    xml = generate_xpdl(process)
+    filename = f"{_sanitize_filename(process.passport.code)}_Process.xpdl"
+    return Response(
+        content=xml.encode('utf-8'),
+        media_type='application/xml',
+        headers=_check_headers(validate_xpdl(xml), attachment_headers(filename)),
     )
 
 

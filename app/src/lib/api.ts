@@ -1,4 +1,4 @@
-import type { BusinessProcess, PixRegistryRecord } from '@/types/process'
+import type { BusinessProcess } from '@/types/process'
 import { parseDrawio } from './drawio'
 import { generateBpmn2Xml } from './bpmn-export'
 import { generateProcessetEventLogCsv, generateProcessRegulationCsv, generatePixJson } from './processet-export'
@@ -54,6 +54,41 @@ export async function checkBackendHealth(): Promise<boolean> {
   }
 }
 
+/**
+ * Платформа отказалась принять карту: в исходнике дефект, из-за которого
+ * PIX не откроет выгрузку. Это не сбой связи, а осознанный ответ бэкенда —
+ * его текст нужно показать сотруднику целиком, вместе с адресом фигуры.
+ */
+export class SourceRejectedError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'SourceRejectedError'
+  }
+}
+
+/**
+ * Отличает «бэкенд отверг файл» от «бэкенда нет».
+ *
+ * Раньше любой не-OK ответ уводил импорт в клиентский разбор: сотрудник
+ * получал карту, собранную в обход проверки, и ни слова о том, что схему
+ * забракавали. Отказ по существу (4xx) обязан долететь до экрана, а на
+ * недоступность бэкенда (5xx, обрыв связи) по-прежнему работает запасной
+ * разбор в браузере — иначе импорт встанет из-за упавшего сервиса.
+ */
+async function rejectionFrom(res: Response): Promise<SourceRejectedError | null> {
+  if (res.ok || res.status >= 500) return null
+  let detail = ''
+  try {
+    const body = await res.json()
+    detail = typeof body?.detail === 'string' ? body.detail : ''
+  } catch {
+    detail = ''
+  }
+  return new SourceRejectedError(
+    detail || `Платформа не приняла файл (код ${res.status}).`,
+  )
+}
+
 /** Import .drawio, .xml, .bpmn file using Python FastAPI or local fallback */
 export async function importDrawioFileApi(file: File): Promise<{ process: BusinessProcess; source: 'fastapi' | 'local' }> {
   try {
@@ -65,6 +100,9 @@ export async function importDrawioFileApi(file: File): Promise<{ process: Busine
       body: formData,
     })
 
+    const rejected = await rejectionFrom(res)
+    if (rejected) throw rejected
+
     if (res.ok) {
       const process: BusinessProcess = await res.json()
       if ((process.nodes?.length ?? 0) > 0) {
@@ -72,6 +110,7 @@ export async function importDrawioFileApi(file: File): Promise<{ process: Busine
       }
     }
   } catch (err) {
+    if (err instanceof SourceRejectedError) throw err
     console.warn('FastAPI import endpoint unreachable, using client parser fallback:', err)
   }
 
@@ -91,6 +130,9 @@ export async function importDrawioXmlApi(xml: string, fileName: string = 'Pasted
       body: JSON.stringify({ xml, fileName }),
     })
 
+    const rejected = await rejectionFrom(res)
+    if (rejected) throw rejected
+
     if (res.ok) {
       const process: BusinessProcess = await res.json()
       if ((process.nodes?.length ?? 0) > 0) {
@@ -98,6 +140,7 @@ export async function importDrawioXmlApi(xml: string, fileName: string = 'Pasted
       }
     }
   } catch (err) {
+    if (err instanceof SourceRejectedError) throw err
     console.warn('FastAPI XML import endpoint unreachable, using client parser fallback:', err)
   }
 
@@ -118,29 +161,6 @@ export async function saveProcessToBackend(process: BusinessProcess): Promise<vo
   } catch {
     // ignore
   }
-}
-
-/** Create a new case in PIX Registry on backend */
-export async function createRegistryCaseApi(
-  processId: string,
-  caseId: string,
-  assignedTo: string,
-  data: Record<string, any>
-): Promise<PixRegistryRecord | null> {
-  try {
-    const res = await fetch(`${API_BASE}/processes/${encodeURIComponent(processId)}/registry/cases`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ caseId, assignedTo, data }),
-    })
-
-    if (res.ok) {
-      return await res.json()
-    }
-  } catch (err) {
-    console.warn('FastAPI create case failed:', err)
-  }
-  return null
 }
 
 /** Одно замечание к файлу выгрузки — тем же языком, каким о нём скажет PIX. */
@@ -226,7 +246,7 @@ export async function fetchPmmPackage(processId: string): Promise<ArrayBuffer> {
 /** Trigger direct backend file download with fallback */
 export async function triggerExportDownload(
   process: BusinessProcess,
-  type: 'bpmn' | 'pmm' | 'event-log' | 'regulation' | 'pix-json'
+  type: 'bpmn' | 'pmm' | 'xpdl' | 'event-log' | 'regulation' | 'pix-json'
 ): Promise<void> {
   let endpoint = ''
   let defaultFilename = ''
@@ -237,6 +257,9 @@ export async function triggerExportDownload(
   } else if (type === 'pmm') {
     endpoint = `${API_BASE}/import/${encodeURIComponent(process.id)}/export/pmm`
     defaultFilename = `${process.passport.code}_PIX_Map.pmm`
+  } else if (type === 'xpdl') {
+    endpoint = `${API_BASE}/import/${encodeURIComponent(process.id)}/export/xpdl`
+    defaultFilename = `${process.passport.code}_Process.xpdl`
   } else if (type === 'event-log') {
     endpoint = `${API_BASE}/import/${encodeURIComponent(process.id)}/export/event-log`
     defaultFilename = `${process.passport.code}_EventLogs.csv`

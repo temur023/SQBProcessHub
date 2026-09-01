@@ -6,7 +6,8 @@
     pm/configuration.xml   — каталог свойств и нотаций студии
     pm/maps/<slug>.xml     — сама карта (<Map> с <node> и <connector>)
 
-Ключевые соглашения формата, сверенные с эталонной выгрузкой PIX:
+Ключевые соглашения формата, сверенные с выгрузкой самой студии
+(``tests/fixtures/sap.pmm`` — карта, сделанная и сохранённая в PIX):
 
 * узлы внутри дорожки (`horizontalRoad`) позиционируются ОТНОСИТЕЛЬНО дорожки,
   сама дорожка — в абсолютных координатах карты;
@@ -16,10 +17,14 @@
   и целевого узла, а не только промежуточные изломы; ломаную задаём для каждой
   связи — без неё студия трассирует сама и на плотной карте кладёт линии
   поверх соседних;
-* ``sourcePoint``/``targetPoint`` — необязательные индексы якорей: не задаём их,
-  чтобы студия сама выбрала точку примыкания к грани фигуры;
-* стиль линии (``lineStyle``) и оформление подписи хранятся дочерними
-  элементами рядом с ``color``/``fontSize``.
+* ``sourcePoint``/``targetPoint`` — необязательные индексы якорей: задаём их
+  для тех граней, чей номер эталон называет однозначно, для остальных
+  опускаем, и студия выбирает точку примыкания сама (в своей выгрузке она
+  опускает ``sourcePoint`` у 30 связей из 50);
+* стиль линии — атрибут ``lineStyle`` у самой связи, а не дочерний элемент:
+  дочернего ``<lineStyle>`` в выгрузке студии нет ни разу;
+* маркеры концов берутся парой к стилю линии (см. ``_line_decoration``):
+  незнакомый маркер студия отбрасывает вместе со связью.
 
 В отличие от BPMN-выгрузки, здесь НЕ применяется нормализация степеней
 событий: ``.pmm`` — это рисунок карты, и узел должен выглядеть так, как его
@@ -56,16 +61,21 @@ _CONFIGURATION_PATH = Path(__file__).resolve().parent.parent / 'resources' / 'pi
 _BPMN_PROBE_ELEMENT = 'gateway_xor'
 #: Куда падает тип, которого в каталоге студии не оказалось.
 _FALLBACK_ELEMENT = 'task'
+#: Как саму нотацию подписывает студия в атрибуте ``<Map notation="…">``.
+#: В каталоге она объявлена как ``BPMN``, но в собственной выгрузке студии
+#: (``tests/fixtures/sap.pmm``) стоит строчное ``bpmn`` — пишем ровно так же,
+#: чтобы не расходиться с эталоном на первом же атрибуте карты.
+_MAP_NOTATION = 'bpmn'
 
 
 @lru_cache(maxsize=1)
 def bpmn_notation() -> Tuple[str, frozenset]:
-    """Имя BPMN-нотации в каталоге студии и её элементы.
+    """Каноническое имя BPMN-нотации в каталоге студии и её элементы.
 
-    Имя берём из самого каталога, а не пишем константой: студия ищет нотацию
-    по имени точь-в-точь, и написанное на глаз ``notation="bpmn"`` вместо
-    ``BPMN`` она не находит — а потом не может найти в ней и тип фигуры
-    («Notation element not found (Parameter 'type')») и отвергает весь пакет.
+    Имя берём из самого каталога, а не пишем константой: по нему ищутся
+    типы фигур, и незнакомый тип валит импорт целиком («Notation element not
+    found (Parameter 'type')»). В карту, однако, уезжает не оно, а
+    ``_MAP_NOTATION``: регистр имени студия не различает, а пишет строчными.
     """
     root = ET.fromstring(_CONFIGURATION_PATH.read_text(encoding='utf-8'))
     for notation in root.iter('notation'):
@@ -347,6 +357,102 @@ def _coord(value: float) -> str:
     return str(int(round(value)))
 
 
+#: Оформление связи по её роду: стиль линии и маркеры концов. Снято с выгрузки
+#: самой студии (``tests/fixtures/sap.pmm``), где встречаются ровно три
+#: сочетания, и каждое отвечает своему понятию BPMN:
+#:
+#:     solid  + line   + arrowclosed — поток управления      (28 связей)
+#:     dotted + line   + arrowLine   — ассоциация с артефактом (21)
+#:     dashed + circle + arrowEmpty  — поток сообщений         (1)
+#:
+#: Писавшийся раньше ``arrow`` в выгрузке студии не встречается ни разу, а
+#: незнакомый маркер она молча отбрасывает вместе со связью — пунктирные линии
+#: до карты не доезжали именно поэтому.
+_SEQUENCE_DECORATION = ('solid', 'line', 'arrowclosed')
+_ASSOCIATION_DECORATION = ('dotted', 'line', 'arrowLine')
+_MESSAGE_DECORATION = ('dashed', 'circle', 'arrowEmpty')
+
+#: Индекс точки привязки к грани фигуры (``sourcePoint``/``targetPoint``).
+#: Номера — не сторона света, а место фигуры в её собственном списке якорей,
+#: и полностью этот список по одному эталону не восстанавливается: у грани их
+#: несколько (для верхней встречаются и 1, и 17). Поэтому пишем только те, что
+#: эталон подтверждает однозначно, а для остальных граней атрибут опускаем —
+#: студия сама выберет точку примыкания, как делает и в своей выгрузке
+#: (``sourcePoint`` там стоит лишь у 20 связей из 50).
+#:
+#: Сколько случаев за каждым номером в ``tests/fixtures/sap.pmm``:
+#: источник — низ 0 (4), левая 6 (2); цель — левая 6 (9), верх 1 (7),
+#: низ 3 (5), правая 4 (2).
+_SOURCE_ANCHOR = {'bottom': 0, 'left': 6}
+_TARGET_ANCHOR = {'top': 1, 'right': 4, 'bottom': 3, 'left': 6}
+
+#: Насколько точка ломаной может отойти от грани и всё ещё считаться лежащей
+#: на ней: ломаная округляется к целым и выравнивается по осям сдвигом на
+#: пиксель (``edge_routing._snap_to_pixel_grid``).
+_ANCHOR_TOLERANCE = 2.0
+
+
+def _line_decoration(edge: ProcessEdge) -> Tuple[str, str, str]:
+    """Стиль линии и маркеры её концов — по роду связи."""
+    if edge.kind == 'messageFlow':
+        return _MESSAGE_DECORATION
+    if edge.kind == 'association' or edge.dashed:
+        return _ASSOCIATION_DECORATION
+    return _SEQUENCE_DECORATION
+
+
+def _anchor_side(
+    node: ProcessNode,
+    point: Tuple[float, float],
+    placed: Optional[Dict[str, Tuple[int, int]]],
+) -> Optional[str]:
+    """Грань фигуры, на которой лежит конец ломаной, или ``None``.
+
+    Сторону определяем по той же ломаной, которая уезжает в файл: якорь,
+    разошедшийся с нарисованной линией, хуже отсутствующего — студия увела бы
+    связь к другой грани.
+    """
+    ox, oy = (placed or {}).get(node.id, (node.geometry.x, node.geometry.y))
+    width, height = node.geometry.width, node.geometry.height
+    if width <= 0 or height <= 0:
+        return None
+    px, py = point
+    within_x = ox - _ANCHOR_TOLERANCE <= px <= ox + width + _ANCHOR_TOLERANCE
+    within_y = oy - _ANCHOR_TOLERANCE <= py <= oy + height + _ANCHOR_TOLERANCE
+    distance: Dict[str, float] = {}
+    if within_y:
+        distance['left'] = abs(px - ox)
+        distance['right'] = abs(px - (ox + width))
+    if within_x:
+        distance['top'] = abs(py - oy)
+        distance['bottom'] = abs(py - (oy + height))
+    if not distance:
+        return None
+    side = min(distance, key=lambda k: distance[k])
+    return side if distance[side] <= _ANCHOR_TOLERANCE else None
+
+
+def _anchor_attrs(
+    route: List[Tuple[float, float]],
+    src: Optional[ProcessNode],
+    tgt: Optional[ProcessNode],
+    placed: Optional[Dict[str, Tuple[int, int]]],
+) -> str:
+    """Атрибуты ``sourcePoint``/``targetPoint`` связи — те, что известны."""
+    if len(route) < 2:
+        return ''
+    attrs = ''
+    if src is not None:
+        index = _SOURCE_ANCHOR.get(_anchor_side(src, route[0], placed))
+        if index is not None:
+            attrs += f' sourcePoint="{index}"'
+    if tgt is not None:
+        index = _TARGET_ANCHOR.get(_anchor_side(tgt, route[-1], placed))
+        if index is not None:
+            attrs += f' targetPoint="{index}"'
+    return attrs
+
+
 def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
     slug = map_slug(process)
     id_map: Dict[str, str] = {}
@@ -364,7 +470,7 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
         '<?xml version="1.0" encoding="utf-8"?>',
         (
             f'<Map xmlns:xsi="{_NS_XSI}" xmlns:xsd="{_NS_XSD}" '
-            f'name="{escape_xml(slug)}" notation="{escape_xml(bpmn_notation()[0])}" '
+            f'name="{escape_xml(slug)}" notation="{_MAP_NOTATION}" '
             'paperEnabled="false" paperType="0">'
         ),
     ]
@@ -469,32 +575,26 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
                 continue
             src_node, tgt_node = message_flow_endpoints(edge, other, lane, lane_is_source)
 
-        dotted = edge.kind in ('association', 'messageFlow') or bool(edge.dashed)
-        line_style = 'dotted' if dotted else 'solid'
-        # Маркер конца берём из словаря React Flow, на котором построен холст
-        # студии (`arrowclosed` пришёл из эталонной выгрузки): нестандартное
-        # значение студия молча отбрасывает вместе со связью.
-        marker_end = 'arrow' if dotted else 'arrowclosed'
+        line_style, marker_start, marker_end = _line_decoration(edge)
         label = (edge.name or edge.condition or '').strip()
         # Подпись связи в PIX — атрибут Text; label студия не читает.
         text_attr = f' Text="{escape_xml(label)}"' if label else ''
+
+        route = polyline(edge, src_node, tgt_node, placed)
+        anchors = _anchor_attrs(route, src_node, tgt_node, placed)
 
         lines.append(
             f'  <connector id="{escape_xml(_pix_id(edge.id))}" type="step"{text_attr}'
             f' lineStyle="{line_style}"'
             f' sourceNodeId="{escape_xml(id_map[edge.sourceId])}"'
-            f' targetNodeId="{escape_xml(id_map[edge.targetId])}">'
+            f' targetNodeId="{escape_xml(id_map[edge.targetId])}"{anchors}>'
         )
-        lines.append('    <MarkerStart>line</MarkerStart>')
+        lines.append(f'    <MarkerStart>{marker_start}</MarkerStart>')
         lines.append('    <MarkerMiddle />')
         lines.append(f'    <MarkerEnd>{marker_end}</MarkerEnd>')
-        for index, (px, py) in enumerate(polyline(edge, src_node, tgt_node, placed)):
+        for index, (px, py) in enumerate(route):
             lines.append(f'    <waypoint x="{_coord(px)}" y="{_coord(py)}" index="{index}" />')
         lines.append('    <labelPosition>50</labelPosition>')
-        # Стиль линии дублируется дочерним элементом: остальные свойства
-        # оформления (color, fontSize) студия хранит именно так, и как атрибут
-        # lineStyle до неё не доезжал — пунктир приходил сплошной линией.
-        lines.append(f'    <lineStyle>{line_style}</lineStyle>')
         lines.append('    <color>var(--fg-gray-primary)</color>')
         lines.append('    <fontSize>12</fontSize>')
         lines.append('    <fontBold>false</fontBold>')

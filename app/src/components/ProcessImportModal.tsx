@@ -161,12 +161,15 @@ export const ProcessImportModal: React.FC<ProcessImportModalProps> = ({
         </div>
 
         {errorMsg && (
-          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-start justify-between gap-2">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <div>
+          <div className="flex items-start justify-between gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
+            <div className="flex min-w-0 items-start gap-2">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="min-w-0">
                 <p className="font-medium">Ошибка импорта:</p>
-                <p className="mt-0.5">{errorMsg}</p>
+                {/* whitespace-pre-line: предпроверка перечисляет находки
+                    построчно, и без сохранения переносов список склеивается
+                    в одну строку, из которой ничего не вычитать. */}
+                <p className="mt-0.5 whitespace-pre-line break-words">{errorMsg}</p>
               </div>
             </div>
             <Button

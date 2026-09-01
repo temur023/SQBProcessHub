@@ -60,9 +60,22 @@ def escape_xml(value) -> str:
 
 
 def _safe_id(raw: str, prefix: str, used: Dict[str, str], taken: set) -> str:
+    """Выдаёт уникальный xsd:ID и запоминает, во что превратился исходный.
+
+    Раньше функция начиналась с возврата уже выданного значения по исходной
+    строке. Для одной и той же сущности это было безобидно, но каждая сущность
+    и так спрашивает идентификатор ровно один раз, а совпадение исходных строк
+    у РАЗНЫХ сущностей возвращало им общий id. Так рождались дубликаты, из-за
+    которых студия отвергала файл целиком:
+
+    * маркер длительности шага ``A`` просит ``Duration_A`` — и получает id
+      фигуры, которая в исходнике уже называлась ``Duration_A``;
+    * две фигуры с одинаковым ``id`` в склеенном draw.io.
+
+    Поэтому кэш больше не отдаёт готовый ответ, а только ведёт журнал
+    соответствий: каждый вызов проходит через ``taken`` и получает своё имя.
+    """
     original = raw or ''
-    if original in used:
-        return used[original]
     candidate = original if _NCNAME.match(original) else ''
     if not candidate:
         cleaned = re.sub(r'[^A-Za-z0-9._-]', '_', original)
@@ -185,14 +198,43 @@ def marker_box(marker: DurationMarker) -> Box:
 
 
 def _duration_label_candidates(marker: DurationMarker) -> List[Box]:
-    """Куда положить время: под часами, затем правее, левее и выше."""
+    """Куда положить время: под часами, затем правее, левее, выше и по углам.
+
+    Четырёх сторон на плотной карте не хватает: если все они заняты, выбор
+    падает на «наименее конфликтную» позицию, и время печатается поверх текста
+    самого шага. Диагонали и вторая полка дают запас.
+    """
     width, height = label_size(marker.text)
     half = EVENT_SIDE // 2
+    cx, cy = marker.cx, marker.cy
+    near = half + 4
+    far = half + 6 + height
     return [
-        (marker.cx - width // 2, marker.cy + half + 2, width, height),
-        (marker.cx + half + 4, marker.cy - height // 2, width, height),
-        (marker.cx - half - 4 - width, marker.cy - height // 2, width, height),
-        (marker.cx - width // 2, marker.cy - half - 2 - height, width, height),
+        (cx - width // 2, cy + half + 2, width, height),
+        (cx + near, cy - height // 2, width, height),
+        (cx - near - width, cy - height // 2, width, height),
+        (cx - width // 2, cy - half - 2 - height, width, height),
+        (cx + near, cy + half + 2, width, height),
+        (cx - near - width, cy + half + 2, width, height),
+        (cx + near, cy - half - 2 - height, width, height),
+        (cx - near - width, cy - half - 2 - height, width, height),
+        (cx - width // 2, cy + far, width, height),
+        (cx - width // 2, cy - far - height, width, height),
+    ]
+
+
+def _band_boxes(x: int, y: int, width: int, height: int, header: int) -> List[Box]:
+    """Заголовок дорожки и её рамка — места, куда подпись класть нельзя.
+
+    В полосе слева bpmn.io печатает повёрнутое название дорожки, а по контуру
+    рисует линию. Подпись, попавшая туда, ложится либо поверх названия, либо
+    ровно на разделитель между дорожками — ровно то, что видно в выгрузке.
+    """
+    b = LANE_BORDER
+    return [
+        (x, y, header, height),
+        (x, y - b, width, 2 * b),
+        (x, y + height - b, width, 2 * b),
     ]
 
 
@@ -317,6 +359,10 @@ def _node_documentation(node: ProcessNode) -> str:
 
 #: Ширина заголовочной полосы пула в BPMNDI (bpmn.io рисует ровно 30 px).
 POOL_HEADER = 30
+#: Полоса с названием дорожки внутри пула — bpmn.io рисует её той же ширины.
+LANE_HEADER = 30
+#: Толщина рамки дорожки: подпись, севшая на разделитель, читается перечёркнутой.
+LANE_BORDER = 4
 
 #: Типы, которым BPMN разрешает быть концом messageFlow (InteractionNode).
 _INTERACTION_TYPES = (
@@ -506,7 +552,12 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         xml.append('')
 
     xml.append(
-        f'  <bpmn:process id="{escape_xml(proc_id)}" name="{process_name}" isExecutable="true">'
+        # processType и isExecutable проставлены явно: значение по умолчанию
+        # («None») стандарт разрешает опустить, но профиль выгрузки для PIX
+        # требует обоих атрибутов в тексте файла. Основной процесс — Private:
+        # это внутренняя оркестровка банка, а не публичный интерфейс.
+        f'  <bpmn:process id="{escape_xml(proc_id)}" name="{process_name}"'
+        f' processType="Private" isExecutable="true">'
     )
 
     # ── 1. laneSet (только узлы потока) ─────────────────────────────────────
@@ -624,8 +675,10 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
 
     for lane in external_lanes:
         xml.append(
+            # Внешняя сторона — «чёрный ящик»: поведения у неё в файле нет,
+            # видна только граница взаимодействия, поэтому Public.
             f'  <bpmn:process id="{escape_xml(external_process_of[lane.id])}" '
-            f'name="{escape_xml(lane.name)}" isExecutable="false" />'
+            f'name="{escape_xml(lane.name)}" processType="Public" isExecutable="false" />'
         )
     if external_lanes:
         xml.append('')
@@ -696,6 +749,18 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         routes.append((edge, _edge_waypoints(edge, src_node, tgt_node)))
 
     taken_boxes: List[Tuple[int, int, int, int]] = node_obstacles(all_nodes)
+    # Заголовки дорожек и пулов — тоже занятое место: в них печатается
+    # повёрнутое название, и подпись, попавшая туда, ложится прямо на него.
+    if use_collab:
+        taken_boxes.append((px, py, POOL_HEADER, ph))
+        for lane in external_lanes:
+            g = lane.geometry
+            taken_boxes.extend(_band_boxes(g.x, g.y, g.width, g.height, POOL_HEADER))
+    for lane in lanes:
+        g = lane.geometry
+        lane_x = px + POOL_HEADER if use_collab else g.x
+        lane_w = max(pw - POOL_HEADER, 80) if use_collab else g.width
+        taken_boxes.extend(_band_boxes(lane_x, g.y, lane_w, g.height, LANE_HEADER))
     # Часы у шага занимают место на карте так же, как фигура: подпись связи,
     # положенная на них, скрывает цифру.
     taken_boxes.extend(marker_box(m) for m in markers)
