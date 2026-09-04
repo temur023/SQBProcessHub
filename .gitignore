@@ -9,6 +9,7 @@ __pycache__/
 
 # Секреты и локальное состояние
 .env
+.DS_Store
 backend/app/data/process_store.json
 
 # Результаты опытов с импортом в PIX: снимки журналов машины аналитика,

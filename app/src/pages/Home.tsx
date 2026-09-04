@@ -11,7 +11,6 @@ import { ImportReport } from '@/components/ImportReport'
 import type { CanvasFocus } from '@/components/ProcessVisualizer'
 import { NodeDetailDrawer } from '@/components/NodeDetailDrawer'
 import { ExportDrawer } from '@/components/ExportDrawer'
-import { ExportViewerModal } from '@/components/ExportViewerModal'
 import { generateProcessRegulationCsv, downloadFile } from '@/lib/processet-export'
 import { saveProcessToBackend, listProcessesFromBackend, loadProcessFromBackend } from '@/lib/api'
 import { analyzeProcessConformance } from '@/lib/conformance'
@@ -26,7 +25,6 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<string>('visualizer')
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
-  const [isViewerOpen, setIsViewerOpen] = useState(false)
   const [selectedNode, setSelectedNode] = useState<ProcessNode | null>(null)
   /** Замечание, на фигуры которого сейчас наведена карта. */
   const [canvasFocus, setCanvasFocus] = useState<CanvasFocus | null>(null)
@@ -150,7 +148,6 @@ export default function Home() {
         setActiveTab={setActiveTab}
         onOpenImport={() => setIsImportOpen(true)}
         onOpenExport={() => setIsExportOpen(true)}
-        onOpenViewer={() => setIsViewerOpen(true)}
         onExportExcel={handleExportExcel}
       />
 
@@ -264,13 +261,6 @@ export default function Home() {
         open={isExportOpen}
         onOpenChange={setIsExportOpen}
         process={currentProcess}
-      />
-
-      <ExportViewerModal
-        open={isViewerOpen}
-        onOpenChange={setIsViewerOpen}
-        process={currentProcess}
-        onLoadIntoWorkspace={handleProcessLoaded}
       />
     </div>
   )

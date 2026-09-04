@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react'
 import {
   Cpu,
   Download,
-  FileCode2,
-  FileSearch,
   FileSpreadsheet,
   Layers,
   Server,
@@ -25,7 +23,6 @@ interface HeaderProps {
   setActiveTab: (tab: string) => void
   onOpenImport: () => void
   onOpenExport: () => void
-  onOpenViewer: () => void
   onExportExcel: () => void
 }
 
@@ -68,7 +65,6 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   onOpenImport,
   onOpenExport,
-  onOpenViewer,
   onExportExcel,
 }) => {
   const [isBackendOnline, setIsBackendOnline] = useState<boolean | null>(null)
@@ -95,30 +91,9 @@ export const Header: React.FC<HeaderProps> = ({
     {
       id: 'visualizer',
       icon: Layers,
-      label: '1. Карта процесса',
+      label: 'Карта процесса',
       short: 'Карта',
       count: currentProcess.nodes.length,
-    },
-    {
-      id: 'matrix',
-      icon: FileSpreadsheet,
-      label: '2. Регламент и роли',
-      short: 'Регламент',
-      count: totalTasks,
-    },
-    {
-      id: 'registry',
-      icon: FileCode2,
-      label: '3. Реестры PIX',
-      short: 'Реестры',
-      count: currentProcess.registry.records.length,
-    },
-    {
-      id: 'processet',
-      icon: TrendingUp,
-      label: '4. Сверка Processet',
-      short: 'Сверка',
-      dot: true,
     },
   ]
 
@@ -130,14 +105,6 @@ export const Header: React.FC<HeaderProps> = ({
       title: 'Загрузить карту процесса из draw.io',
       onClick: onOpenImport,
       iconClass: 'text-emerald-600 dark:text-emerald-400',
-    },
-    {
-      id: 'viewer',
-      icon: FileSearch,
-      label: 'Просмотр',
-      title: 'Открыть готовый .bpmn или .pmm и увидеть карту так, как её получит PIX',
-      onClick: onOpenViewer,
-      iconClass: 'text-sky-600 dark:text-sky-400',
     },
     {
       id: 'excel',
