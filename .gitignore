@@ -16,3 +16,4 @@ backend/app/data/process_store.json
 # в репозитории им не место. Сам набор проб генерируется скриптом.
 backend/scripts/pix_probe/probe_results/
 backend/scripts/pix_probe/pix_test_suite/
+.DS_Store
