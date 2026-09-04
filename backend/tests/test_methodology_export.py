@@ -567,7 +567,10 @@ class PmmExportTest(unittest.TestCase):
             # `arrow` в выгрузке студии не встречается ни разу: пунктирным
             # связям там отвечает `arrowLine`, а незнакомый маркер студия
             # отбрасывает вместе со связью.
-            self.assertEqual(c.findtext("MarkerEnd"), "arrowLine")
+            # Наконечника у связи с базой данных нет: в draw.io к цилиндру идёт
+            # простой пунктир. Стрелка читается как направление потока, хотя поток
+            # через хранилище не идёт — шаг просто им пользуется.
+            self.assertEqual(c.findtext("MarkerEnd"), "line")
             # Стиль линии живёт только в атрибуте: дочернего <lineStyle>
             # у студии нет ни у одной связи.
             self.assertIsNone(c.find("lineStyle"))

@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.models.process import Geometry, ProcessNode
 from app.services.drawio_parser import parse_drawio_xml
+import app.services.edge_routing as er
 from app.services.bpmn_exporter import step_duration_text
 from app.services.layout import wrapped_line_count
 from app.services.edge_routing import MIN_SEGMENT, orthogonal_waypoints
@@ -617,6 +618,88 @@ class DocumentIconTest(unittest.TestCase):
     def test_document_keeps_its_small_size(self):
         geo = self.by_id['doc'].geometry
         self.assertEqual((geo.width, geo.height), (28, 34))
+
+
+
+class LabelSideTest(unittest.TestCase):
+    """Подписи, которые студия печатает снаружи, не должны сталкиваться."""
+
+    MAP = """<mxfile host="app.diagrams.net">
+  <diagram id="d1" name="Карта">
+    <mxGraphModel>
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="g1" value="Qo'shimcha hujjatlar lozimmi?" style="rhombus;" vertex="1" parent="1">
+          <mxGeometry x="200" y="200" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="g2" value="Sanksiya mavjudmi?" style="rhombus;" vertex="1" parent="1">
+          <mxGeometry x="280" y="200" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="f" edge="1" source="g1" target="g2" parent="1" />
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>"""
+
+    def test_adjacent_gateways_get_opposite_sides(self):
+        # Два соседних ромба с длинными вопросами клали подписи друг на друга:
+        # места мы выбрать не можем, только сторону, и обе были «сверху».
+        root = _map_root(parse_drawio_xml(self.MAP, 'labels.drawio'))
+        sides = {
+            n.get('label'): n.get('labelPlacement')
+            for n in root.iter('node') if n.get('type') == 'gateway_xor'
+        }
+        self.assertEqual(len(sides), 2, sides)
+        self.assertEqual(set(sides.values()), {'Top', 'Bottom'}, sides)
+
+    def test_a_lone_gateway_keeps_the_label_above(self):
+        # Сверху — как в draw.io; вниз уводим только при столкновении.
+        lone = self.MAP.replace(
+            '<mxCell id="g2" value="Sanksiya mavjudmi?" style="rhombus;" vertex="1" parent="1">\n'
+            '          <mxGeometry x="280" y="200" width="50" height="50" as="geometry" />\n'
+            '        </mxCell>', '').replace(
+            '<mxCell id="f" edge="1" source="g1" target="g2" parent="1" />', '')
+        root = _map_root(parse_drawio_xml(lone, 'lone.drawio'))
+        gateway = next(n for n in root.iter('node') if n.get('type') == 'gateway_xor')
+        self.assertEqual(gateway.get('labelPlacement'), 'Top')
+
+
+class DataLinkMarkerTest(unittest.TestCase):
+    """У связи с базой данных наконечника нет."""
+
+    def test_association_ends_without_an_arrow(self):
+        # В draw.io к цилиндру идёт простой пунктир. Стрелка читается как
+        # направление потока, хотя поток через хранилище не идёт.
+        root = _map_root(parse_drawio_xml(DRAWIO, 'geometry.drawio'))
+        dotted = [c for c in root.findall('connector') if c.get('lineStyle') == 'dotted']
+        self.assertTrue(dotted, 'в фикстуре нет связи с артефактом')
+        for connector in dotted:
+            self.assertEqual(connector.findtext('MarkerEnd'), 'line')
+
+
+class UturnTest(unittest.TestCase):
+    """Линия не должна уходить от цели и возвращаться."""
+
+    def test_route_that_turns_back_is_rejected(self):
+        self.assertTrue(er._doubles_back(
+            [(0.0, 0.0), (100.0, 0.0), (100.0, 50.0), (-60.0, 50.0)]))
+
+    def test_the_rule_is_deliberately_coarse(self):
+        """Обход «вверх, вбок, вниз» правило тоже считает разворотом.
+
+        Отделять одно от другого пробовали: развороты выросли с 19 до 27, а
+        линий сквозь фигуры стало больше — обход, за который никто не
+        штрафует, трассировщик начинает выбирать и там, где он не нужен.
+        Пересечение стоит дороже разворота, поэтому нужный обход правило не
+        отменяет.
+        """
+        self.assertTrue(er._doubles_back(
+            [(0.0, 0.0), (0.0, -80.0), (300.0, -80.0), (300.0, 0.0)]))
+
+    def test_short_wobble_is_tolerated(self):
+        self.assertFalse(er._doubles_back(
+            [(0.0, 0.0), (20.0, 0.0), (20.0, 40.0), (0.0, 40.0), (0.0, 300.0)]))
 
 
 

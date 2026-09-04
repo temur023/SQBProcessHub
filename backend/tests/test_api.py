@@ -518,7 +518,10 @@ class TestSQBProcessHubApi(unittest.TestCase):
         dotted = next(c for c in connectors if c.get("lineStyle") == "dotted")
         # Маркер конца — из словаря студии: `arrow` в её выгрузке не встречается
         # ни разу, а незнакомый маркер она молча отбрасывает вместе со связью.
-        self.assertEqual(dotted.findtext("MarkerEnd"), "arrowLine")
+        # Наконечника у связи с базой данных нет: в draw.io к цилиндру идёт
+        # простой пунктир. Стрелка читается как направление потока, хотя поток
+        # через хранилище не идёт — шаг просто им пользуется.
+        self.assertEqual(dotted.findtext("MarkerEnd"), "line")
         # Стиль линии — только атрибут; дочернего <lineStyle> у студии нет.
         self.assertIsNone(dotted.find("lineStyle"))
         solid = next(c for c in connectors if c.get("lineStyle") == "solid")

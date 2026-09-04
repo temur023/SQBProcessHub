@@ -56,7 +56,7 @@ from app.services.bpmn_exporter import (
     split_external_lanes,
     step_duration_text,
 )
-from app.services.layout import _free_space, wrapped_line_count
+from app.services.layout import _free_space, text_width, wrapped_line_count
 from app.services.edge_routing import (
     Corridors,
     Obstacles,
@@ -434,6 +434,86 @@ def node_properties_xml(node: ProcessNode, indent: str) -> List[str]:
     return lines
 
 
+#: Кегль подписи, которую студия печатает СНАРУЖИ фигуры.
+_EXTERNAL_LABEL_FONT = 16.0
+#: Шире этого студия переносит подпись по словам.
+_EXTERNAL_LABEL_MAX_WIDTH = 180.0
+#: Зазор между фигурой и её подписью, px.
+_EXTERNAL_LABEL_GAP = 4.0
+
+
+def _external_label_box(
+    box: Tuple[float, float, float, float],
+    text: str,
+    placement: str,
+) -> Tuple[float, float, float, float]:
+    """Куда ляжет подпись, напечатанная над фигурой или под ней."""
+    x, y, w, h = box
+    width = min(max(text_width(text, _EXTERNAL_LABEL_FONT) + 8, 40.0),
+                _EXTERNAL_LABEL_MAX_WIDTH)
+    lines = wrapped_line_count(text, width, _EXTERNAL_LABEL_FONT)
+    height = lines * _EXTERNAL_LABEL_FONT * 1.25 + 4
+    left = x + w / 2 - width / 2
+    if placement == 'Top':
+        return (left, y - height - _EXTERNAL_LABEL_GAP, width, height)
+    return (left, y + h + _EXTERNAL_LABEL_GAP, width, height)
+
+
+def _boxes_touch(a, b) -> bool:
+    return (min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0]) > 2
+            and min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]) > 2)
+
+
+def choose_label_placements(
+    flow: Sequence[ProcessNode],
+    placed: Dict[str, Tuple[int, int]],
+) -> Dict[str, str]:
+    """Сверху или снизу печатать подпись каждой фигуры.
+
+    Подпись шлюза и имя базы данных студия рисует ВНЕ фигуры, и место для неё
+    мы выбрать не можем — только сторону. Ставить всем «сверху» нельзя: два
+    соседних ромба с длинными вопросами накладывают подписи друг на друга,
+    ровно как на карте банка. В draw.io аналитик разводит их сам — один вопрос
+    над ромбом, другой под ним.
+
+    Считаем обе стороны и берём ту, где меньше столкновений: сначала с уже
+    расставленными подписями, потом с фигурами. При равенстве — сверху, как в
+    эталоне.
+    """
+    boxes: Dict[str, Tuple[float, float, float, float]] = {}
+    for node in flow:
+        x, y = placed.get(node.id, (node.geometry.x, node.geometry.y))
+        boxes[node.id] = (float(x), float(y),
+                          float(node.geometry.width), float(node.geometry.height))
+
+    shapes = list(boxes.values())
+    chosen: Dict[str, str] = {}
+    taken: List[Tuple[float, float, float, float]] = []
+    # Сначала длинные подписи: им труднее найти свободную сторону.
+    for node in sorted(flow, key=lambda n: -len(map_label(n))):
+        if node.type not in _EXTERNAL_LABEL_TYPES:
+            continue
+        text = map_label(node)
+        if not text:
+            continue
+        best_side, best_cost, best_box = 'Top', None, None
+        for side in ('Top', 'Bottom'):
+            candidate = _external_label_box(boxes[node.id], text, side)
+            cost = (
+                sum(1 for other in taken if _boxes_touch(candidate, other)),
+                sum(1 for other in shapes if _boxes_touch(candidate, other)),
+            )
+            if best_cost is None or cost < best_cost:
+                best_side, best_cost, best_box = side, cost, candidate
+        chosen[node.id] = best_side
+        taken.append(best_box)
+    return chosen
+
+
+#: Фигуры, подпись которых студия печатает снаружи.
+_EXTERNAL_LABEL_TYPES = (*GATEWAY_NODE_TYPES, 'dataStore', 'dataObject')
+
+
 #: Куда студия кладёт подпись шлюза.
 #:
 #: В эталонной выгрузке студии стоит ``Left``, и платформа повторяла её. На
@@ -449,13 +529,13 @@ def node_properties_xml(node: ProcessNode, indent: str) -> List[str]:
 _GATEWAY_LABEL_PLACEMENT = 'Top'
 
 
-def _node_extra(node: ProcessNode) -> str:
+def _node_extra(node: ProcessNode, placement: str = _GATEWAY_LABEL_PLACEMENT) -> str:
     if node.type in GATEWAY_NODE_TYPES:
-        return f' labelPlacement="{_GATEWAY_LABEL_PLACEMENT}" font_size="16"'
-    # Имя системы аналитик пишет НАД цилиндром — «iABS», «EHA». Сбоку оно
+        return f' labelPlacement="{placement}" font_size="16"'
+    # Имя системы аналитик пишет над цилиндром — «iABS», «EHA». Сбоку оно
     # налезает на соседний шаг, и на карте не понять, к чему относится.
     if node.type in ('dataStore', 'dataObject'):
-        return ' labelPlacement="Top"'
+        return f' labelPlacement="{placement}"'
     return ''
 
 
@@ -931,8 +1011,12 @@ def _coord(value: float) -> str:
 #: Писавшийся раньше ``arrow`` в выгрузке студии не встречается ни разу, а
 #: незнакомый маркер она молча отбрасывает вместе со связью — пунктирные линии
 #: до карты не доезжали именно поэтому.
+#: У связи с базой данных наконечника нет: в draw.io к цилиндру идёт простой
+#: пунктир без стрелки. Стрелка на нём читается как направление потока, хотя
+#: поток через хранилище не идёт — шаг просто им пользуется. ``line`` студия
+#: пишет сама (у всех связей это ``MarkerStart``), так что значение известное.
 _SEQUENCE_DECORATION = ('solid', 'line', 'arrowclosed')
-_ASSOCIATION_DECORATION = ('dotted', 'line', 'arrowLine')
+_ASSOCIATION_DECORATION = ('dotted', 'line', 'line')
 _MESSAGE_DECORATION = ('dashed', 'circle', 'arrowEmpty')
 
 #: Индекс точки привязки к грани фигуры (``sourcePoint``/``targetPoint``).
@@ -1182,9 +1266,21 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
     placed: Dict[str, Tuple[int, int]] = {}
     assigned = set()
     for lane in lanes:
-        children = [n for n in flow if n.laneId == lane.id]
-        for n in children:
+        for n in flow:
+            if n.laneId != lane.id:
+                continue
             assigned.add(n.id)
+            rel_x, rel_y = clamp_into_lane(n, lane)
+            placed[n.id] = (lane.geometry.x + rel_x, lane.geometry.y + rel_y)
+    for n in flow:
+        placed.setdefault(n.id, (n.geometry.x, n.geometry.y))
+
+    # Сторону подписи выбираем, зная итоговые места ВСЕХ фигур: двум соседним
+    # ромбам одна и та же сторона кладёт вопросы друг на друга.
+    label_side = choose_label_placements(flow, placed)
+
+    for lane in lanes:
+        children = [n for n in flow if n.laneId == lane.id]
         lines.append(
             f'  <node type="horizontalRoad" id="{escape_xml(id_map[lane.id])}"'
             f' label="{escape_xml(lane.name)}" number="0"'
@@ -1194,11 +1290,12 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
         )
         for n in children:
             rel_x, rel_y = clamp_into_lane(n, lane)
-            placed[n.id] = (lane.geometry.x + rel_x, lane.geometry.y + rel_y)
             lines.append(
                 _node_xml(
                     pix_type(n), id_map[n.id], map_label(n), rel_x, rel_y,
-                    n.geometry.width, n.geometry.height, _node_extra(n), indent='    ',
+                    n.geometry.width, n.geometry.height,
+                    _node_extra(n, label_side.get(n.id, _GATEWAY_LABEL_PLACEMENT)),
+                    indent='    ',
                     children=node_properties_xml(n, '    '),
                 )
             )
@@ -1213,7 +1310,8 @@ def generate_map_xml(process: BusinessProcess) -> Tuple[str, str]:
         lines.append(
             _node_xml(
                 pix_type(n), id_map[n.id], map_label(n), n.geometry.x, n.geometry.y,
-                n.geometry.width, n.geometry.height, _node_extra(n),
+                n.geometry.width, n.geometry.height,
+                _node_extra(n, label_side.get(n.id, _GATEWAY_LABEL_PLACEMENT)),
                 children=node_properties_xml(n, '  '),
             )
         )
