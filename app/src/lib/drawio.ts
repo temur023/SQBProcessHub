@@ -9,7 +9,7 @@ import type {
   ProcessPassport,
   PixRegistrySchema,
 } from '@/types/process'
-import { GATEWAY_NODE_TYPES, isArtifactNode, isTaskNode } from '@/types/process'
+import { ARTIFACT_NODE_TYPES, GATEWAY_NODE_TYPES, isArtifactNode, isTaskNode } from '@/types/process'
 import { analyzeProcessConformance } from './conformance'
 import { normalizeLayout } from './layout'
 import { collectImportDiagnostics } from './diagnostics'
