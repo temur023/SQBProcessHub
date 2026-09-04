@@ -212,7 +212,7 @@ def test_type_outside_the_studio_catalogue_is_rejected(process):
     """То самое «Notation element not found (Parameter 'type')»."""
     payload = generate_pmm_zip(process)
     name, xml = map_part(payload)
-    broken = repack(payload, name, xml.replace('type="userTask"', 'type="megaTask"', 1))
+    broken = repack(payload, name, xml.replace('type="task"', 'type="megaTask"', 1))
     assert 'pix_pmm_type_unknown' in codes(validate_pmm_for_pix(broken))
 
 
@@ -243,7 +243,7 @@ def test_child_outside_its_lane_is_rejected(process):
     payload = generate_pmm_zip(process)
     name, xml = map_part(payload)
     # Двигаем первый вложенный шаг далеко вправо от дорожки.
-    at = xml.index('type="userTask"')
+    at = xml.index('type="task"')
     head = xml.rindex('<node', 0, at)
     tail = xml.index('/>', at)
     moved = xml[:head] + xml[head:tail].replace('x="', 'x="99000', 1) + xml[tail:]

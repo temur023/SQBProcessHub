@@ -242,7 +242,7 @@ def _baseline_process():
                     laneId='Lane_front', laneName='Фронт-офис',
                     geometry=Geometry(x=212, y=162, width=36, height=36)),
         ProcessNode(id='Task_1', name='Проверка документов', type='userTask',
-                    laneId='Lane_front', laneName='Фронт-офис', slaMinutes=15,
+                    laneId='Lane_front', laneName='Фронт-офис', slaMinutes=15, slaMeasured=True,
                     geometry=Geometry(x=320, y=140, width=160, height=80)),
         ProcessNode(id='End_1', name='Справка выдана', type='endEvent',
                     laneId='Lane_front', laneName='Фронт-офис',
@@ -290,9 +290,9 @@ def _deviate_pmm_out_of_bounds(xml: str) -> str:
     Координаты вложенной фигуры в ``.pmm`` отсчитываются от дорожки. Гипотеза:
     студия либо обрежет фигуру, либо отнесёт её к другой дорожке, либо откажет.
     """
-    match = re.search(r'(<node type="userTask"[^>]*?\sx=")(-?\d+)(")', xml)
+    match = re.search(r'(<node type="task"[^>]*?\sx=")(-?\d+)(")', xml)
     if not match:
-        raise RuntimeError('в контрольной карте нет узла userTask с координатой x')
+        raise RuntimeError('в контрольной карте нет узла task с координатой x')
     return xml[:match.start(2)] + '99000' + xml[match.end(2):]
 
 
@@ -302,7 +302,44 @@ def _deviate_pmm_unknown_type(xml: str) -> str:
     Ожидаемое сообщение — то самое «Notation element not found (Parameter
     'type')». Проба подтверждает, что отказ даёт именно тип, а не что-то рядом.
     """
-    return xml.replace('type="userTask"', 'type="megaUserTask"', 1)
+    return xml.replace('type="task"', 'type="megaUserTask"', 1)
+
+
+def _deviate_pmm_label_placement_top(map_xml: str) -> str:
+    """Ставит подпись шлюза над ромбом вместо «слева».
+
+    Эталон студии (``tests/fixtures/sap.pmm``) знает у ``labelPlacement``
+    ровно одно значение — ``Left``, и платформа пишет только его. На плотной
+    карте банка подпись слева ложится на предыдущую фигуру: у двух соседних
+    ромбов вопросы наезжают друг на друга. Значение ``Top`` напрашивается, но
+    ничем не подтверждено — а неизвестное значение перечисления студия может и
+    не пережить. Проба выясняет это ценой одного импорта.
+
+    Атрибут ставится задаче, а не шлюзу: вопрос к студии — про само значение,
+    и ответ от типа фигуры не зависит. Держать в контроле лишний ромб только
+    ради этой пробы значило бы менять все остальные.
+    """
+    marker = '<node type="task"'
+    start = map_xml.index(marker)
+    return (map_xml[:start + len(marker)] + ' labelPlacement="Top"'
+            + map_xml[start + len(marker):])
+
+
+def _deviate_pmm_node_property(map_xml: str) -> str:
+    """Ставит шагу длительность больше суток — в форме ``d.hh:mm:ss``.
+
+    Имена свойств выяснены и закрыты: панель строит их по каталогу студии, и
+    платформа пишет ``vremya_protsessa`` / ``system_process_time`` /
+    ``vremya_ozhidaniya``. Осталось одно неподтверждённое правило — как
+    записывать длительность от суток и больше.
+
+    Вывод сделан из .NET, а не из наблюдения: ``TimeSpan.Parse("24:00:00")``
+    падает, часы обязаны лежать в 0..23, а сутки выносятся отдельным полем
+    через точку. Отсюда «1.00:00:00» вместо «24:00:00». В сегодняшних картах
+    банка максимум 960 минут, так что вживую правило ещё ни разу не
+    проверялось, — а первая же карта с двухдневным согласованием его заденет.
+    """
+    return map_xml.replace('value="00:15:00"', 'value="1.12:00:00"', 1)
 
 
 PMM_CASES: List[Tuple[str, str, Optional[Callable[[str], str]], str, str, Optional[int]]] = [
@@ -321,6 +358,27 @@ PMM_CASES: List[Tuple[str, str, Optional[Callable[[str], str]], str, str, Option
         'pix_pmm_child_outside',
         'Проверяет, обрежет ли студия фигуру, перенесёт в другую дорожку '
         'или откажется открыть карту.',
+        1,
+    ),
+    (
+        'test_08_pmm_label_placement_top.pmm',
+        'Подпись шлюза сверху (labelPlacement="Top")',
+        _deviate_pmm_label_placement_top,
+        '?',
+        'Примет ли студия значение, которого нет в её эталонной выгрузке? '
+        'Если да — подписи шлюзов можно расставлять по свободному месту, и '
+        'вопросы перестанут наезжать друг на друга.',
+        1,
+    ),
+    (
+        'test_09_pmm_node_property.pmm',
+        'Длительность больше суток: «1.12:00:00»',
+        _deviate_pmm_node_property,
+        '?',
+        'Примет ли студия сутки отдельным полем через точку? В контроле время '
+        'обычное («00:15:00»), здесь — полтора суток. Если файл откроется и в '
+        'панели свойств шага стоит 1 д 12 ч, правило верно; если нет — длинные '
+        'согласования надо записывать иначе.',
         1,
     ),
     (
@@ -431,6 +489,20 @@ def _selfcheck(manifest: Dict) -> List[str]:
     problems: List[str] = []
     for case in manifest['cases']:
         name = case['file']
+        if case['expected_rule'] == '?':
+            # Проба-возможность: спрашивает, что студия ПРИНИМАЕТ, а не что
+            # отвергает. Наш профиль обязан её пропускать — иначе выгрузка
+            # никогда не сможет воспользоваться ответом, даже положительным.
+            if case['rejected_by_pix_profile']:
+                problems.append(
+                    f'{name}: профиль отвергает пробу-возможность '
+                    f'({", ".join(case["pix_profile_errors"])}) — ответ студии '
+                    'нечего будет применить.')
+            if case['changed_places'] != case.get('expected_places'):
+                problems.append(
+                    f'{name}: отличий от контроля {case["changed_places"]}, '
+                    f'ожидалось {case.get("expected_places")}.')
+            continue
         if case['expected_rule'] == '—':
             if case['rejected_by_pix_profile']:
                 problems.append(

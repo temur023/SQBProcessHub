@@ -307,14 +307,24 @@ def check_exports(process_id: str):
 
     Студия отвергает пакет целиком из-за одного дефекта и называет только код
     ошибки. Здесь те же проверки делаются заранее и с указанием фигуры.
+
+    Наборов правил два, и берутся оба — те же, что и при скачивании файла.
+    ``export_validation`` отвечает «файл соответствует BPMN 2.0»,
+    ``pix_spec_checker`` — «файл откроется именно в Процессной студии». Второй
+    строже, и без него панель экспорта показывала бы зелёный баннер на файле,
+    который студия не примет.
     """
     process = get_store().get(process_id)
     if not process:
         raise HTTPException(404, f"Process '{process_id}' not found")
 
+    bpmn = generate_bpmn_xml(process)
+    pmm = generate_pmm_zip(process)
     checks = [
-        validate_bpmn_xml(generate_bpmn_xml(process)),
-        validate_pmm_package(generate_pmm_zip(process)),
+        validate_bpmn_xml(bpmn),
+        validate_bpmn_for_pix(bpmn),
+        validate_pmm_package(pmm),
+        validate_pmm_for_pix(pmm),
     ]
     return {
         'processId': process_id,

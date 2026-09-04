@@ -1,0 +1,2126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  id="Definitions_proc_42e80b42"
+  targetNamespace="http://bpmn.io/schema/bpmn"
+  exporter="SQB Process Hub"
+  exporterVersion="2.0">
+
+  <!-- Process map: overnight -->
+  <bpmn:collaboration id="Collaboration_Process_PRC_SQB_F0CF21">
+    <bpmn:participant id="Participant_Process_PRC_SQB_F0CF21" name="overnight" processRef="Process_PRC_SQB_F0CF21" />
+    <bpmn:participant id="Participant_Os9W5SnazrjCTrFuyly5-1" name="Mijoz" processRef="Process_Os9W5SnazrjCTrFuyly5-1" />
+    <bpmn:messageFlow id="Os9W5SnazrjCTrFuyly5-251" sourceRef="Os9W5SnazrjCTrFuyly5-174" targetRef="Participant_Os9W5SnazrjCTrFuyly5-1" />
+    <bpmn:messageFlow id="Os9W5SnazrjCTrFuyly5-254" sourceRef="Os9W5SnazrjCTrFuyly5-45" targetRef="Participant_Os9W5SnazrjCTrFuyly5-1" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_PRC_SQB_F0CF21" name="overnight" processType="Private" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_Process_PRC_SQB_F0CF21">
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-3" name="Devonxona xizmati (Ijro boshqarish va rivojlantirishni tahlil qilish)">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-8</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-8</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-13" name="Boshqaruv Raisi o&apos;rinbosari yordamchisi">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-14</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-14</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-16</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-20</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-22</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-22</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-26" name="Boshqaruv Raisi o&apos;rinbosari">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-27</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-27</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-29</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-33</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-35" name="Korporativ markaz direktori yordamchisi">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-36</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-36</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-40" name="Korporativ markaz direktori">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-41</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-41</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-43</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-45</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-45</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-49</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-49</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-51</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-51</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-55</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-57</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-57</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-61</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-65" name="RM (Korporativ markaz)">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-66</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-66</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-68</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-68</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-70</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-70</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-74</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-77</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-78</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-78</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-82</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-83" name="Mahsulot menejeri (Korporativ markaz)">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-84</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-84</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-87</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-87</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-89</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-89</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-91</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-93</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-94</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-94</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-100</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-101</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-101</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-105" name="Direktor o&apos;rinbosari (Korporativ markaz)">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-106</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-106</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-108</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-108</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-110</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-114</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-114</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-116</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-120</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-120</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-124" name="Direktor (Moliyaviy menejment markazi)">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-125</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-125</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-127</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-131</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-131</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-133" name="Bosh menejer (Moliyaviy menejment markazi)">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-134</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-134</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-136</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-139</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-139</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-140</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-144</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-147" name="Kotibi Bank mahsulotlarini boshqarish kichik qo&apos;mitasi">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-148</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-148</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-152</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-154</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-154</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-158</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-158</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-160" name="Bank mahsulotlarini boshqarish kichik qo&apos;mitasi a&apos;zolari">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-161</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-161</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-163</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-165</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-165</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-169</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-173" name="Universal servis menejer (Korporativ markaz)">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-171</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-174</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-174</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-176</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-176</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-178</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-181</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-181</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-185</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-187</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-187</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-194" name="Katta nazoratchi (Korporativ markaz)">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-195</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-195</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-197</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-197</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Os9W5SnazrjCTrFuyly5-244" name="Valyuta operatsiyalarini muvofiqlashtirish xizmati (Operatsion departament)">
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-245</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Os9W5SnazrjCTrFuyly5-245</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Os9W5SnazrjCTrFuyly5-247</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Os9W5SnazrjCTrFuyly5-4" name="Mijoz bankka xat beradi">
+      <bpmn:documentation>Code: START; Role: Devonxona xizmati (Ijro boshqarish va rivojlantirishni tahlil qilish); System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-12</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-6" name="Xatni qabul qilib oladi">
+      <bpmn:documentation>Code: STEP-01; Role: Devonxona xizmati (Ijro boshqarish va rivojlantirishni tahlil qilish); System: SQB CRM / Core; ST: 5 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-12</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-5</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-6" name="5 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-6" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT5M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-8" name="Xatni EHA tizimidan ro&apos;yhatga oladi va tegishli Boshqaruv Raisi o&apos;rinbosarini biriktiradi">
+      <bpmn:documentation>Code: STEP-02; Role: Devonxona xizmati (Ijro boshqarish va rivojlantirishni tahlil qilish); System: EHA; ST: 3 min; Category: api_service; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-5</bpmn:incoming>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-239</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-228</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-8" name="3 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-8" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT3M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-14" name="Xatning mazmuni bilan tanishib chiqadi">
+      <bpmn:documentation>Code: STEP-03; Role: Boshqaruv Raisi o&apos;rinbosari yordamchisi; System: SQB CRM / Core; ST: 2 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-17</bpmn:incoming>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-242</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-21</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-14" name="2 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-14" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-16" name="Ожидание 10 мин">
+      <bpmn:documentation>Role: Boshqaruv Raisi o&apos;rinbosari yordamchisi; System: SQB CRM / Core; ST: 10 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-228</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-17</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Os9W5SnazrjCTrFuyly5-20" name="To&apos;g&apos;ri yo&apos;naltirilganmi?" gatewayDirection="Diverging">
+      <bpmn:documentation>Role: Boshqaruv Raisi o&apos;rinbosari yordamchisi; System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-21</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-24</bpmn:outgoing>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-239</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-22" name="Xatga rezolyutsiya tayyorlaydi va tasdiqlash uchun Boshqaruv Raisi o&apos;rinbosariga kiritadi">
+      <bpmn:documentation>Code: STEP-04; Role: Boshqaruv Raisi o&apos;rinbosari yordamchisi; System: SQB CRM / Core; ST: 2 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-24</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-241</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-22" name="2 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-22" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-27" name="Xat va uning rezolyutsiyasi bilan tanishadi">
+      <bpmn:documentation>Code: STEP-05; Role: Boshqaruv Raisi o&apos;rinbosari; System: EHA; ST: 2 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-30</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-34</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-27" name="2 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-27" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-29" name="Ожидание 60 мин">
+      <bpmn:documentation>Role: Boshqaruv Raisi o&apos;rinbosari; System: SQB CRM / Core; ST: 60 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-241</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-30</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Os9W5SnazrjCTrFuyly5-33" name="Tasdiqlaydimi?" gatewayDirection="Diverging">
+      <bpmn:documentation>Role: Boshqaruv Raisi o&apos;rinbosari; System: SQB CRM / Core; ST: 180 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-34</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-237</bpmn:outgoing>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-242</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-36" name="Xatga rezolyutsiya tayyorlaydi va tasdiqlash uchun direktorga kiritadi">
+      <bpmn:documentation>Code: STEP-06; Role: Korporativ markaz direktori yordamchisi; System: EHA; ST: 2 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-237</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-230</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-36" name="2 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-36" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-41" name="Qo&apos;shimcha kelishuvni imzolash">
+      <bpmn:documentation>Code: STEP-07; Role: Korporativ markaz direktori; System: SQB CRM / Core; ST: 1 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-44</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-214</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-41" name="1 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-41" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-43" name="Ожидание 10 мин">
+      <bpmn:documentation>Role: Korporativ markaz direktori; System: SQB CRM / Core; ST: 10 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-213</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-44</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-45" name="Xat bilan tanishish va tasdiqlash">
+      <bpmn:documentation>Code: STEP-08; Role: Korporativ markaz direktori; System: SQB CRM / Core; ST: 5 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-231</bpmn:incoming>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-45" name="5 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-45" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT5M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-49" name="Xat va uning rezolyutsiyasi bilan tanishib uni tasdiqlash">
+      <bpmn:documentation>Code: STEP-09; Role: Korporativ markaz direktori; System: EHA; ST: 2 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-230</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-229</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-49" name="2 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-49" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-51" name="Xulosa ko&apos;rib chiqish va tasdiqlash">
+      <bpmn:documentation>Code: STEP-10; Role: Korporativ markaz direktori; System: EHA; ST: 10 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-56</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-204</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-51" name="10 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-51" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-55" name="Ожидание 10 мин">
+      <bpmn:documentation>Role: Korporativ markaz direktori; System: SQB CRM / Core; ST: 10 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-233</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-56</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-57" name="Qo&apos;mitaga kiritish uchun xizmat yozishma tayyorlash">
+      <bpmn:documentation>Code: STEP-11; Role: Korporativ markaz direktori; System: EHA; ST: 2 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-62</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-236</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-57" name="2 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-57" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-61" name="Ожидание 10 мин">
+      <bpmn:documentation>Role: Korporativ markaz direktori; System: SQB CRM / Core; ST: 10 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-235</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-62</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-66" name="1. Mijoz ehtiyojini aniqlash">
+      <bpmn:documentation>Code: STEP-01; Role: RM (Korporativ markaz); System: SQB CRM / Core; ST: 10 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-229</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-199</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-66" name="10 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-66" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-68" name="3. Ma&apos;lumot asosida yuqotilayotgan daromadlar yuzasidan taklif ishlab chiqish va Markaz direktor o&apos;rinbosari bilan kelishish">
+      <bpmn:documentation>Code: STEP-03; Role: RM (Korporativ markaz); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-193</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-200</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-68" name="1 ч" attachedToRef="Os9W5SnazrjCTrFuyly5-68" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-70" name="Xulosa ko&apos;rib chiqish va kelishish">
+      <bpmn:documentation>Code: STEP-12; Role: RM (Korporativ markaz); System: EHA; ST: 10 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-202</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-203</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-70" name="10 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-70" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="Os9W5SnazrjCTrFuyly5-74" name="Qo&apos;shimcha kelishuv imzolandimi" gatewayDirection="Diverging">
+      <bpmn:documentation>Role: RM (Korporativ markaz); System: SQB CRM / Core; ST: 180 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-72</bpmn:outgoing>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-210</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="Os9W5SnazrjCTrFuyly5-77" name="Jarayon tugaydi">
+      <bpmn:documentation>Code: END; Role: RM (Korporativ markaz); System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-72</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-78" name="Qo&apos;mita qaroridan kelib chiqib, mijoz murojaati bo&apos;yicha javob xati yoziladi">
+      <bpmn:documentation>Code: STEP-13; Role: RM (Korporativ markaz); System: EHA; ST: 20 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-224</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-226</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-78" name="20 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-78" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT20M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-82" name="Ожидание 10 мин">
+      <bpmn:documentation>Role: RM (Korporativ markaz); System: SQB CRM / Core; ST: 10 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-227</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-231</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-84" name="2. Mijoz so&apos;rovi bo&apos;yicha umumiy ma&apos;lumot tayyorlash">
+      <bpmn:documentation>Code: STEP-02; Role: Mahsulot menejeri (Korporativ markaz); System: SQB CRM / Core; ST: 120 min; Out: Документ; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-199</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-193</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-84" name="2 ч" attachedToRef="Os9W5SnazrjCTrFuyly5-84" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-87" name="1. Moliyaviy ko&apos;ratkichlarini tahlili 2. Overnight stavkasi bo&apos;yicha hisob-kitob">
+      <bpmn:documentation>Code: STEP-01; Role: Mahsulot menejeri (Korporativ markaz); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-87" name="1 ч" attachedToRef="Os9W5SnazrjCTrFuyly5-87" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-89" name="Ma&apos;lumot asosida xulosa shakllantirish va tasdiqlash uchun yuborish">
+      <bpmn:documentation>Code: STEP-14; Role: Mahsulot menejeri (Korporativ markaz); System: EHA; ST: 20 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-207</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-92</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-89" name="20 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-89" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT20M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:parallelGateway id="Os9W5SnazrjCTrFuyly5-91" name="Условие" gatewayDirection="Diverging">
+      <bpmn:documentation>Role: Mahsulot menejeri (Korporativ markaz); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-92</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-201</bpmn:outgoing>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-202</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:exclusiveGateway id="Os9W5SnazrjCTrFuyly5-93" name="Qo&apos;mita qarori ijobiymi?" gatewayDirection="Diverging">
+      <bpmn:documentation>Role: Mahsulot menejeri (Korporativ markaz); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-220</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-96</bpmn:outgoing>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-224</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-94" name="Qo&apos;mita qarori USMga taqdim etiladi">
+      <bpmn:documentation>Code: STEP-15; Role: Mahsulot menejeri (Korporativ markaz); System: SQB CRM / Core; ST: 2 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-96</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-209</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-94" name="2 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-94" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:parallelGateway id="Os9W5SnazrjCTrFuyly5-100" name="Условие" gatewayDirection="Converging">
+      <bpmn:documentation>Role: Mahsulot menejeri (Korporativ markaz); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-203</bpmn:incoming>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-232</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-233</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-101" name="Qo&apos;mitaga kiritish uchun xizmat yozishma tayyorlash">
+      <bpmn:documentation>Code: STEP-16; Role: Mahsulot menejeri (Korporativ markaz); System: EHA; ST: 2 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-204</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-234</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-101" name="2 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-101" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-106" name="4. Mijoz murojaati va uning moliyaviy hisob kitobi bilan tanishish">
+      <bpmn:documentation>Code: STEP-04; Role: Direktor o&apos;rinbosari (Korporativ markaz); System: SQB CRM / Core; ST: 10 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-200</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-111</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-106" name="10 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-106" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-108" name="Xulosa ko&apos;rib chiqish va kelishish">
+      <bpmn:documentation>Code: STEP-17; Role: Direktor o&apos;rinbosari (Korporativ markaz); System: EHA; ST: 10 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-201</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-232</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-108" name="10 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-108" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:parallelGateway id="Os9W5SnazrjCTrFuyly5-110" name="Условие" gatewayDirection="Converging">
+      <bpmn:documentation>Role: Direktor o&apos;rinbosari (Korporativ markaz); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-111</bpmn:incoming>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-205</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-207</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-114" name="Xat bilan tanishish va kelishish">
+      <bpmn:documentation>Code: STEP-18; Role: Direktor o&apos;rinbosari (Korporativ markaz); System: EHA; ST: 2 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-117</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-227</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-114" name="2 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-114" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-116" name="Ожидание 10 мин">
+      <bpmn:documentation>Role: Direktor o&apos;rinbosari (Korporativ markaz); System: SQB CRM / Core; ST: 10 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-226</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-117</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-120" name="Xizmat yozishmani kelishish tayyorlash">
+      <bpmn:documentation>Code: STEP-19; Role: Direktor o&apos;rinbosari (Korporativ markaz); System: EHA; ST: 2 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-234</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-235</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-120" name="2 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-120" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-125" name="Kelishishga kelgan xulosani xodimga ko&apos;rib chiqish uchun yo&apos;naltirish">
+      <bpmn:documentation>Code: STEP-20; Role: Direktor (Moliyaviy menejment markazi); System: EHA; ST: 2 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-128</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-215</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-125" name="2 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-125" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-127" name="Ожидание 60 мин">
+      <bpmn:documentation>Role: Direktor (Moliyaviy menejment markazi); System: SQB CRM / Core; ST: 60 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-236</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-128</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-131" name="Kelishish tugmasini bosish">
+      <bpmn:documentation>Code: STEP-21; Role: Direktor (Moliyaviy menejment markazi); System: SQB CRM / Core; ST: 2 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-216</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-217</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-131" name="2 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-131" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-134" name="Xulosadagi hisob-kitoblar to&apos;g&apos;riligini tekshiradi">
+      <bpmn:documentation>Code: STEP-22; Role: Bosh menejer (Moliyaviy menejment markazi); System: EHA; ST: 120 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-141</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-137</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-134" name="2 ч" attachedToRef="Os9W5SnazrjCTrFuyly5-134" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="Os9W5SnazrjCTrFuyly5-136" name="Hisob-kitob to&apos;g&apos;rimi?" gatewayDirection="Diverging">
+      <bpmn:documentation>Role: Bosh menejer (Moliyaviy menejment markazi); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-137</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-145</bpmn:outgoing>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-205</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-139" name="Kamchiliklar to&apos;g&apos;risida ma&apos;lumot bergan holda">
+      <bpmn:documentation>Code: STEP-23; Role: Bosh menejer (Moliyaviy menejment markazi); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-139" name="1 ч" attachedToRef="Os9W5SnazrjCTrFuyly5-139" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-140" name="Ожидание 40 мин">
+      <bpmn:documentation>Role: Bosh menejer (Moliyaviy menejment markazi); System: SQB CRM / Core; ST: 40 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-215</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-141</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT40M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-144" name="Ожидание 40 мин">
+      <bpmn:documentation>Role: Bosh menejer (Moliyaviy menejment markazi); System: SQB CRM / Core; ST: 40 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-145</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-216</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT40M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-148" name="Qo&apos;mita a&apos;zolariga kun tartibini masala yuzasidan tegishli hujjatlarni ilova qilgan holda aloqa kanallari orqali xabar beradi">
+      <bpmn:documentation>Code: STEP-24; Role: Kotibi Bank mahsulotlarini boshqarish kichik qo&apos;mitasi; System: EHA; ST: 10 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-153</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-208</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-148" name="10 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-148" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-152" name="Ожидание 60 мин">
+      <bpmn:documentation>Role: Kotibi Bank mahsulotlarini boshqarish kichik qo&apos;mitasi; System: SQB CRM / Core; ST: 60 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-217</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-153</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-154" name="Qo&apos;mita yig&apos;ilishi bayonnomasini tayyorlash va tasdiqlash uchun EHAga kiritish">
+      <bpmn:documentation>Code: STEP-25; Role: Kotibi Bank mahsulotlarini boshqarish kichik qo&apos;mitasi; System: EHA; ST: 10 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-221</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-218</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-154" name="10 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-154" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-158" name="Tasdiqlangan Qo&apos;mita bayonnomasini tegishli xodimga yo&apos;naltirish">
+      <bpmn:documentation>Code: STEP-26; Role: Kotibi Bank mahsulotlarini boshqarish kichik qo&apos;mitasi; System: SQB CRM / Core; ST: 10 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-219</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-220</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-158" name="10 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-158" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-161" name="Aloqa kanallari orqali xulosa bilan tanishish va o&apos;z takliflarini ma&apos;lum qilish">
+      <bpmn:documentation>Code: STEP-27; Role: Bank mahsulotlarini boshqarish kichik qo&apos;mitasi a&apos;zolari; System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-164</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-221</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-161" name="1 ч" attachedToRef="Os9W5SnazrjCTrFuyly5-161" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-163" name="1 kun">
+      <bpmn:documentation>Role: Bank mahsulotlarini boshqarish kichik qo&apos;mitasi a&apos;zolari; System: SQB CRM / Core; ST: 30 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-208</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-164</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT30M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-165" name="Qo&apos;mita bayonnomasi bilan tanishish va tasdiqlash">
+      <bpmn:documentation>Code: STEP-28; Role: Bank mahsulotlarini boshqarish kichik qo&apos;mitasi a&apos;zolari; System: EHA; ST: 30 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-170</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-219</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-165" name="30 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-165" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT30M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-169" name="1 kun">
+      <bpmn:documentation>Role: Bank mahsulotlarini boshqarish kichik qo&apos;mitasi a&apos;zolari; System: SQB CRM / Core; ST: 30 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-218</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-170</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT30M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-171" name="Ожидание 10 мин">
+      <bpmn:documentation>Role: Universal servis menejer (Korporativ markaz); System: SQB CRM / Core; ST: 10 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-209</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-222</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-174" name="Qo&apos;mita qaroridan kelib chiqib mijoz bilan imzolangan shartnomaga qo&apos;shimcha kelishuv tayyorlash va mijoz bilan kelishish uchun word shaklida yuboradi">
+      <bpmn:documentation>Code: STEP-29; Role: Universal servis menejer (Korporativ markaz); System: SQB CRM / Core; ST: 10 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-222</bpmn:incoming>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-174" name="10 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-174" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-176" name="Qo&apos;shimcha kelishuvni Katta nazoratchidan imzolatish">
+      <bpmn:documentation>Code: STEP-30; Role: Universal servis menejer (Korporativ markaz); System: SQB CRM / Core; ST: 1 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-210</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-179</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-176" name="1 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-176" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="Os9W5SnazrjCTrFuyly5-178" name="Ожидание 3 мин">
+      <bpmn:documentation>Role: Universal servis menejer (Korporativ markaz); System: SQB CRM / Core; ST: 3 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-179</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-212</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT3M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-181" name="Qo&apos;shimcha kelishuvni skaner qilish va &quot;Банковский комиссия&quot; modulida biriktirish">
+      <bpmn:documentation>Code: STEP-31; Role: Universal servis menejer (Korporativ markaz); System: IABS; ST: 3 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-186</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-180</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-181" name="3 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-181" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT3M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:parallelGateway id="Os9W5SnazrjCTrFuyly5-185" name="Условие">
+      <bpmn:documentation>Role: Universal servis menejer (Korporativ markaz); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-172</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-186</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-187" name="“Yuridik shaxslar depozitlari” modulida anketa ochish, ma’lumotlarni to‘ldirish va tasdiqlash uchun yuborish">
+      <bpmn:documentation>Code: STEP-32; Role: Universal servis menejer (Korporativ markaz); System: Dragle BI; ST: 10 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-180</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-223</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-187" name="10 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-187" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-195" name="Qo&apos;shimcha kelishuvni imzolash">
+      <bpmn:documentation>Code: STEP-33; Role: Katta nazoratchi (Korporativ markaz); System: SQB CRM / Core; ST: 1 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-212</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-213</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-195" name="1 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-195" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-197" name="Qo&apos;shimcha kelishuvga bank muhrini qo&apos;yish">
+      <bpmn:documentation>Code: STEP-34; Role: Katta nazoratchi (Korporativ markaz); System: SQB CRM / Core; ST: 1 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-214</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-172</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-197" name="1 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-197" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Os9W5SnazrjCTrFuyly5-245" name="Anketani tekshirish va tasdiqlash">
+      <bpmn:documentation>Code: STEP-35; Role: Valyuta operatsiyalarini muvofiqlashtirish xizmati (Operatsion departament); System: Dragle BI; ST: 10 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-223</bpmn:incoming>
+      <bpmn:outgoing>Os9W5SnazrjCTrFuyly5-248</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Os9W5SnazrjCTrFuyly5-245" name="10 мин" attachedToRef="Os9W5SnazrjCTrFuyly5-245" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="Os9W5SnazrjCTrFuyly5-247" name="Jarayon tugaydi">
+      <bpmn:documentation>Code: END; Role: Valyuta operatsiyalarini muvofiqlashtirish xizmati (Operatsion departament); System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Os9W5SnazrjCTrFuyly5-248</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-10" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-31" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-38" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-47" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-53" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-59" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-63" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-75" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-80" name="EHA" />
+    <bpmn:dataObjectReference id="Os9W5SnazrjCTrFuyly5-86" name="Документ" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-98" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-103" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-112" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-118" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-122" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-129" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-142" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-150" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-156" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-167" name="EHA" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-189" name="Dragle BI" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-191" name="IABS" />
+    <bpmn:dataStoreReference id="Os9W5SnazrjCTrFuyly5-249" name="Dragle BI" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-5" sourceRef="Os9W5SnazrjCTrFuyly5-6" targetRef="Os9W5SnazrjCTrFuyly5-8" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-12" sourceRef="Os9W5SnazrjCTrFuyly5-4" targetRef="Os9W5SnazrjCTrFuyly5-6" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-17" sourceRef="Os9W5SnazrjCTrFuyly5-16" targetRef="Os9W5SnazrjCTrFuyly5-14" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-21" sourceRef="Os9W5SnazrjCTrFuyly5-14" targetRef="Os9W5SnazrjCTrFuyly5-20" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-24" name="Ha" sourceRef="Os9W5SnazrjCTrFuyly5-20" targetRef="Os9W5SnazrjCTrFuyly5-22">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Ha</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-30" sourceRef="Os9W5SnazrjCTrFuyly5-29" targetRef="Os9W5SnazrjCTrFuyly5-27" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-34" sourceRef="Os9W5SnazrjCTrFuyly5-27" targetRef="Os9W5SnazrjCTrFuyly5-33" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-44" sourceRef="Os9W5SnazrjCTrFuyly5-43" targetRef="Os9W5SnazrjCTrFuyly5-41" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-56" sourceRef="Os9W5SnazrjCTrFuyly5-55" targetRef="Os9W5SnazrjCTrFuyly5-51" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-62" sourceRef="Os9W5SnazrjCTrFuyly5-61" targetRef="Os9W5SnazrjCTrFuyly5-57" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-72" name="Yo&apos;q" sourceRef="Os9W5SnazrjCTrFuyly5-74" targetRef="Os9W5SnazrjCTrFuyly5-77">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Yo&apos;q</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-92" sourceRef="Os9W5SnazrjCTrFuyly5-89" targetRef="Os9W5SnazrjCTrFuyly5-91" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-96" name="Ha" sourceRef="Os9W5SnazrjCTrFuyly5-93" targetRef="Os9W5SnazrjCTrFuyly5-94">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Ha</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-111" sourceRef="Os9W5SnazrjCTrFuyly5-106" targetRef="Os9W5SnazrjCTrFuyly5-110" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-117" sourceRef="Os9W5SnazrjCTrFuyly5-116" targetRef="Os9W5SnazrjCTrFuyly5-114" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-128" sourceRef="Os9W5SnazrjCTrFuyly5-127" targetRef="Os9W5SnazrjCTrFuyly5-125" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-137" sourceRef="Os9W5SnazrjCTrFuyly5-134" targetRef="Os9W5SnazrjCTrFuyly5-136" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-141" sourceRef="Os9W5SnazrjCTrFuyly5-140" targetRef="Os9W5SnazrjCTrFuyly5-134" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-145" name="Ha" sourceRef="Os9W5SnazrjCTrFuyly5-136" targetRef="Os9W5SnazrjCTrFuyly5-144">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Ha</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-153" sourceRef="Os9W5SnazrjCTrFuyly5-152" targetRef="Os9W5SnazrjCTrFuyly5-148" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-164" sourceRef="Os9W5SnazrjCTrFuyly5-163" targetRef="Os9W5SnazrjCTrFuyly5-161" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-170" sourceRef="Os9W5SnazrjCTrFuyly5-169" targetRef="Os9W5SnazrjCTrFuyly5-165" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-172" sourceRef="Os9W5SnazrjCTrFuyly5-197" targetRef="Os9W5SnazrjCTrFuyly5-185" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-179" sourceRef="Os9W5SnazrjCTrFuyly5-176" targetRef="Os9W5SnazrjCTrFuyly5-178" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-180" sourceRef="Os9W5SnazrjCTrFuyly5-181" targetRef="Os9W5SnazrjCTrFuyly5-187" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-186" sourceRef="Os9W5SnazrjCTrFuyly5-185" targetRef="Os9W5SnazrjCTrFuyly5-181" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-193" sourceRef="Os9W5SnazrjCTrFuyly5-84" targetRef="Os9W5SnazrjCTrFuyly5-68" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-199" sourceRef="Os9W5SnazrjCTrFuyly5-66" targetRef="Os9W5SnazrjCTrFuyly5-84" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-200" sourceRef="Os9W5SnazrjCTrFuyly5-68" targetRef="Os9W5SnazrjCTrFuyly5-106" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-201" sourceRef="Os9W5SnazrjCTrFuyly5-91" targetRef="Os9W5SnazrjCTrFuyly5-108" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-202" sourceRef="Os9W5SnazrjCTrFuyly5-91" targetRef="Os9W5SnazrjCTrFuyly5-70" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-203" sourceRef="Os9W5SnazrjCTrFuyly5-70" targetRef="Os9W5SnazrjCTrFuyly5-100" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-204" sourceRef="Os9W5SnazrjCTrFuyly5-51" targetRef="Os9W5SnazrjCTrFuyly5-101" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-205" name="Yo&apos;q" sourceRef="Os9W5SnazrjCTrFuyly5-136" targetRef="Os9W5SnazrjCTrFuyly5-110">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Yo&apos;q</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-207" sourceRef="Os9W5SnazrjCTrFuyly5-110" targetRef="Os9W5SnazrjCTrFuyly5-89" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-208" sourceRef="Os9W5SnazrjCTrFuyly5-148" targetRef="Os9W5SnazrjCTrFuyly5-163" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-209" sourceRef="Os9W5SnazrjCTrFuyly5-94" targetRef="Os9W5SnazrjCTrFuyly5-171" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-210" name="Ha" sourceRef="Os9W5SnazrjCTrFuyly5-74" targetRef="Os9W5SnazrjCTrFuyly5-176">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Ha</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-212" sourceRef="Os9W5SnazrjCTrFuyly5-178" targetRef="Os9W5SnazrjCTrFuyly5-195" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-213" sourceRef="Os9W5SnazrjCTrFuyly5-195" targetRef="Os9W5SnazrjCTrFuyly5-43" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-214" sourceRef="Os9W5SnazrjCTrFuyly5-41" targetRef="Os9W5SnazrjCTrFuyly5-197" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-215" sourceRef="Os9W5SnazrjCTrFuyly5-125" targetRef="Os9W5SnazrjCTrFuyly5-140" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-216" sourceRef="Os9W5SnazrjCTrFuyly5-144" targetRef="Os9W5SnazrjCTrFuyly5-131" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-217" sourceRef="Os9W5SnazrjCTrFuyly5-131" targetRef="Os9W5SnazrjCTrFuyly5-152" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-218" sourceRef="Os9W5SnazrjCTrFuyly5-154" targetRef="Os9W5SnazrjCTrFuyly5-169" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-219" sourceRef="Os9W5SnazrjCTrFuyly5-165" targetRef="Os9W5SnazrjCTrFuyly5-158" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-220" sourceRef="Os9W5SnazrjCTrFuyly5-158" targetRef="Os9W5SnazrjCTrFuyly5-93" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-221" sourceRef="Os9W5SnazrjCTrFuyly5-161" targetRef="Os9W5SnazrjCTrFuyly5-154" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-222" sourceRef="Os9W5SnazrjCTrFuyly5-171" targetRef="Os9W5SnazrjCTrFuyly5-174" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-223" sourceRef="Os9W5SnazrjCTrFuyly5-187" targetRef="Os9W5SnazrjCTrFuyly5-245" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-224" name="Yo&apos;q" sourceRef="Os9W5SnazrjCTrFuyly5-93" targetRef="Os9W5SnazrjCTrFuyly5-78">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Yo&apos;q</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-226" sourceRef="Os9W5SnazrjCTrFuyly5-78" targetRef="Os9W5SnazrjCTrFuyly5-116" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-227" sourceRef="Os9W5SnazrjCTrFuyly5-114" targetRef="Os9W5SnazrjCTrFuyly5-82" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-228" sourceRef="Os9W5SnazrjCTrFuyly5-8" targetRef="Os9W5SnazrjCTrFuyly5-16" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-229" sourceRef="Os9W5SnazrjCTrFuyly5-49" targetRef="Os9W5SnazrjCTrFuyly5-66" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-230" sourceRef="Os9W5SnazrjCTrFuyly5-36" targetRef="Os9W5SnazrjCTrFuyly5-49" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-231" sourceRef="Os9W5SnazrjCTrFuyly5-82" targetRef="Os9W5SnazrjCTrFuyly5-45" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-232" sourceRef="Os9W5SnazrjCTrFuyly5-108" targetRef="Os9W5SnazrjCTrFuyly5-100" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-233" sourceRef="Os9W5SnazrjCTrFuyly5-100" targetRef="Os9W5SnazrjCTrFuyly5-55" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-234" sourceRef="Os9W5SnazrjCTrFuyly5-101" targetRef="Os9W5SnazrjCTrFuyly5-120" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-235" sourceRef="Os9W5SnazrjCTrFuyly5-120" targetRef="Os9W5SnazrjCTrFuyly5-61" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-236" sourceRef="Os9W5SnazrjCTrFuyly5-57" targetRef="Os9W5SnazrjCTrFuyly5-127" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-237" name="Ha" sourceRef="Os9W5SnazrjCTrFuyly5-33" targetRef="Os9W5SnazrjCTrFuyly5-36">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Ha</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-239" name="Yo&apos;q" sourceRef="Os9W5SnazrjCTrFuyly5-20" targetRef="Os9W5SnazrjCTrFuyly5-8">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Yo&apos;q</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-241" sourceRef="Os9W5SnazrjCTrFuyly5-22" targetRef="Os9W5SnazrjCTrFuyly5-29" />
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-242" name="Yo&apos;q" sourceRef="Os9W5SnazrjCTrFuyly5-33" targetRef="Os9W5SnazrjCTrFuyly5-14">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Yo&apos;q</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Os9W5SnazrjCTrFuyly5-248" sourceRef="Os9W5SnazrjCTrFuyly5-245" targetRef="Os9W5SnazrjCTrFuyly5-247" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-11" sourceRef="Os9W5SnazrjCTrFuyly5-10" targetRef="Os9W5SnazrjCTrFuyly5-8" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-32" sourceRef="Os9W5SnazrjCTrFuyly5-31" targetRef="Os9W5SnazrjCTrFuyly5-27" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-39" sourceRef="Os9W5SnazrjCTrFuyly5-38" targetRef="Os9W5SnazrjCTrFuyly5-36" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-54" sourceRef="Os9W5SnazrjCTrFuyly5-53" targetRef="Os9W5SnazrjCTrFuyly5-51" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-60" sourceRef="Os9W5SnazrjCTrFuyly5-59" targetRef="Os9W5SnazrjCTrFuyly5-57" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-64" sourceRef="Os9W5SnazrjCTrFuyly5-63" targetRef="Os9W5SnazrjCTrFuyly5-49" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-76" sourceRef="Os9W5SnazrjCTrFuyly5-75" targetRef="Os9W5SnazrjCTrFuyly5-70" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-81" sourceRef="Os9W5SnazrjCTrFuyly5-80" targetRef="Os9W5SnazrjCTrFuyly5-78" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-88" sourceRef="Os9W5SnazrjCTrFuyly5-84" targetRef="Os9W5SnazrjCTrFuyly5-86" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-99" sourceRef="Os9W5SnazrjCTrFuyly5-98" targetRef="Os9W5SnazrjCTrFuyly5-89" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-104" sourceRef="Os9W5SnazrjCTrFuyly5-103" targetRef="Os9W5SnazrjCTrFuyly5-101" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-113" sourceRef="Os9W5SnazrjCTrFuyly5-112" targetRef="Os9W5SnazrjCTrFuyly5-108" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-119" sourceRef="Os9W5SnazrjCTrFuyly5-118" targetRef="Os9W5SnazrjCTrFuyly5-114" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-123" sourceRef="Os9W5SnazrjCTrFuyly5-122" targetRef="Os9W5SnazrjCTrFuyly5-120" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-130" sourceRef="Os9W5SnazrjCTrFuyly5-129" targetRef="Os9W5SnazrjCTrFuyly5-125" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-143" sourceRef="Os9W5SnazrjCTrFuyly5-142" targetRef="Os9W5SnazrjCTrFuyly5-134" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-151" sourceRef="Os9W5SnazrjCTrFuyly5-150" targetRef="Os9W5SnazrjCTrFuyly5-148" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-157" sourceRef="Os9W5SnazrjCTrFuyly5-156" targetRef="Os9W5SnazrjCTrFuyly5-154" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-168" sourceRef="Os9W5SnazrjCTrFuyly5-167" targetRef="Os9W5SnazrjCTrFuyly5-165" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-190" sourceRef="Os9W5SnazrjCTrFuyly5-189" targetRef="Os9W5SnazrjCTrFuyly5-187" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-192" sourceRef="Os9W5SnazrjCTrFuyly5-191" targetRef="Os9W5SnazrjCTrFuyly5-181" associationDirection="One" />
+    <bpmn:association id="Os9W5SnazrjCTrFuyly5-250" sourceRef="Os9W5SnazrjCTrFuyly5-249" targetRef="Os9W5SnazrjCTrFuyly5-245" associationDirection="One" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Os9W5SnazrjCTrFuyly5-1" name="Mijoz" processType="Public" isExecutable="false" />
+
+  <bpmndi:BPMNDiagram id="Diagram_Process_PRC_SQB_F0CF21">
+    <bpmndi:BPMNPlane id="Plane_Process_PRC_SQB_F0CF21" bpmnElement="Collaboration_Process_PRC_SQB_F0CF21">
+      <bpmndi:BPMNShape id="Participant_Process_PRC_SQB_F0CF21_di" bpmnElement="Participant_Process_PRC_SQB_F0CF21" isHorizontal="true">
+        <dc:Bounds x="91" y="340" width="4250" height="3380" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Os9W5SnazrjCTrFuyly5-1_di" bpmnElement="Participant_Os9W5SnazrjCTrFuyly5-1" isHorizontal="true">
+        <dc:Bounds x="121" y="160" width="4229" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-3_di" bpmnElement="Os9W5SnazrjCTrFuyly5-3" isHorizontal="true">
+        <dc:Bounds x="121" y="340" width="4220" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-13_di" bpmnElement="Os9W5SnazrjCTrFuyly5-13" isHorizontal="true">
+        <dc:Bounds x="121" y="540" width="4220" height="280" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-26_di" bpmnElement="Os9W5SnazrjCTrFuyly5-26" isHorizontal="true">
+        <dc:Bounds x="121" y="820" width="4220" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-35_di" bpmnElement="Os9W5SnazrjCTrFuyly5-35" isHorizontal="true">
+        <dc:Bounds x="121" y="1120" width="4220" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-40_di" bpmnElement="Os9W5SnazrjCTrFuyly5-40" isHorizontal="true">
+        <dc:Bounds x="121" y="1300" width="4220" height="220" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-65_di" bpmnElement="Os9W5SnazrjCTrFuyly5-65" isHorizontal="true">
+        <dc:Bounds x="121" y="1520" width="4220" height="210" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-83_di" bpmnElement="Os9W5SnazrjCTrFuyly5-83" isHorizontal="true">
+        <dc:Bounds x="121" y="1730" width="4220" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-105_di" bpmnElement="Os9W5SnazrjCTrFuyly5-105" isHorizontal="true">
+        <dc:Bounds x="121" y="1930" width="4220" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-124_di" bpmnElement="Os9W5SnazrjCTrFuyly5-124" isHorizontal="true">
+        <dc:Bounds x="121" y="2190" width="4220" height="210" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-133_di" bpmnElement="Os9W5SnazrjCTrFuyly5-133" isHorizontal="true">
+        <dc:Bounds x="121" y="2400" width="4220" height="310" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-147_di" bpmnElement="Os9W5SnazrjCTrFuyly5-147" isHorizontal="true">
+        <dc:Bounds x="121" y="2710" width="4220" height="220" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-160_di" bpmnElement="Os9W5SnazrjCTrFuyly5-160" isHorizontal="true">
+        <dc:Bounds x="121" y="2930" width="4220" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-173_di" bpmnElement="Os9W5SnazrjCTrFuyly5-173" isHorizontal="true">
+        <dc:Bounds x="121" y="3190" width="4220" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-194_di" bpmnElement="Os9W5SnazrjCTrFuyly5-194" isHorizontal="true">
+        <dc:Bounds x="121" y="3380" width="4220" height="150" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-244_di" bpmnElement="Os9W5SnazrjCTrFuyly5-244" isHorizontal="true">
+        <dc:Bounds x="121" y="3530" width="4220" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-4_di" bpmnElement="Os9W5SnazrjCTrFuyly5-4">
+        <dc:Bounds x="220" y="410" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="174" y="494" width="142" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-6_di" bpmnElement="Os9W5SnazrjCTrFuyly5-6">
+        <dc:Bounds x="306" y="395" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-6_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-6">
+        <dc:Bounds x="408" y="457" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="406" y="495" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-8_di" bpmnElement="Os9W5SnazrjCTrFuyly5-8">
+        <dc:Bounds x="486" y="379" width="150" height="112" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-8_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-8">
+        <dc:Bounds x="598" y="473" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="638" y="482" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-10_di" bpmnElement="Os9W5SnazrjCTrFuyly5-10">
+        <dc:Bounds x="649" y="366" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="672" y="412" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-14_di" bpmnElement="Os9W5SnazrjCTrFuyly5-14">
+        <dc:Bounds x="456" y="600" width="240" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-14_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-14">
+        <dc:Bounds x="658" y="662" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="698" y="671" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-16_di" bpmnElement="Os9W5SnazrjCTrFuyly5-16">
+        <dc:Bounds x="566" y="525" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="597" y="581" width="104" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-20_di" bpmnElement="Os9W5SnazrjCTrFuyly5-20">
+        <dc:Bounds x="720" y="615" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="673" y="699" width="144" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-22_di" bpmnElement="Os9W5SnazrjCTrFuyly5-22">
+        <dc:Bounds x="810" y="599" width="260" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-22_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-22">
+        <dc:Bounds x="1032" y="664" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1030" y="702" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-27_di" bpmnElement="Os9W5SnazrjCTrFuyly5-27">
+        <dc:Bounds x="397" y="907" width="250" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-27_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-27">
+        <dc:Bounds x="609" y="969" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="607" y="1007" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-29_di" bpmnElement="Os9W5SnazrjCTrFuyly5-29">
+        <dc:Bounds x="567" y="840" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="457" y="856" width="104" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-31_di" bpmnElement="Os9W5SnazrjCTrFuyly5-31">
+        <dc:Bounds x="660" y="870" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="683" y="846" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-33_di" bpmnElement="Os9W5SnazrjCTrFuyly5-33">
+        <dc:Bounds x="552" y="1010" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="608" y="1026" width="97" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-36_di" bpmnElement="Os9W5SnazrjCTrFuyly5-36">
+        <dc:Bounds x="437" y="1169" width="210" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-36_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-36">
+        <dc:Bounds x="609" y="1234" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="607" y="1272" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-38_di" bpmnElement="Os9W5SnazrjCTrFuyly5-38">
+        <dc:Bounds x="660" y="1140" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="683" y="1186" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-41_di" bpmnElement="Os9W5SnazrjCTrFuyly5-41">
+        <dc:Bounds x="3360" y="1330" width="200" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-41_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-41">
+        <dc:Bounds x="3522" y="1392" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3520" y="1430" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-43_di" bpmnElement="Os9W5SnazrjCTrFuyly5-43">
+        <dc:Bounds x="3450" y="1440" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3340" y="1456" width="104" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-45_di" bpmnElement="Os9W5SnazrjCTrFuyly5-45">
+        <dc:Bounds x="2870" y="1365" width="200" height="68" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-45_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-45">
+        <dc:Bounds x="3032" y="1415" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3072" y="1424" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-47_di" bpmnElement="Os9W5SnazrjCTrFuyly5-47">
+        <dc:Bounds x="2848" y="1322" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2808" y="1333" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-49_di" bpmnElement="Os9W5SnazrjCTrFuyly5-49">
+        <dc:Bounds x="477" y="1369" width="170" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-49_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-49">
+        <dc:Bounds x="609" y="1434" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="607" y="1472" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-51_di" bpmnElement="Os9W5SnazrjCTrFuyly5-51">
+        <dc:Bounds x="1180" y="1355" width="210" height="68" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-51_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-51">
+        <dc:Bounds x="1352" y="1405" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1392" y="1414" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-53_di" bpmnElement="Os9W5SnazrjCTrFuyly5-53">
+        <dc:Bounds x="1403" y="1320" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1426" y="1366" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-55_di" bpmnElement="Os9W5SnazrjCTrFuyly5-55">
+        <dc:Bounds x="1320" y="1440" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1210" y="1456" width="104" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-57_di" bpmnElement="Os9W5SnazrjCTrFuyly5-57">
+        <dc:Bounds x="1642" y="1346" width="170" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-57_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-57">
+        <dc:Bounds x="1774" y="1411" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1814" y="1420" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-59_di" bpmnElement="Os9W5SnazrjCTrFuyly5-59">
+        <dc:Bounds x="1825" y="1322" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1848" y="1368" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-61_di" bpmnElement="Os9W5SnazrjCTrFuyly5-61">
+        <dc:Bounds x="1742" y="1450" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1632" y="1466" width="104" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-63_di" bpmnElement="Os9W5SnazrjCTrFuyly5-63">
+        <dc:Bounds x="660" y="1340" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="683" y="1316" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-66_di" bpmnElement="Os9W5SnazrjCTrFuyly5-66">
+        <dc:Bounds x="327" y="1569" width="170" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-66_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-66">
+        <dc:Bounds x="459" y="1631" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="454" y="1669" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-68_di" bpmnElement="Os9W5SnazrjCTrFuyly5-68">
+        <dc:Bounds x="521" y="1553" width="210" height="112" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-68_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-68">
+        <dc:Bounds x="693" y="1647" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="695" y="1685" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-70_di" bpmnElement="Os9W5SnazrjCTrFuyly5-70">
+        <dc:Bounds x="951" y="1569" width="210" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-70_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-70">
+        <dc:Bounds x="1123" y="1631" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1118" y="1669" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-74_di" bpmnElement="Os9W5SnazrjCTrFuyly5-74">
+        <dc:Bounds x="3158" y="1610" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3084" y="1586" width="199" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-75_di" bpmnElement="Os9W5SnazrjCTrFuyly5-75">
+        <dc:Bounds x="1174" y="1540" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1197" y="1586" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-77_di" bpmnElement="Os9W5SnazrjCTrFuyly5-77">
+        <dc:Bounds x="3277" y="1610" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3252" y="1666" width="99" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-78_di" bpmnElement="Os9W5SnazrjCTrFuyly5-78">
+        <dc:Bounds x="2592" y="1600" width="228" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-78_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-78">
+        <dc:Bounds x="2782" y="1665" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2777" y="1703" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-80_di" bpmnElement="Os9W5SnazrjCTrFuyly5-80">
+        <dc:Bounds x="2770" y="1544" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2856" y="1555" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-82_di" bpmnElement="Os9W5SnazrjCTrFuyly5-82">
+        <dc:Bounds x="2961" y="1560" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2851" y="1576" width="104" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-84_di" bpmnElement="Os9W5SnazrjCTrFuyly5-84">
+        <dc:Bounds x="401" y="1789" width="180" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-84_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-84">
+        <dc:Bounds x="543" y="1854" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="545" y="1892" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-86_di" bpmnElement="Os9W5SnazrjCTrFuyly5-86">
+        <dc:Bounds x="601" y="1772" width="80" height="60" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="687" y="1793" width="64" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-87_di" bpmnElement="Os9W5SnazrjCTrFuyly5-87">
+        <dc:Bounds x="605" y="1840" width="240" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-87_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-87">
+        <dc:Bounds x="807" y="1905" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="809" y="1943" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-89_di" bpmnElement="Os9W5SnazrjCTrFuyly5-89">
+        <dc:Bounds x="880" y="1790" width="160" height="97" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-89_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-89">
+        <dc:Bounds x="1002" y="1869" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="997" y="1907" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-91_di" bpmnElement="Os9W5SnazrjCTrFuyly5-91">
+        <dc:Bounds x="1071" y="1805" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1127" y="1821" width="58" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-93_di" bpmnElement="Os9W5SnazrjCTrFuyly5-93">
+        <dc:Bounds x="2500" y="1799" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2556" y="1815" width="143" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-94_di" bpmnElement="Os9W5SnazrjCTrFuyly5-94">
+        <dc:Bounds x="2600" y="1843" width="220" height="68" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-94_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-94">
+        <dc:Bounds x="2782" y="1893" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2822" y="1902" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-98_di" bpmnElement="Os9W5SnazrjCTrFuyly5-98">
+        <dc:Bounds x="1021" y="1747" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1107" y="1758" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-100_di" bpmnElement="Os9W5SnazrjCTrFuyly5-100">
+        <dc:Bounds x="1230" y="1800" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1191" y="1856" width="58" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-101_di" bpmnElement="Os9W5SnazrjCTrFuyly5-101">
+        <dc:Bounds x="1356" y="1790" width="170" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-101_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-101">
+        <dc:Bounds x="1488" y="1855" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1486" y="1893" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-103_di" bpmnElement="Os9W5SnazrjCTrFuyly5-103">
+        <dc:Bounds x="1504" y="1747" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1590" y="1758" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-106_di" bpmnElement="Os9W5SnazrjCTrFuyly5-106">
+        <dc:Bounds x="681" y="2040" width="230" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-106_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-106">
+        <dc:Bounds x="873" y="2105" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="868" y="2143" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-108_di" bpmnElement="Os9W5SnazrjCTrFuyly5-108">
+        <dc:Bounds x="1009" y="2040" width="210" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-108_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-108">
+        <dc:Bounds x="1181" y="2102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1176" y="2140" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-110_di" bpmnElement="Os9W5SnazrjCTrFuyly5-110">
+        <dc:Bounds x="935" y="2056" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="931" y="2112" width="58" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-112_di" bpmnElement="Os9W5SnazrjCTrFuyly5-112">
+        <dc:Bounds x="1144" y="1996" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1167" y="1972" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-114_di" bpmnElement="Os9W5SnazrjCTrFuyly5-114">
+        <dc:Bounds x="2796" y="2061" width="190" height="68" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-114_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-114">
+        <dc:Bounds x="2948" y="2111" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2946" y="2149" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-116_di" bpmnElement="Os9W5SnazrjCTrFuyly5-116">
+        <dc:Bounds x="2881" y="1970" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2771" y="1986" width="104" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-118_di" bpmnElement="Os9W5SnazrjCTrFuyly5-118">
+        <dc:Bounds x="2771" y="2021" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2731" y="2032" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-120_di" bpmnElement="Os9W5SnazrjCTrFuyly5-120">
+        <dc:Bounds x="1421" y="1981" width="240" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-120_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-120">
+        <dc:Bounds x="1623" y="2043" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1621" y="2081" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-122_di" bpmnElement="Os9W5SnazrjCTrFuyly5-122">
+        <dc:Bounds x="1674" y="1950" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1697" y="1996" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-125_di" bpmnElement="Os9W5SnazrjCTrFuyly5-125">
+        <dc:Bounds x="1378" y="2290" width="220" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-125_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-125">
+        <dc:Bounds x="1560" y="2355" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1600" y="2364" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-127_di" bpmnElement="Os9W5SnazrjCTrFuyly5-127">
+        <dc:Bounds x="1478" y="2219" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1368" y="2235" width="104" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-129_di" bpmnElement="Os9W5SnazrjCTrFuyly5-129">
+        <dc:Bounds x="1572" y="2246" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1595" y="2222" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-131_di" bpmnElement="Os9W5SnazrjCTrFuyly5-131">
+        <dc:Bounds x="1676" y="2268" width="170" height="68" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-131_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-131">
+        <dc:Bounds x="1808" y="2318" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1806" y="2356" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-134_di" bpmnElement="Os9W5SnazrjCTrFuyly5-134">
+        <dc:Bounds x="1408" y="2504" width="160" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-134_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-134">
+        <dc:Bounds x="1530" y="2569" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1532" y="2607" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-136_di" bpmnElement="Os9W5SnazrjCTrFuyly5-136">
+        <dc:Bounds x="1463" y="2620" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1423" y="2676" width="130" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-139_di" bpmnElement="Os9W5SnazrjCTrFuyly5-139">
+        <dc:Bounds x="1221" y="2539" width="150" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-139_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-139">
+        <dc:Bounds x="1333" y="2604" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1373" y="2613" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-140_di" bpmnElement="Os9W5SnazrjCTrFuyly5-140">
+        <dc:Bounds x="1478" y="2420" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1368" y="2436" width="104" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-142_di" bpmnElement="Os9W5SnazrjCTrFuyly5-142">
+        <dc:Bounds x="1562" y="2460" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1585" y="2436" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-144_di" bpmnElement="Os9W5SnazrjCTrFuyly5-144">
+        <dc:Bounds x="1751" y="2410" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1641" y="2426" width="104" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-148_di" bpmnElement="Os9W5SnazrjCTrFuyly5-148">
+        <dc:Bounds x="1752" y="2805" width="248" height="97" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-148_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-148">
+        <dc:Bounds x="1962" y="2884" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2002" y="2893" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-150_di" bpmnElement="Os9W5SnazrjCTrFuyly5-150">
+        <dc:Bounds x="1945" y="2765" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1968" y="2741" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-152_di" bpmnElement="Os9W5SnazrjCTrFuyly5-152">
+        <dc:Bounds x="1866" y="2726" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1756" y="2742" width="104" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-154_di" bpmnElement="Os9W5SnazrjCTrFuyly5-154">
+        <dc:Bounds x="2033" y="2776" width="258" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-154_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-154">
+        <dc:Bounds x="2253" y="2841" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2248" y="2879" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-156_di" bpmnElement="Os9W5SnazrjCTrFuyly5-156">
+        <dc:Bounds x="2205" y="2736" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2291" y="2747" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-158_di" bpmnElement="Os9W5SnazrjCTrFuyly5-158">
+        <dc:Bounds x="2338" y="2779" width="228" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-158_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-158">
+        <dc:Bounds x="2528" y="2844" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2523" y="2882" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-161_di" bpmnElement="Os9W5SnazrjCTrFuyly5-161">
+        <dc:Bounds x="1752" y="3069" width="248" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-161_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-161">
+        <dc:Bounds x="1962" y="3134" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2002" y="3143" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-163_di" bpmnElement="Os9W5SnazrjCTrFuyly5-163">
+        <dc:Bounds x="1866" y="2960" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1820" y="2976" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-165_di" bpmnElement="Os9W5SnazrjCTrFuyly5-165">
+        <dc:Bounds x="2188" y="3069" width="168" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-165_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-165">
+        <dc:Bounds x="2318" y="3134" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2358" y="3143" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-167_di" bpmnElement="Os9W5SnazrjCTrFuyly5-167">
+        <dc:Bounds x="2373" y="3030" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2396" y="3006" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-169_di" bpmnElement="Os9W5SnazrjCTrFuyly5-169">
+        <dc:Bounds x="2262" y="2970" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2216" y="2986" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-171_di" bpmnElement="Os9W5SnazrjCTrFuyly5-171">
+        <dc:Bounds x="2700" y="3206" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2590" y="3222" width="104" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-174_di" bpmnElement="Os9W5SnazrjCTrFuyly5-174">
+        <dc:Bounds x="2585" y="3272" width="250" height="108" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-174_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-174">
+        <dc:Bounds x="2797" y="3362" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2792" y="3400" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-176_di" bpmnElement="Os9W5SnazrjCTrFuyly5-176">
+        <dc:Bounds x="3094" y="3216" width="180" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-176_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-176">
+        <dc:Bounds x="3236" y="3281" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3234" y="3319" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-178_di" bpmnElement="Os9W5SnazrjCTrFuyly5-178">
+        <dc:Bounds x="3174" y="3318" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3070" y="3334" width="98" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-181_di" bpmnElement="Os9W5SnazrjCTrFuyly5-181">
+        <dc:Bounds x="3855" y="3196" width="150" height="112" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-181_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-181">
+        <dc:Bounds x="3967" y="3290" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3965" y="3328" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-185_di" bpmnElement="Os9W5SnazrjCTrFuyly5-185">
+        <dc:Bounds x="3775" y="3243" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3771" y="3219" width="58" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-187_di" bpmnElement="Os9W5SnazrjCTrFuyly5-187">
+        <dc:Bounds x="4029" y="3212" width="180" height="112" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-187_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-187">
+        <dc:Bounds x="4171" y="3306" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4166" y="3344" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-189_di" bpmnElement="Os9W5SnazrjCTrFuyly5-189">
+        <dc:Bounds x="4233" y="3210" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4242" y="3256" width="61" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-191_di" bpmnElement="Os9W5SnazrjCTrFuyly5-191">
+        <dc:Bounds x="3812" y="3316" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3898" y="3327" width="38" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-195_di" bpmnElement="Os9W5SnazrjCTrFuyly5-195">
+        <dc:Bounds x="3084" y="3420" width="200" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-195_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-195">
+        <dc:Bounds x="3246" y="3482" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3286" y="3491" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-197_di" bpmnElement="Os9W5SnazrjCTrFuyly5-197">
+        <dc:Bounds x="3601" y="3406" width="150" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-197_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-197">
+        <dc:Bounds x="3713" y="3471" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3753" y="3480" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-245_di" bpmnElement="Os9W5SnazrjCTrFuyly5-245">
+        <dc:Bounds x="3994" y="3580" width="200" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Os9W5SnazrjCTrFuyly5-245_di" bpmnElement="Duration_Os9W5SnazrjCTrFuyly5-245">
+        <dc:Bounds x="4156" y="3642" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4151" y="3680" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-247_di" bpmnElement="Os9W5SnazrjCTrFuyly5-247">
+        <dc:Bounds x="4259" y="3595" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4234" y="3651" width="99" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Os9W5SnazrjCTrFuyly5-249_di" bpmnElement="Os9W5SnazrjCTrFuyly5-249">
+        <dc:Bounds x="4218" y="3555" width="80" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4304" y="3566" width="61" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-5_di" bpmnElement="Os9W5SnazrjCTrFuyly5-5">
+        <di:waypoint x="446" y="435" />
+        <di:waypoint x="486" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-11_di" bpmnElement="Os9W5SnazrjCTrFuyly5-11">
+        <di:waypoint x="649" y="394" />
+        <di:waypoint x="634" y="394" />
+        <di:waypoint x="634" y="380" />
+        <di:waypoint x="619" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-12_di" bpmnElement="Os9W5SnazrjCTrFuyly5-12">
+        <di:waypoint x="270" y="435" />
+        <di:waypoint x="306" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-17_di" bpmnElement="Os9W5SnazrjCTrFuyly5-17">
+        <di:waypoint x="591" y="575" />
+        <di:waypoint x="591" y="588" />
+        <di:waypoint x="576" y="588" />
+        <di:waypoint x="576" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-21_di" bpmnElement="Os9W5SnazrjCTrFuyly5-21">
+        <di:waypoint x="696" y="640" />
+        <di:waypoint x="720" y="640" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-24_di" bpmnElement="Os9W5SnazrjCTrFuyly5-24">
+        <di:waypoint x="770" y="640" />
+        <di:waypoint x="810" y="640" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="774" y="618" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-30_di" bpmnElement="Os9W5SnazrjCTrFuyly5-30">
+        <di:waypoint x="592" y="890" />
+        <di:waypoint x="592" y="898" />
+        <di:waypoint x="522" y="898" />
+        <di:waypoint x="522" y="907" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-32_di" bpmnElement="Os9W5SnazrjCTrFuyly5-32">
+        <di:waypoint x="660" y="898" />
+        <di:waypoint x="640" y="898" />
+        <di:waypoint x="640" y="908" />
+        <di:waypoint x="619" y="908" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-34_di" bpmnElement="Os9W5SnazrjCTrFuyly5-34">
+        <di:waypoint x="522" y="987" />
+        <di:waypoint x="522" y="998" />
+        <di:waypoint x="577" y="998" />
+        <di:waypoint x="577" y="1010" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-39_di" bpmnElement="Os9W5SnazrjCTrFuyly5-39">
+        <di:waypoint x="660" y="1168" />
+        <di:waypoint x="642" y="1168" />
+        <di:waypoint x="642" y="1170" />
+        <di:waypoint x="623" y="1170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-44_di" bpmnElement="Os9W5SnazrjCTrFuyly5-44">
+        <di:waypoint x="3475" y="1440" />
+        <di:waypoint x="3475" y="1425" />
+        <di:waypoint x="3460" y="1425" />
+        <di:waypoint x="3460" y="1410" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-54_di" bpmnElement="Os9W5SnazrjCTrFuyly5-54">
+        <di:waypoint x="1403" y="1348" />
+        <di:waypoint x="1395" y="1348" />
+        <di:waypoint x="1395" y="1361" />
+        <di:waypoint x="1386" y="1361" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-56_di" bpmnElement="Os9W5SnazrjCTrFuyly5-56">
+        <di:waypoint x="1345" y="1440" />
+        <di:waypoint x="1345" y="1432" />
+        <di:waypoint x="1285" y="1432" />
+        <di:waypoint x="1285" y="1423" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-60_di" bpmnElement="Os9W5SnazrjCTrFuyly5-60">
+        <di:waypoint x="1825" y="1350" />
+        <di:waypoint x="1809" y="1350" />
+        <di:waypoint x="1809" y="1347" />
+        <di:waypoint x="1793" y="1347" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-62_di" bpmnElement="Os9W5SnazrjCTrFuyly5-62">
+        <di:waypoint x="1767" y="1450" />
+        <di:waypoint x="1767" y="1440" />
+        <di:waypoint x="1727" y="1440" />
+        <di:waypoint x="1727" y="1429" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-64_di" bpmnElement="Os9W5SnazrjCTrFuyly5-64">
+        <di:waypoint x="660" y="1368" />
+        <di:waypoint x="644" y="1368" />
+        <di:waypoint x="644" y="1370" />
+        <di:waypoint x="628" y="1370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-72_di" bpmnElement="Os9W5SnazrjCTrFuyly5-72">
+        <di:waypoint x="3208" y="1635" />
+        <di:waypoint x="3277" y="1635" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3225" y="1613" width="35" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-76_di" bpmnElement="Os9W5SnazrjCTrFuyly5-76">
+        <di:waypoint x="1174" y="1568" />
+        <di:waypoint x="1156" y="1568" />
+        <di:waypoint x="1156" y="1570" />
+        <di:waypoint x="1137" y="1570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-81_di" bpmnElement="Os9W5SnazrjCTrFuyly5-81">
+        <di:waypoint x="2770" y="1572" />
+        <di:waypoint x="2763" y="1572" />
+        <di:waypoint x="2763" y="1600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-88_di" bpmnElement="Os9W5SnazrjCTrFuyly5-88">
+        <di:waypoint x="581" y="1844" />
+        <di:waypoint x="591" y="1844" />
+        <di:waypoint x="591" y="1802" />
+        <di:waypoint x="601" y="1802" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-92_di" bpmnElement="Os9W5SnazrjCTrFuyly5-92">
+        <di:waypoint x="1040" y="1838" />
+        <di:waypoint x="1056" y="1838" />
+        <di:waypoint x="1056" y="1830" />
+        <di:waypoint x="1071" y="1830" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-96_di" bpmnElement="Os9W5SnazrjCTrFuyly5-96">
+        <di:waypoint x="2525" y="1849" />
+        <di:waypoint x="2525" y="1877" />
+        <di:waypoint x="2600" y="1877" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2532" y="1855" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-99_di" bpmnElement="Os9W5SnazrjCTrFuyly5-99">
+        <di:waypoint x="1021" y="1775" />
+        <di:waypoint x="1022" y="1775" />
+        <di:waypoint x="1022" y="1791" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-104_di" bpmnElement="Os9W5SnazrjCTrFuyly5-104">
+        <di:waypoint x="1504" y="1775" />
+        <di:waypoint x="1505" y="1775" />
+        <di:waypoint x="1505" y="1791" />
+        <di:waypoint x="1507" y="1791" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-111_di" bpmnElement="Os9W5SnazrjCTrFuyly5-111">
+        <di:waypoint x="911" y="2082" />
+        <di:waypoint x="923" y="2082" />
+        <di:waypoint x="923" y="2081" />
+        <di:waypoint x="935" y="2081" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-113_di" bpmnElement="Os9W5SnazrjCTrFuyly5-113">
+        <di:waypoint x="1144" y="2024" />
+        <di:waypoint x="1170" y="2024" />
+        <di:waypoint x="1170" y="2041" />
+        <di:waypoint x="1195" y="2041" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-117_di" bpmnElement="Os9W5SnazrjCTrFuyly5-117">
+        <di:waypoint x="2906" y="2020" />
+        <di:waypoint x="2906" y="2040" />
+        <di:waypoint x="2891" y="2040" />
+        <di:waypoint x="2891" y="2061" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-119_di" bpmnElement="Os9W5SnazrjCTrFuyly5-119">
+        <di:waypoint x="2839" y="2059" />
+        <di:waypoint x="2818" y="2059" />
+        <di:waypoint x="2818" y="2078" />
+        <di:waypoint x="2796" y="2078" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-123_di" bpmnElement="Os9W5SnazrjCTrFuyly5-123">
+        <di:waypoint x="1674" y="1978" />
+        <di:waypoint x="1654" y="1978" />
+        <di:waypoint x="1654" y="1982" />
+        <di:waypoint x="1634" y="1982" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-128_di" bpmnElement="Os9W5SnazrjCTrFuyly5-128">
+        <di:waypoint x="1503" y="2269" />
+        <di:waypoint x="1503" y="2280" />
+        <di:waypoint x="1488" y="2280" />
+        <di:waypoint x="1488" y="2290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-130_di" bpmnElement="Os9W5SnazrjCTrFuyly5-130">
+        <di:waypoint x="1572" y="2266" />
+        <di:waypoint x="1572" y="2290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-137_di" bpmnElement="Os9W5SnazrjCTrFuyly5-137">
+        <di:waypoint x="1488" y="2587" />
+        <di:waypoint x="1488" y="2620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-141_di" bpmnElement="Os9W5SnazrjCTrFuyly5-141">
+        <di:waypoint x="1503" y="2470" />
+        <di:waypoint x="1503" y="2487" />
+        <di:waypoint x="1488" y="2487" />
+        <di:waypoint x="1488" y="2504" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-143_di" bpmnElement="Os9W5SnazrjCTrFuyly5-143">
+        <di:waypoint x="1562" y="2480" />
+        <di:waypoint x="1556" y="2480" />
+        <di:waypoint x="1556" y="2504" />
+        <di:waypoint x="1549" y="2504" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-145_di" bpmnElement="Os9W5SnazrjCTrFuyly5-145">
+        <di:waypoint x="1513" y="2645" />
+        <di:waypoint x="1776" y="2645" />
+        <di:waypoint x="1776" y="2460" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1721" y="2623" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-151_di" bpmnElement="Os9W5SnazrjCTrFuyly5-151">
+        <di:waypoint x="1945" y="2793" />
+        <di:waypoint x="1938" y="2793" />
+        <di:waypoint x="1938" y="2805" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-153_di" bpmnElement="Os9W5SnazrjCTrFuyly5-153">
+        <di:waypoint x="1891" y="2776" />
+        <di:waypoint x="1891" y="2790" />
+        <di:waypoint x="1876" y="2790" />
+        <di:waypoint x="1876" y="2805" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-157_di" bpmnElement="Os9W5SnazrjCTrFuyly5-157">
+        <di:waypoint x="2205" y="2764" />
+        <di:waypoint x="2226" y="2764" />
+        <di:waypoint x="2226" y="2776" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-164_di" bpmnElement="Os9W5SnazrjCTrFuyly5-164">
+        <di:waypoint x="1891" y="3010" />
+        <di:waypoint x="1891" y="3040" />
+        <di:waypoint x="1876" y="3040" />
+        <di:waypoint x="1876" y="3069" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-168_di" bpmnElement="Os9W5SnazrjCTrFuyly5-168">
+        <di:waypoint x="2373" y="3058" />
+        <di:waypoint x="2314" y="3058" />
+        <di:waypoint x="2314" y="3069" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-170_di" bpmnElement="Os9W5SnazrjCTrFuyly5-170">
+        <di:waypoint x="2287" y="3020" />
+        <di:waypoint x="2287" y="3044" />
+        <di:waypoint x="2272" y="3044" />
+        <di:waypoint x="2272" y="3069" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-172_di" bpmnElement="Os9W5SnazrjCTrFuyly5-172">
+        <di:waypoint x="3751" y="3448" />
+        <di:waypoint x="3800" y="3448" />
+        <di:waypoint x="3800" y="3293" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-179_di" bpmnElement="Os9W5SnazrjCTrFuyly5-179">
+        <di:waypoint x="3184" y="3299" />
+        <di:waypoint x="3184" y="3308" />
+        <di:waypoint x="3199" y="3308" />
+        <di:waypoint x="3199" y="3318" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-180_di" bpmnElement="Os9W5SnazrjCTrFuyly5-180">
+        <di:waypoint x="4005" y="3252" />
+        <di:waypoint x="4017" y="3252" />
+        <di:waypoint x="4017" y="3268" />
+        <di:waypoint x="4029" y="3268" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-186_di" bpmnElement="Os9W5SnazrjCTrFuyly5-186">
+        <di:waypoint x="3825" y="3268" />
+        <di:waypoint x="3840" y="3268" />
+        <di:waypoint x="3840" y="3252" />
+        <di:waypoint x="3855" y="3252" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-190_di" bpmnElement="Os9W5SnazrjCTrFuyly5-190">
+        <di:waypoint x="4233" y="3238" />
+        <di:waypoint x="4164" y="3238" />
+        <di:waypoint x="4164" y="3212" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-192_di" bpmnElement="Os9W5SnazrjCTrFuyly5-192">
+        <di:waypoint x="3892" y="3344" />
+        <di:waypoint x="3874" y="3344" />
+        <di:waypoint x="3874" y="3224" />
+        <di:waypoint x="3855" y="3224" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-193_di" bpmnElement="Os9W5SnazrjCTrFuyly5-193">
+        <di:waypoint x="581" y="1830" />
+        <di:waypoint x="626" y="1830" />
+        <di:waypoint x="626" y="1665" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-199_di" bpmnElement="Os9W5SnazrjCTrFuyly5-199">
+        <di:waypoint x="412" y="1649" />
+        <di:waypoint x="412" y="1830" />
+        <di:waypoint x="401" y="1830" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-200_di" bpmnElement="Os9W5SnazrjCTrFuyly5-200">
+        <di:waypoint x="731" y="1609" />
+        <di:waypoint x="796" y="1609" />
+        <di:waypoint x="796" y="2040" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-201_di" bpmnElement="Os9W5SnazrjCTrFuyly5-201">
+        <di:waypoint x="1096" y="1855" />
+        <di:waypoint x="1096" y="1948" />
+        <di:waypoint x="1114" y="1948" />
+        <di:waypoint x="1114" y="2040" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-202_di" bpmnElement="Os9W5SnazrjCTrFuyly5-202">
+        <di:waypoint x="1096" y="1805" />
+        <di:waypoint x="1096" y="1727" />
+        <di:waypoint x="1047" y="1727" />
+        <di:waypoint x="1047" y="1649" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-203_di" bpmnElement="Os9W5SnazrjCTrFuyly5-203">
+        <di:waypoint x="1056" y="1649" />
+        <di:waypoint x="1056" y="1724" />
+        <di:waypoint x="1255" y="1724" />
+        <di:waypoint x="1255" y="1800" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-204_di" bpmnElement="Os9W5SnazrjCTrFuyly5-204">
+        <di:waypoint x="1390" y="1389" />
+        <di:waypoint x="1441" y="1389" />
+        <di:waypoint x="1441" y="1790" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-205_di" bpmnElement="Os9W5SnazrjCTrFuyly5-205">
+        <di:waypoint x="1463" y="2645" />
+        <di:waypoint x="960" y="2645" />
+        <di:waypoint x="960" y="2106" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="968" y="2618" width="35" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-207_di" bpmnElement="Os9W5SnazrjCTrFuyly5-207">
+        <di:waypoint x="960" y="2056" />
+        <di:waypoint x="960" y="1887" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-208_di" bpmnElement="Os9W5SnazrjCTrFuyly5-208">
+        <di:waypoint x="1876" y="2902" />
+        <di:waypoint x="1876" y="2931" />
+        <di:waypoint x="1891" y="2931" />
+        <di:waypoint x="1891" y="2960" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-209_di" bpmnElement="Os9W5SnazrjCTrFuyly5-209">
+        <di:waypoint x="2710" y="1911" />
+        <di:waypoint x="2710" y="2558" />
+        <di:waypoint x="2725" y="2558" />
+        <di:waypoint x="2725" y="3206" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-210_di" bpmnElement="Os9W5SnazrjCTrFuyly5-210">
+        <di:waypoint x="3183" y="1660" />
+        <di:waypoint x="3183" y="2438" />
+        <di:waypoint x="3184" y="2438" />
+        <di:waypoint x="3184" y="3216" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3192" y="2429" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-212_di" bpmnElement="Os9W5SnazrjCTrFuyly5-212">
+        <di:waypoint x="3199" y="3368" />
+        <di:waypoint x="3199" y="3394" />
+        <di:waypoint x="3185" y="3394" />
+        <di:waypoint x="3185" y="3421" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-213_di" bpmnElement="Os9W5SnazrjCTrFuyly5-213">
+        <di:waypoint x="3184" y="3420" />
+        <di:waypoint x="3184" y="2455" />
+        <di:waypoint x="3475" y="2455" />
+        <di:waypoint x="3475" y="1490" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-214_di" bpmnElement="Os9W5SnazrjCTrFuyly5-214">
+        <di:waypoint x="3460" y="1410" />
+        <di:waypoint x="3460" y="2408" />
+        <di:waypoint x="3676" y="2408" />
+        <di:waypoint x="3676" y="3406" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-215_di" bpmnElement="Os9W5SnazrjCTrFuyly5-215">
+        <di:waypoint x="1488" y="2373" />
+        <di:waypoint x="1488" y="2396" />
+        <di:waypoint x="1503" y="2396" />
+        <di:waypoint x="1503" y="2420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-216_di" bpmnElement="Os9W5SnazrjCTrFuyly5-216">
+        <di:waypoint x="1776" y="2410" />
+        <di:waypoint x="1776" y="2373" />
+        <di:waypoint x="1761" y="2373" />
+        <di:waypoint x="1761" y="2336" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-217_di" bpmnElement="Os9W5SnazrjCTrFuyly5-217">
+        <di:waypoint x="1761" y="2336" />
+        <di:waypoint x="1761" y="2531" />
+        <di:waypoint x="1891" y="2531" />
+        <di:waypoint x="1891" y="2726" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-218_di" bpmnElement="Os9W5SnazrjCTrFuyly5-218">
+        <di:waypoint x="2162" y="2859" />
+        <di:waypoint x="2162" y="2914" />
+        <di:waypoint x="2287" y="2914" />
+        <di:waypoint x="2287" y="2970" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-219_di" bpmnElement="Os9W5SnazrjCTrFuyly5-219">
+        <di:waypoint x="2272" y="3069" />
+        <di:waypoint x="2272" y="2966" />
+        <di:waypoint x="2452" y="2966" />
+        <di:waypoint x="2452" y="2862" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-220_di" bpmnElement="Os9W5SnazrjCTrFuyly5-220">
+        <di:waypoint x="2452" y="2779" />
+        <di:waypoint x="2452" y="1824" />
+        <di:waypoint x="2500" y="1824" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-221_di" bpmnElement="Os9W5SnazrjCTrFuyly5-221">
+        <di:waypoint x="1876" y="3069" />
+        <di:waypoint x="1876" y="2964" />
+        <di:waypoint x="2162" y="2964" />
+        <di:waypoint x="2162" y="2859" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-222_di" bpmnElement="Os9W5SnazrjCTrFuyly5-222">
+        <di:waypoint x="2725" y="3256" />
+        <di:waypoint x="2725" y="3264" />
+        <di:waypoint x="2710" y="3264" />
+        <di:waypoint x="2710" y="3272" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-223_di" bpmnElement="Os9W5SnazrjCTrFuyly5-223">
+        <di:waypoint x="4119" y="3324" />
+        <di:waypoint x="4119" y="3452" />
+        <di:waypoint x="4094" y="3452" />
+        <di:waypoint x="4094" y="3580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-224_di" bpmnElement="Os9W5SnazrjCTrFuyly5-224">
+        <di:waypoint x="2525" y="1799" />
+        <di:waypoint x="2525" y="1642" />
+        <di:waypoint x="2592" y="1642" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2533" y="1678" width="35" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-226_di" bpmnElement="Os9W5SnazrjCTrFuyly5-226">
+        <di:waypoint x="2706" y="1683" />
+        <di:waypoint x="2706" y="1826" />
+        <di:waypoint x="2906" y="1826" />
+        <di:waypoint x="2906" y="1970" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-227_di" bpmnElement="Os9W5SnazrjCTrFuyly5-227">
+        <di:waypoint x="2986" y="2095" />
+        <di:waypoint x="2986" y="1610" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-228_di" bpmnElement="Os9W5SnazrjCTrFuyly5-228">
+        <di:waypoint x="561" y="491" />
+        <di:waypoint x="561" y="508" />
+        <di:waypoint x="591" y="508" />
+        <di:waypoint x="591" y="525" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-229_di" bpmnElement="Os9W5SnazrjCTrFuyly5-229">
+        <di:waypoint x="562" y="1452" />
+        <di:waypoint x="562" y="1510" />
+        <di:waypoint x="412" y="1510" />
+        <di:waypoint x="412" y="1569" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-230_di" bpmnElement="Os9W5SnazrjCTrFuyly5-230">
+        <di:waypoint x="542" y="1252" />
+        <di:waypoint x="542" y="1310" />
+        <di:waypoint x="562" y="1310" />
+        <di:waypoint x="562" y="1369" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-231_di" bpmnElement="Os9W5SnazrjCTrFuyly5-231">
+        <di:waypoint x="2986" y="1560" />
+        <di:waypoint x="2986" y="1496" />
+        <di:waypoint x="2970" y="1496" />
+        <di:waypoint x="2970" y="1433" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-232_di" bpmnElement="Os9W5SnazrjCTrFuyly5-232">
+        <di:waypoint x="1114" y="2040" />
+        <di:waypoint x="1114" y="1945" />
+        <di:waypoint x="1255" y="1945" />
+        <di:waypoint x="1255" y="1850" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-233_di" bpmnElement="Os9W5SnazrjCTrFuyly5-233">
+        <di:waypoint x="1280" y="1825" />
+        <di:waypoint x="1345" y="1825" />
+        <di:waypoint x="1345" y="1490" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-234_di" bpmnElement="Os9W5SnazrjCTrFuyly5-234">
+        <di:waypoint x="1441" y="1873" />
+        <di:waypoint x="1441" y="1927" />
+        <di:waypoint x="1541" y="1927" />
+        <di:waypoint x="1541" y="1981" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-235_di" bpmnElement="Os9W5SnazrjCTrFuyly5-235">
+        <di:waypoint x="1541" y="1981" />
+        <di:waypoint x="1541" y="1740" />
+        <di:waypoint x="1767" y="1740" />
+        <di:waypoint x="1767" y="1500" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-236_di" bpmnElement="Os9W5SnazrjCTrFuyly5-236">
+        <di:waypoint x="1812" y="1388" />
+        <di:waypoint x="1832" y="1388" />
+        <di:waypoint x="1832" y="2120" />
+        <di:waypoint x="1503" y="2120" />
+        <di:waypoint x="1503" y="2219" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-237_di" bpmnElement="Os9W5SnazrjCTrFuyly5-237">
+        <di:waypoint x="577" y="1060" />
+        <di:waypoint x="577" y="1114" />
+        <di:waypoint x="542" y="1114" />
+        <di:waypoint x="542" y="1169" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="557" y="1140" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-239_di" bpmnElement="Os9W5SnazrjCTrFuyly5-239">
+        <di:waypoint x="745" y="615" />
+        <di:waypoint x="745" y="435" />
+        <di:waypoint x="636" y="435" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="753" y="462" width="35" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-241_di" bpmnElement="Os9W5SnazrjCTrFuyly5-241">
+        <di:waypoint x="940" y="682" />
+        <di:waypoint x="940" y="740" />
+        <di:waypoint x="592" y="740" />
+        <di:waypoint x="592" y="840" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-242_di" bpmnElement="Os9W5SnazrjCTrFuyly5-242">
+        <di:waypoint x="552" y="1035" />
+        <di:waypoint x="440" y="1035" />
+        <di:waypoint x="440" y="640" />
+        <di:waypoint x="456" y="640" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="448" y="876" width="35" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-248_di" bpmnElement="Os9W5SnazrjCTrFuyly5-248">
+        <di:waypoint x="4194" y="3620" />
+        <di:waypoint x="4259" y="3620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-250_di" bpmnElement="Os9W5SnazrjCTrFuyly5-250">
+        <di:waypoint x="4218" y="3583" />
+        <di:waypoint x="4144" y="3583" />
+        <di:waypoint x="4144" y="3580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-251_di" bpmnElement="Os9W5SnazrjCTrFuyly5-251">
+        <di:waypoint x="2835" y="3326" />
+        <di:waypoint x="3040" y="3326" />
+        <di:waypoint x="3040" y="241" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Os9W5SnazrjCTrFuyly5-254_di" bpmnElement="Os9W5SnazrjCTrFuyly5-254">
+        <di:waypoint x="2970" y="1365" />
+        <di:waypoint x="2970" y="241" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -28,8 +28,36 @@ from app.services.conformance_engine import analyze_process_conformance
 from app.services.diagnostics import collect_import_diagnostics
 from app.services.layout import normalize_layout
 
+#: Хвост тега: атрибуты вплоть до закрывающей скобки. Значение в кавычках
+#: пропускается целиком, потому что внутри него ``>`` — обычный символ, а не
+#: конец тега. Наивное ``[^>]*>`` на таком значении обрывается посреди
+#: атрибута, и весь остаток разметки вываливается в подпись как текст: подписи
+#: с классами Tailwind (``class="[&>*]:pointer-events-auto …"``) приезжали в
+#: Процессную студию вместе с версткой вместо названия шага.
+_TAG_TAIL = r'(?:[^>"\']|"[^"]*"|\'[^\']*\')*>'
+
+#: Буфер обмена draw.io, попавший в подпись.
+#:
+#: Копируя фигуры, редактор кладёт в буфер их модель — ``<mxGraphModel>`` со
+#: всеми ячейками, — и при вставке в текстовое поле она приезжает туда как
+#: есть, обычно в процентной кодировке. Настоящая подпись при этом остаётся
+#: в начале строки, а дальше тянется полотно разметки: на карте студии оно
+#: разворачивается колонкой мусора через полсхемы.
+_CLIPBOARD_PAYLOAD_RE = re.compile(
+    r'(?:%3C|<)\s*mxGraphModel\b.*', re.IGNORECASE | re.DOTALL)
+
+#: Фигуры-цилиндры draw.io: все варианты базы данных, какие есть в библиотеке.
+_CYLINDER_SHAPE_RE = re.compile(r'^(?:cylinder\d*|datastore|db)$', re.IGNORECASE)
+
 #: Теги, которые в draw.io означают перенос строки, а не оформление внутри неё.
-_BLOCK_TAG_RE = re.compile(r'<\s*/?\s*(?:br|div|p|li|ul|ol|tr|td|h[1-6])\b[^>]*>', re.IGNORECASE)
+_BLOCK_TAG_RE = re.compile(
+    rf'<\s*/?\s*(?:br|div|p|li|ul|ol|tr|td|h[1-6])\b{_TAG_TAIL}', re.IGNORECASE)
+
+#: Любой тег — снимается после блочных, уже без замены на пробел.
+_ANY_TAG_RE = re.compile(rf'<\s*/?\s*[a-zA-Z][^\s/>]*{_TAG_TAIL}')
+
+#: Комментарии и служебные объявления: внутри них ``>`` тоже допустим.
+_COMMENT_RE = re.compile(r'<!--.*?-->|<!\[CDATA\[.*?\]\]>|<![^>]*>', re.DOTALL)
 
 
 def clean_label(raw: Optional[str]) -> str:
@@ -40,12 +68,22 @@ def clean_label(raw: Optional[str]) -> str:
     посреди слова, как только к части текста применили оформление, и пробел на
     этом месте разрывал число — «1 440 min» превращалось в «1 44» и «0 min»,
     а время шага уезжало с 1440 минут на 0.
+
+    Теги снимаются с учётом кавычек: в подпись, вставленную копированием с
+    веб-страницы, приезжает разметка, где значение атрибута само содержит
+    ``>``. Разбор по первому попавшемуся ``>`` обрывался внутри атрибута, и
+    остаток верстки уходил в название шага — в Процессной студии вместо
+    «Avizlovchi bank …» стояло полстраницы классов и data-атрибутов.
     """
     if not raw:
         return ''
     text = raw.replace('&nbsp;', ' ')
+    # Буфер обмена редактора обрезаем ДО снятия тегов: внутри него разметки
+    # больше, чем текста, и снимать её по одному тегу незачем.
+    text = _CLIPBOARD_PAYLOAD_RE.sub('', text)
+    text = _COMMENT_RE.sub('', text)
     text = _BLOCK_TAG_RE.sub(' ', text)
-    text = re.sub(r'<[^>]+>', '', text)
+    text = _ANY_TAG_RE.sub('', text)
     text = (
         text.replace('&lt;', '<')
             .replace('&gt;', '>')
@@ -233,6 +271,14 @@ def is_clipart_style(style: str) -> bool:
         or ';image=' in s
         or 'shape=image' in s
         or 'shape=mxgraph.signs' in s
+        # Библиотека Office — тот же клипарт: телефон, монитор, здание. Иконка
+        # телефона с подписью-времени превращалась в «Операцию STEP-NN» и
+        # ложилась поверх ряда шагов.
+        #
+        # Кроме документов: ``office.concepts.documents`` — это лист бумаги,
+        # который аналитик ставит рядом с шагом и ведёт к нему пунктир. Это
+        # артефакт процесса, а не украшение, и он разбирается ниже как документ.
+        or ('shape=mxgraph.office.' in s and 'office.concepts.documents' not in s)
     )
 
 
@@ -482,13 +528,30 @@ def classify_vertex(style: str, label: str, has_incoming: bool, has_outgoing: bo
 
     # ── Артефакты (2-ILOVA: Artefaktlar) ────────────────────────────────────
     # Хранилище данных: IABS, EHA, EDO, Korporativ pochta.
-    if 'shape=datastore' in s or 'mxgraph.bpmn.datastore' in s or 'kind=datastore' in s:
+    #
+    # Цилиндр рисуют не только фигурой BPMN: в библиотеке draw.io их несколько
+    # (``cylinder``, ``cylinder2``, ``cylinder3``, база из блок-схем), и
+    # аналитики берут ту, что попалась под руку. Нераспознанный цилиндр
+    # становился шагом — лишней строкой в регламенте и прямоугольником вместо
+    # базы на карте студии.
+    if (
+        'shape=datastore' in s
+        or 'mxgraph.bpmn.datastore' in s
+        or 'kind=datastore' in s
+        or _CYLINDER_SHAPE_RE.match(shape)
+        or 'mxgraph.flowchart.database' in s
+    ):
         return 'dataStore'
     # Объект данных: Dalolatnoma, Yig'ma jild, Hujjatlar ro'yxati.
-    if 'mxgraph.bpmn.data2' in s or shape.endswith('bpmn.data') or 'shape=dataobject' in s:
+    if ('mxgraph.bpmn.data2' in s or shape.endswith('bpmn.data') or 'shape=dataobject' in s
+            or 'office.concepts.documents' in s):
         return 'dataObject'
     # Текстовое примечание: фигура-заметка или обрамлённая текстовая врезка.
-    if 'shape=note' in s or 'mxgraph.bpmn.annotation' in s or 'shape=mxgraph.flowchart.annotation' in s:
+    # Выноска (``callout``) — это записка к шагу, как её и рисует аналитик:
+    # облачко с текстом над фигурой. Нераспознанная, она становилась
+    # полноразмерной задачей и ложилась поверх соседнего ряда.
+    if ('shape=note' in s or 'mxgraph.bpmn.annotation' in s
+            or 'shape=mxgraph.flowchart.annotation' in s or 'shape=callout' in s):
         return 'textAnnotation'
     if is_text_note(style, label):
         return 'textAnnotation'
@@ -646,6 +709,20 @@ def detect_system(name: str, lane_name: str) -> str:
     if 'swift' in lower or 'свифт' in lower:
         return 'SWIFT Alliance'
     return 'SQB CRM / Core'
+
+def sla_is_measured(raw_text: str, node_type: NodeType) -> bool:
+    """Стояло ли время в самой подписи фигуры.
+
+    Отличать измеренное от подставленного нужно ровно для карты: время,
+    которого в draw.io не было, не должно появляться на ней ни значком часов,
+    ни свойством шага.
+    """
+    if node_type in ARTIFACT_NODE_TYPES:
+        return False
+    if duration_minutes(raw_text) is not None:
+        return True
+    return bool(re.search(r'(\d+(?:[.,]\d+)?)\s*m\b', raw_text or '', re.IGNORECASE))
+
 
 def extract_sla_minutes(raw_text: str, category: StepCategory, node_type: NodeType) -> int:
     if node_type in ARTIFACT_NODE_TYPES:
@@ -877,6 +954,7 @@ def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
         else:
             code = None
         sla = extract_sla_minutes(raw_name, category, node_type)
+        sla_measured = sla_is_measured(raw_name, node_type)
         geo = bounds_map.get(node_id) or Geometry(
             x=100 + (step_index * 150), y=100, width=140, height=70
         )
@@ -890,6 +968,7 @@ def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
             geometry=geo,
             style='',
             slaMinutes=sla,
+            slaMeasured=sla_measured,
             costPerExecution=800 if category == 'rpa_bot' else sla * 1932,
             automationPotential=95 if category == 'rpa_bot' else 60,
             system=detect_system(name, ''),
@@ -942,6 +1021,50 @@ def parse_bpmn_xml(xml_str: str, filename: str) -> BusinessProcess:
         'messageflow': 'messageFlow',
     }
     edges: List[ProcessEdge] = []
+
+    # ── Связи с данными живут ВНУТРИ активности ────────────────────────────
+    #
+    # По спецификации хранилище и документ подключаются к шагу не ассоциацией,
+    # а ``dataInputAssociation`` / ``dataOutputAssociation`` — вложенными в сам
+    # шаг элементами, у которых концы записаны не атрибутами, а дочерними
+    # тегами ``sourceRef`` / ``targetRef``. Обычный обход по атрибутам их не
+    # видит, и при повторном чтении собственной выгрузки все системы и
+    # документы отваливались от шагов.
+    #
+    # Направление читается из имени тега: вход — из данных в шаг, выход — из
+    # шага в данные. У выходной связи ``sourceRef`` может отсутствовать вовсе:
+    # источник выводится из места объявления.
+    for holder in root.iter():
+        holder_id = holder.get('id')
+        if not holder_id:
+            continue
+        for child in holder:
+            tag = _local_tag(child.tag).lower()
+            if tag not in ('datainputassociation', 'dataoutputassociation'):
+                continue
+            refs = {
+                _local_tag(g.tag).lower(): (g.text or '').strip()
+                for g in child
+                if _local_tag(g.tag).lower() in ('sourceref', 'targetref')
+            }
+            if tag == 'datainputassociation':
+                data_id, step_id = refs.get('sourceref', ''), holder_id
+            else:
+                data_id, step_id = refs.get('targetref', ''), holder_id
+            if data_id not in node_ids or step_id not in node_ids:
+                continue
+            source_id, target_id = (
+                (data_id, step_id) if tag == 'datainputassociation' else (step_id, data_id)
+            )
+            edges.append(ProcessEdge(
+                id=child.get('id') or f'edge_{uuid.uuid4().hex[:8]}',
+                name='',
+                kind='association',
+                sourceId=source_id,
+                targetId=target_id,
+                dashed=True,
+            ))
+
     for el in root.iter():
         kind = edge_kinds.get(_local_tag(el.tag).lower())
         if not kind:
@@ -1325,6 +1448,9 @@ def _apply_duration_badges(
         if best is None:
             continue
         value = max(1, int(round(minutes)))
+        # Время пришло с карты — отдельной фигурой-часами рядом с шагом. Именно
+        # так его и рисует аналитик: в подписи шага цифры нет.
+        best.slaMeasured = True
         if is_wait:
             best.waitMinutes = (best.waitMinutes or 0) + value
         elif best.id in st_seen:
@@ -1715,6 +1841,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         # Время ищем только в очищенной подписи: в сырой разметке draw.io лежат
         # цвета вида «#000», и «0 min» из атрибута стиля забирал шагу его SLA.
         sla_min = extract_sla_minutes(raw_cleaned, category, node_type)
+        sla_measured = sla_is_measured(raw_cleaned, node_type)
         if duration_minutes(raw_cleaned) is not None:
             timed_step_ids.add(node_id)
 
@@ -1743,6 +1870,13 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
         elif 'Gateway' in node_type:
             width = max(int(round(width or 48)), 32)
             height = max(int(round(height or 48)), 32)
+        elif node_type in ARTIFACT_NODE_TYPES:
+            # Артефакт подписан СНАРУЖИ — и в bpmn.io, и в студии, — поэтому
+            # места под текст внутри ему не нужно. Минимум 80×40, рассчитанный
+            # на шаг, раздувал цилиндр базы вдвое против нарисованного (в
+            # картах банка он 30×25 … 50×36) и делал его заметнее самого шага.
+            width = max(int(round(width or 40)), 24)
+            height = max(int(round(height or 30)), 20)
         else:
             # task / serviceTask: минимум 80x40 для текста
             width = max(int(round(width or 120)), 80)
@@ -1760,6 +1894,7 @@ def parse_drawio_xml(content: str, filename: str) -> BusinessProcess:
             style=style,
             laneId=parent_id,
             slaMinutes=sla_min,
+            slaMeasured=sla_measured,
             costPerExecution=fot_cost,
             automationPotential=95 if category == 'rpa_bot' else (65 if category == 'manual' else 40)
         )

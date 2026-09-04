@@ -66,8 +66,19 @@ class DiagnosticsCollector:
         ))
 
 
-def _is_generated_name(name: str) -> bool:
+def is_generated_name(name: Optional[str]) -> bool:
+    """Имя, которое подставила платформа, а не написал аналитик.
+
+    Нужно не только отчёту о качестве импорта: на карту для Процессной студии
+    такие подписи не идут. В draw.io безымянный шлюз так и нарисован — пустым
+    ромбом, вопрос стоит на ветках; подставленное «Условие» на карте студии
+    оказывается лишней надписью, которой в эталоне нет.
+    """
     return any((name or '').startswith(prefix) for prefix in _GENERATED_NAME_PREFIXES)
+
+
+def _is_generated_name(name: str) -> bool:
+    return is_generated_name(name)
 
 
 def _cap(
@@ -186,6 +197,30 @@ def collect_import_diagnostics(
         )
     _cap(collector, 'no_incoming', len(dead_ends), 'Ещё {count} шагов без входящих связей.',
          dead_ends[_MAX_PER_CODE:])
+
+    # Несколько связей, входящих в один шаг, — «неявное слияние»: стандарт BPMN
+    # его допускает, а Процессная студия считает ошибкой («У элемента должен
+    # быть только один входящий поток управления») и отказывается считать по
+    # такой карте показатели. Разойтись со студией молча нельзя, но и чинить за
+    # аналитика тоже: слияние ветвей — решение о том, как устроен процесс, а не
+    # оформление. Поэтому предупреждение с готовым ответом, что дорисовать.
+    merges = [
+        (n, len(incoming[n.id])) for n in flow_nodes
+        if n.type in TASK_NODE_TYPES and len(incoming[n.id]) > 1
+    ]
+    merges.sort(key=lambda pair: -pair[1])
+    for node, count in merges[:_MAX_PER_CODE]:
+        collector.add(
+            'warning', 'implicit_merge',
+            f'В шаг «{node.name}» входит {count} связи: ветки сходятся прямо на шаге.',
+            'Процессная студия PIX принимает только одну входящую связь на шаг. '
+            'Поставьте перед шагом шлюз слияния и заведите ветки в него — на '
+            'смысл процесса это не влияет, зато карта пройдёт проверку студии.',
+            node,
+        )
+    _cap(collector, 'implicit_merge', len(merges),
+         'Ещё в {count} шагов сходится больше одной связи.',
+         [node for node, _ in merges[_MAX_PER_CODE:]])
 
     hanging = [
         n for n in flow_nodes

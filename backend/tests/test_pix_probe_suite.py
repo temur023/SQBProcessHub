@@ -164,6 +164,60 @@ def test_analyzer_reads_nothing_when_the_studio_stayed_silent(tmp_path, suite):
     assert session['runs'][-1]['analysis']['exceptions'] == []
 
 
+def test_manual_record_needs_no_logs(tmp_path, suite):
+    """Опыт должен ставиться и тогда, когда Python рядом со студией не запустить.
+
+    На корпоративной машине его может не быть; результаты вносятся руками, а
+    вердикт по правилу обязан получаться тот же, что и по журналу.
+    """
+    suite_dir, _manifest = suite
+    work = tmp_path / 'results'
+
+    done = _analyzer(work, suite_dir, 'record', 'test_07_pmm_unknown_type.pmm',
+                     '--result', 'refused',
+                     '--message', "Notation element not found (Parameter 'type')")
+    assert done.returncode == 0, done.stdout + done.stderr
+
+    session = json.loads((work / 'session.json').read_text(encoding='utf-8'))
+    run = session['runs'][-1]
+    assert run['case'] == 'test_07_pmm_unknown_type.pmm'
+    assert run['result'] == 'refused'
+    assert run['source'] == 'manual'
+    # Сообщение с экрана разбирается тем же разбором, что и журнал.
+    assert 'pix_pmm_type_unknown' in run['analysis']['matched_known_rules']
+
+
+def test_manual_record_replaces_a_repeated_case(tmp_path, suite):
+    """Пробу переставляют, когда сомневаются в результате; двух записей быть не должно."""
+    suite_dir, _manifest = suite
+    work = tmp_path / 'results'
+
+    _analyzer(work, suite_dir, 'record', 'test_02_float_coordinates.bpmn',
+              '--result', 'refused')
+    _analyzer(work, suite_dir, 'record', 'test_02_float_coordinates.bpmn',
+              '--result', 'ok', '--note', 'пересмотрел: карта всё-таки открылась')
+
+    session = json.loads((work / 'session.json').read_text(encoding='utf-8'))
+    cases = [r['case'] for r in session['runs']]
+    assert cases.count('test_02_float_coordinates.bpmn') == 1
+    assert session['runs'][-1]['result'] == 'ok'
+
+
+def test_report_reads_manually_recorded_probes(tmp_path, suite):
+    """Сводка обязана строиться и по записанным руками пробам, с пометкой об этом."""
+    suite_dir, _manifest = suite
+    work = tmp_path / 'results'
+
+    _analyzer(work, suite_dir, 'record', 'test_00_baseline.bpmn', '--result', 'ok')
+    _analyzer(work, suite_dir, 'record', 'test_02_float_coordinates.bpmn', '--result', 'ok')
+
+    report = _analyzer(work, suite_dir, 'report')
+    assert report.returncode == 0, report.stdout + report.stderr
+    assert 'контроль в порядке' in report.stdout
+    assert 'правило ЛИШНЕЕ' in report.stdout
+    assert 'записано со слов' in report.stdout
+
+
 def test_report_warns_when_the_control_failed(tmp_path, suite):
     """Провалившийся контроль обесценивает весь опыт — отчёт обязан это сказать."""
     suite_dir, _manifest = suite

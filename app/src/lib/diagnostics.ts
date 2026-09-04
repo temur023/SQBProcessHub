@@ -161,6 +161,26 @@ export function collectImportDiagnostics(
   cap('no_incoming', deadEnds.length, (n) => `Ещё ${n} шагов без входящих связей.`,
     deadEnds.slice(MAX_PER_CODE))
 
+  // Несколько связей, входящих в один шаг, — «неявное слияние»: стандарт BPMN
+  // его допускает, а Процессная студия считает ошибкой («У элемента должен быть
+  // только один входящий поток управления»). Разойтись со студией молча нельзя,
+  // но и чинить за аналитика тоже: слияние ветвей — решение о том, как устроен
+  // процесс, а не оформление.
+  const merges = flowNodes
+    .filter((n) => (TASK_NODE_TYPES as readonly string[]).includes(n.type) &&
+      (incoming.get(n.id) ?? []).length > 1)
+    .sort((a, b) => (incoming.get(b.id) ?? []).length - (incoming.get(a.id) ?? []).length)
+  for (const node of merges.slice(0, MAX_PER_CODE)) {
+    add('warning', 'implicit_merge',
+      `В шаг «${node.name}» входит ${(incoming.get(node.id) ?? []).length} связи: ` +
+      'ветки сходятся прямо на шаге.',
+      'Процессная студия PIX принимает только одну входящую связь на шаг. ' +
+      'Поставьте перед шагом шлюз слияния и заведите ветки в него — на смысл ' +
+      'процесса это не влияет, зато карта пройдёт проверку студии.', node)
+  }
+  cap('implicit_merge', merges.length,
+    (n) => `Ещё в ${n} шагов сходится больше одной связи.`, merges.slice(MAX_PER_CODE))
+
   const hanging = flowNodes.filter(
     (n) => !isArtifact(n) && n.type !== 'endEvent' &&
       !(outgoing.get(n.id) ?? []).length && !isolatedIds.has(n.id),

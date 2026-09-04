@@ -21,7 +21,12 @@ from app.services.export_validation import (
     validate_pmm_package,
     validate_process_exports,
 )
-from app.services.pmm_exporter import generate_pmm_zip
+from app.services.pmm_exporter import (
+    bpmn_notation,
+    generate_pmm_zip,
+    pix_element,
+    pix_type,
+)
 
 FIXTURES = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))))
@@ -114,7 +119,7 @@ class PmmDefectTests(unittest.TestCase):
     def test_unknown_notation_element_is_caught(self):
         # Ровно то, на чём студия говорит «Notation element not found
         # (Parameter 'type')»: тип фигуры не объявлен в нотации.
-        broken = _repack(self.pmm, {'type="userTask"': 'type="dreamTask"'})
+        broken = _repack(self.pmm, {'type="task"': 'type="dreamTask"'})
         self.assertIn('pmm_node_type_unknown', self._codes(broken))
 
     def test_unknown_notation_name_is_caught(self):
@@ -276,6 +281,93 @@ class GeneratedShapeCoverageTests(unittest.TestCase):
             self.assertEqual(
                 [f'{p.code}: {p.message}' for p in check.errors], [], f'.{check.format}',
             )
+
+
+class NotationCategoryTest(unittest.TestCase):
+    """Элемент нотации без категории валит импорт всего пакета.
+
+    Студия отказывала с «Notation element not found (Parameter 'type')», и
+    параметр в сообщении назван не случайно: это категория элемента («Задачи»,
+    «Шлюзы», «События»…). В нотации BPMN её нет ровно у одного элемента из 91 —
+    ``input`` («Текст»), которым платформа выгружала текстовые примечания.
+    Именно те карты, где примечание было, студия и не открывала.
+    """
+
+    def test_input_is_not_offered_as_a_shape_type(self):
+        name, usable = bpmn_notation()
+        self.assertEqual(name, 'BPMN')
+        self.assertNotIn('input', usable, 'элемент без категории считается пригодным')
+        self.assertEqual(len(usable), 90, 'из каталога должен выпасть ровно один элемент')
+
+    def test_annotation_falls_back_to_a_categorised_shape(self):
+        self.assertNotEqual(pix_element('input'), 'input')
+        self.assertIn('group_none', bpmn_notation()[1])
+
+    def test_annotation_reaches_the_package_as_a_data_object(self):
+        """Элемента-выноски в каталоге студии нет вовсе.
+
+        «Текст» (``input``) подошёл бы по смыслу, но он единственный из 91 без
+        категории и валит импорт. Из того, что есть, ближе всего к коробочке
+        из draw.io «Объект данных»: рамка с текстом внутри.
+        """
+        node = ProcessNode(
+            id='note', name='Примечание', type='textAnnotation',
+            geometry=Geometry(x=10, y=10, width=160, height=60))
+        self.assertEqual(pix_type(node), 'dataObject')
+
+    def test_validator_rejects_a_type_without_a_category(self):
+        # Пакет собирается исправным, затем в нём подменяется один тип: так
+        # проверяется само правило, а не способность собрать плохой файл.
+        process = parse_drawio_xml(_MINIMAL_DRAWIO, 'note.drawio')
+        payload = generate_pmm_zip(process)
+        broken = _rewrite_first_node_type(payload, 'input')
+
+        check = validate_pmm_package(broken)
+        codes = [p.code for p in check.errors]
+        self.assertIn('pmm_node_type_no_category', codes)
+        self.assertTrue(any('input' in p.message for p in check.errors))
+
+    def test_a_healthy_package_still_passes(self):
+        process = parse_drawio_xml(_MINIMAL_DRAWIO, 'note.drawio')
+        check = validate_pmm_package(generate_pmm_zip(process))
+        self.assertEqual([p.message for p in check.errors], [])
+
+
+_MINIMAL_DRAWIO = """<mxfile host="app.diagrams.net">
+  <diagram id="d1" name="Карта">
+    <mxGraphModel>
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="s" value="Начало" style="ellipse;fillColor=#10b981;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="t" value="Проверка документов" style="rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="180" y="50" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" source="s" target="t" parent="1" />
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>"""
+
+
+def _rewrite_first_node_type(payload: bytes, kind: str) -> bytes:
+    """Тот же пакет, но у первой фигуры карты подменён тип."""
+    source = zipfile.ZipFile(io.BytesIO(payload))
+    map_part = next(n for n in source.namelist() if n.startswith('pm/maps/'))
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as target:
+        for item in source.infolist():
+            data = source.read(item.filename)
+            if item.filename == map_part:
+                text = data.decode('utf-8')
+                head, sep, tail = text.partition('<node type="')
+                _old, _, rest = tail.partition('"')
+                data = (head + sep + kind + '"' + rest).encode('utf-8')
+            target.writestr(item, data)
+    return out.getvalue()
+
 
 
 if __name__ == '__main__':

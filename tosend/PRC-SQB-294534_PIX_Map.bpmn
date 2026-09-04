@@ -1,0 +1,715 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  id="Definitions_proc_c76429ee"
+  targetNamespace="http://bpmn.io/schema/bpmn"
+  exporter="SQB Process Hub"
+  exporterVersion="2.0">
+
+  <!-- Process map: SMS Banking ulash jarayoni -->
+  <bpmn:collaboration id="Collaboration_Process_PRC_SQB_294534">
+    <bpmn:participant id="Participant_Process_PRC_SQB_294534" name="SMS Banking ulash jarayoni" processRef="Process_PRC_SQB_294534" />
+    <bpmn:participant id="Participant_uXHVFkfJjTyLFB0Weg1J-2" name="Mijoz" processRef="Process_uXHVFkfJjTyLFB0Weg1J-2" />
+    <bpmn:messageFlow id="Cy9Go5OJ9LhtuHQEAWb7-3" sourceRef="Participant_uXHVFkfJjTyLFB0Weg1J-2" targetRef="uXHVFkfJjTyLFB0Weg1J-7" />
+    <bpmn:messageFlow id="cZxG4kKRe9EOhudsVDSG-15" sourceRef="KXy53_DV-_s5o4b85MVl-60" targetRef="Participant_uXHVFkfJjTyLFB0Weg1J-2" />
+    <bpmn:messageFlow id="KXy53_DV-_s5o4b85MVl-75" name="Imzolash va muhrlash" sourceRef="Participant_uXHVFkfJjTyLFB0Weg1J-2" targetRef="KXy53_DV-_s5o4b85MVl-71" />
+    <bpmn:messageFlow id="MPGzZg49Y1iRwdM8o8AB-695" sourceRef="Participant_uXHVFkfJjTyLFB0Weg1J-2" targetRef="MPGzZg49Y1iRwdM8o8AB-33" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_PRC_SQB_294534" name="SMS Banking ulash jarayoni" processType="Private" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_Process_PRC_SQB_294534">
+      <bpmn:lane id="uXHVFkfJjTyLFB0Weg1J-15" name="Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish">
+        <bpmn:flowNodeRef>uXHVFkfJjTyLFB0Weg1J-7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>cZxG4kKRe9EOhudsVDSG-13</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_cZxG4kKRe9EOhudsVDSG-13</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>KXy53_DV-_s5o4b85MVl-60</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_KXy53_DV-_s5o4b85MVl-60</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>KXy53_DV-_s5o4b85MVl-71</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_KXy53_DV-_s5o4b85MVl-71</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>KXy53_DV-_s5o4b85MVl-103</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_KXy53_DV-_s5o4b85MVl-103</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>dj6p0bJkFK40RtGTn1MZ-7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>h6voPZgYOQRN74XCW5x1-2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_h6voPZgYOQRN74XCW5x1-2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>MPGzZg49Y1iRwdM8o8AB-30</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>MPGzZg49Y1iRwdM8o8AB-33</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_MPGzZg49Y1iRwdM8o8AB-33</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>MPGzZg49Y1iRwdM8o8AB-685</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_MPGzZg49Y1iRwdM8o8AB-685</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>MPGzZg49Y1iRwdM8o8AB-692</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>MPGzZg49Y1iRwdM8o8AB-696</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_MPGzZg49Y1iRwdM8o8AB-696</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>MPGzZg49Y1iRwdM8o8AB-709</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_MPGzZg49Y1iRwdM8o8AB-709</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>WjP1qzdbT5XaS2BX29xO-0</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="KXy53_DV-_s5o4b85MVl-0" name="Korporativ markaz direktori">
+        <bpmn:flowNodeRef>KXy53_DV-_s5o4b85MVl-1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_KXy53_DV-_s5o4b85MVl-1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>MPGzZg49Y1iRwdM8o8AB-40</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>MPGzZg49Y1iRwdM8o8AB-702</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_MPGzZg49Y1iRwdM8o8AB-702</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>MPGzZg49Y1iRwdM8o8AB-706</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="KXy53_DV-_s5o4b85MVl-11" name="Korporativ markaz katta nazoratchisi">
+        <bpmn:flowNodeRef>MPGzZg49Y1iRwdM8o8AB-17</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_MPGzZg49Y1iRwdM8o8AB-17</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="KXy53_DV-_s5o4b85MVl-33" name="Komplayens nazorat departamenti AML xizmati menejeri">
+        <bpmn:flowNodeRef>KXy53_DV-_s5o4b85MVl-118</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_KXy53_DV-_s5o4b85MVl-118</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>JL8qhNmZnZ2TMFR0FOEl-3</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:userTask id="KXy53_DV-_s5o4b85MVl-1" name="4. Mijoz arizasi bilan tanishish va vizalash">
+      <bpmn:documentation>Code: STEP-04; Role: Korporativ markaz direktori; System: EHA; ST: 1 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>KXy53_DV-_s5o4b85MVl-91</bpmn:incoming>
+      <bpmn:outgoing>KXy53_DV-_s5o4b85MVl-105</bpmn:outgoing>
+      <bpmn:property id="KXy53_DV-_s5o4b85MVl-99_target" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="KXy53_DV-_s5o4b85MVl-99">
+        <bpmn:sourceRef>KXy53_DV-_s5o4b85MVl-92</bpmn:sourceRef>
+        <bpmn:targetRef>KXy53_DV-_s5o4b85MVl-99_target</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_KXy53_DV-_s5o4b85MVl-1" name="1 мин" attachedToRef="KXy53_DV-_s5o4b85MVl-1" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="MPGzZg49Y1iRwdM8o8AB-40" name="20 minut">
+      <bpmn:documentation>Role: Korporativ markaz direktori; System: SQB CRM / Core; ST: 20 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>KXy53_DV-_s5o4b85MVl-87</bpmn:incoming>
+      <bpmn:outgoing>KXy53_DV-_s5o4b85MVl-91</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT20M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="MPGzZg49Y1iRwdM8o8AB-702" name="11. Mijoz arizasi bilan tanishish va vizalash">
+      <bpmn:documentation>Code: STEP-11; Role: Korporativ markaz direktori; System: EHA; ST: 1 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>MPGzZg49Y1iRwdM8o8AB-707</bpmn:incoming>
+      <bpmn:outgoing>MPGzZg49Y1iRwdM8o8AB-711</bpmn:outgoing>
+      <bpmn:property id="MPGzZg49Y1iRwdM8o8AB-705_target" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="MPGzZg49Y1iRwdM8o8AB-705">
+        <bpmn:sourceRef>MPGzZg49Y1iRwdM8o8AB-704</bpmn:sourceRef>
+        <bpmn:targetRef>MPGzZg49Y1iRwdM8o8AB-705_target</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_MPGzZg49Y1iRwdM8o8AB-702" name="1 мин" attachedToRef="MPGzZg49Y1iRwdM8o8AB-702" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="MPGzZg49Y1iRwdM8o8AB-706" name="20 minut">
+      <bpmn:documentation>Role: Korporativ markaz direktori; System: SQB CRM / Core; ST: 20 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>MPGzZg49Y1iRwdM8o8AB-708</bpmn:incoming>
+      <bpmn:outgoing>MPGzZg49Y1iRwdM8o8AB-707</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT20M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="MPGzZg49Y1iRwdM8o8AB-17" name="7. SMS banking tizimida Aktiv holatiga keltiriladi">
+      <bpmn:documentation>Code: STEP-07; Role: Korporativ markaz katta nazoratchisi; System: SQB CRM / Core; ST: 2 min; Category: rpa_bot; RPA potential: 95%</bpmn:documentation>
+      <bpmn:incoming>MPGzZg49Y1iRwdM8o8AB-15</bpmn:incoming>
+      <bpmn:outgoing>MPGzZg49Y1iRwdM8o8AB-27</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Duration_MPGzZg49Y1iRwdM8o8AB-17" name="2 мин" attachedToRef="MPGzZg49Y1iRwdM8o8AB-17" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:startEvent id="uXHVFkfJjTyLFB0Weg1J-7" name="Mijoz tashrif buyurdi">
+      <bpmn:documentation>Code: START; Role: Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish; System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:outgoing>uXHVFkfJjTyLFB0Weg1J-33</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="cZxG4kKRe9EOhudsVDSG-13" name="1. Mijozni identifikatsiya qilish">
+      <bpmn:documentation>Code: STEP-01; Role: Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish; System: IABS; ST: 3 min; Category: validation; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>uXHVFkfJjTyLFB0Weg1J-33</bpmn:incoming>
+      <bpmn:outgoing>KXy53_DV-_s5o4b85MVl-62</bpmn:outgoing>
+      <bpmn:property id="KXy53_DV-_s5o4b85MVl-56_target" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="KXy53_DV-_s5o4b85MVl-56">
+        <bpmn:sourceRef>KXy53_DV-_s5o4b85MVl-129</bpmn:sourceRef>
+        <bpmn:targetRef>KXy53_DV-_s5o4b85MVl-56_target</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_cZxG4kKRe9EOhudsVDSG-13" name="3 мин" attachedToRef="cZxG4kKRe9EOhudsVDSG-13" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT3M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="KXy53_DV-_s5o4b85MVl-60" name="2. Sms banking xizmatini yoqish uchun ariza formasini taqdim etish">
+      <bpmn:documentation>Code: STEP-02; Role: Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish; System: SQB CRM / Core; ST: 2 min; Category: rpa_bot; RPA potential: 95%</bpmn:documentation>
+      <bpmn:incoming>KXy53_DV-_s5o4b85MVl-62</bpmn:incoming>
+      <bpmn:outgoing>cZxG4kKRe9EOhudsVDSG-18</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Duration_KXy53_DV-_s5o4b85MVl-60" name="2 мин" attachedToRef="KXy53_DV-_s5o4b85MVl-60" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="KXy53_DV-_s5o4b85MVl-71" name="3. Arizani tekshirish va rahbarga vizolash uchun kiritish">
+      <bpmn:documentation>Code: STEP-03; Role: Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish; System: EHA; ST: 3 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>cZxG4kKRe9EOhudsVDSG-18</bpmn:incoming>
+      <bpmn:outgoing>KXy53_DV-_s5o4b85MVl-87</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="KXy53_DV-_s5o4b85MVl-82">
+        <bpmn:targetRef>KXy53_DV-_s5o4b85MVl-126</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_KXy53_DV-_s5o4b85MVl-71" name="3 мин" attachedToRef="KXy53_DV-_s5o4b85MVl-71" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT3M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="KXy53_DV-_s5o4b85MVl-103" name="5. SMS banking tizimida foydalanuvchiga sahifa ochib arizda ko&apos;rsatilgan telefon raqamni kiritadi va tegishli hisob raqami hamda arizasi skaner formatda biriktirilib, sahifa avtorizovat qilanadi.">
+      <bpmn:documentation>Code: STEP-05; Role: Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish; System: IABS; ST: 2 min; Category: rpa_bot; RPA potential: 95%</bpmn:documentation>
+      <bpmn:incoming>KXy53_DV-_s5o4b85MVl-105</bpmn:incoming>
+      <bpmn:outgoing>KXy53_DV-_s5o4b85MVl-112</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="MPGzZg49Y1iRwdM8o8AB-44">
+        <bpmn:targetRef>MPGzZg49Y1iRwdM8o8AB-42</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Duration_KXy53_DV-_s5o4b85MVl-103" name="2 мин" attachedToRef="KXy53_DV-_s5o4b85MVl-103" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="dj6p0bJkFK40RtGTn1MZ-7" name="Milliy va xorijiy ro&apos;yxatga mos kelishi FISH va tug&apos;.sana (AML/CFT)">
+      <bpmn:documentation>Role: Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish; System: AML/CFT Moduli; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>h6voPZgYOQRN74XCW5x1-4</bpmn:incoming>
+      <bpmn:outgoing>MPGzZg49Y1iRwdM8o8AB-15</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="h6voPZgYOQRN74XCW5x1-2" name="6.Milliy va xorijiy ro&apos;yxatga mos kelishi FISH va tug&apos;.sana (AML/CFT) mosligini tekshirish">
+      <bpmn:documentation>Code: STEP-01; Role: Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish; System: AML/CFT Moduli; ST: 3 min; Category: rpa_bot; RPA potential: 95%</bpmn:documentation>
+      <bpmn:incoming>KXy53_DV-_s5o4b85MVl-112</bpmn:incoming>
+      <bpmn:outgoing>h6voPZgYOQRN74XCW5x1-4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Duration_h6voPZgYOQRN74XCW5x1-2" name="3 мин" attachedToRef="h6voPZgYOQRN74XCW5x1-2" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT3M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="MPGzZg49Y1iRwdM8o8AB-30" name="Jarayon to&apos;gadi">
+      <bpmn:documentation>Code: END; Role: Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish; System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>MPGzZg49Y1iRwdM8o8AB-712</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="MPGzZg49Y1iRwdM8o8AB-33" name="9. Arizada o&apos;chirilishi lozim bo&apos;lgan raqamlar bilan tanishib chiqadi">
+      <bpmn:documentation>Code: STEP-09; Role: Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish; System: AML/CFT Moduli; ST: 3 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>MPGzZg49Y1iRwdM8o8AB-694</bpmn:incoming>
+      <bpmn:outgoing>MPGzZg49Y1iRwdM8o8AB-39</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_MPGzZg49Y1iRwdM8o8AB-33" name="3 мин" attachedToRef="MPGzZg49Y1iRwdM8o8AB-33" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT3M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="MPGzZg49Y1iRwdM8o8AB-685" name="8. &quot;Банковская комиссия&quot; modulida SMS banking xizmati tarifida daromad kiritilganligini tekshiradi">
+      <bpmn:documentation>Code: STEP-08; Role: Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish; System: iABS (ЦФТ-Банк); ST: 3 min; Category: rpa_bot; RPA potential: 95%</bpmn:documentation>
+      <bpmn:incoming>MPGzZg49Y1iRwdM8o8AB-27</bpmn:incoming>
+      <bpmn:outgoing>MPGzZg49Y1iRwdM8o8AB-693</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Duration_MPGzZg49Y1iRwdM8o8AB-685" name="3 мин" attachedToRef="MPGzZg49Y1iRwdM8o8AB-685" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT3M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="MPGzZg49Y1iRwdM8o8AB-692" name="Событие-сообщение">
+      <bpmn:documentation>Role: Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish; System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>MPGzZg49Y1iRwdM8o8AB-693</bpmn:incoming>
+      <bpmn:outgoing>MPGzZg49Y1iRwdM8o8AB-694</bpmn:outgoing>
+      <bpmn:messageEventDefinition />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="MPGzZg49Y1iRwdM8o8AB-696" name="10. Arizani rahbarga vizolash uchun kiritish">
+      <bpmn:documentation>Code: STEP-10; Role: Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish; System: EHA; ST: 3 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>MPGzZg49Y1iRwdM8o8AB-39</bpmn:incoming>
+      <bpmn:outgoing>MPGzZg49Y1iRwdM8o8AB-708</bpmn:outgoing>
+      <bpmn:property id="MPGzZg49Y1iRwdM8o8AB-701_target" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="MPGzZg49Y1iRwdM8o8AB-701">
+        <bpmn:sourceRef>MPGzZg49Y1iRwdM8o8AB-699</bpmn:sourceRef>
+        <bpmn:targetRef>MPGzZg49Y1iRwdM8o8AB-701_target</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_MPGzZg49Y1iRwdM8o8AB-696" name="3 мин" attachedToRef="MPGzZg49Y1iRwdM8o8AB-696" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT3M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="MPGzZg49Y1iRwdM8o8AB-709" name="12. SMS banking tizimida arizda korsatilgan raqamni o&apos;chirish">
+      <bpmn:documentation>Code: STEP-12; Role: Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish; System: SQB CRM / Core; ST: 1 min; Category: rpa_bot; RPA potential: 95%</bpmn:documentation>
+      <bpmn:incoming>MPGzZg49Y1iRwdM8o8AB-711</bpmn:incoming>
+      <bpmn:outgoing>MPGzZg49Y1iRwdM8o8AB-712</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Duration_MPGzZg49Y1iRwdM8o8AB-709" name="1 мин" attachedToRef="MPGzZg49Y1iRwdM8o8AB-709" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="WjP1qzdbT5XaS2BX29xO-0" name="Jarayon tugadi">
+      <bpmn:documentation>Code: END; Role: Biznes rivojlantirish va/yoki mijozlarga xizmat ko&apos;rsatish; System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>JL8qhNmZnZ2TMFR0FOEl-8</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="KXy53_DV-_s5o4b85MVl-118" name="6.1. Foydalanuvchini qayta tekshirish">
+      <bpmn:documentation>Code: STEP-06.1; Role: Komplayens nazorat departamenti AML xizmati menejeri; System: IABS; ST: 5 min; Category: validation; RPA potential: 40%</bpmn:documentation>
+      <bpmn:outgoing>JL8qhNmZnZ2TMFR0FOEl-4</bpmn:outgoing>
+      <bpmn:property id="KXy53_DV-_s5o4b85MVl-123_target" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="KXy53_DV-_s5o4b85MVl-123">
+        <bpmn:sourceRef>KXy53_DV-_s5o4b85MVl-131</bpmn:sourceRef>
+        <bpmn:targetRef>KXy53_DV-_s5o4b85MVl-123_target</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_KXy53_DV-_s5o4b85MVl-118" name="5 мин" attachedToRef="KXy53_DV-_s5o4b85MVl-118" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT5M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="JL8qhNmZnZ2TMFR0FOEl-3" name="">
+      <bpmn:documentation>Role: Komplayens nazorat departamenti AML xizmati menejeri; System: AML/CFT Moduli; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>JL8qhNmZnZ2TMFR0FOEl-4</bpmn:incoming>
+      <bpmn:outgoing>JL8qhNmZnZ2TMFR0FOEl-8</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:dataStoreReference id="KXy53_DV-_s5o4b85MVl-92" name="EHA" />
+    <bpmn:dataStoreReference id="MPGzZg49Y1iRwdM8o8AB-704" name="EHA" />
+    <bpmn:dataStoreReference id="KXy53_DV-_s5o4b85MVl-126" name="EHA" />
+    <bpmn:dataStoreReference id="KXy53_DV-_s5o4b85MVl-129" name="IABS" />
+    <bpmn:dataStoreReference id="MPGzZg49Y1iRwdM8o8AB-42" name="IABS" />
+    <bpmn:dataStoreReference id="MPGzZg49Y1iRwdM8o8AB-699" name="EHA" />
+    <bpmn:dataStoreReference id="KXy53_DV-_s5o4b85MVl-131" name="IABS" />
+    <bpmn:sequenceFlow id="KXy53_DV-_s5o4b85MVl-91" sourceRef="MPGzZg49Y1iRwdM8o8AB-40" targetRef="KXy53_DV-_s5o4b85MVl-1" />
+    <bpmn:sequenceFlow id="MPGzZg49Y1iRwdM8o8AB-707" sourceRef="MPGzZg49Y1iRwdM8o8AB-706" targetRef="MPGzZg49Y1iRwdM8o8AB-702" />
+    <bpmn:sequenceFlow id="uXHVFkfJjTyLFB0Weg1J-33" sourceRef="uXHVFkfJjTyLFB0Weg1J-7" targetRef="cZxG4kKRe9EOhudsVDSG-13" />
+    <bpmn:sequenceFlow id="cZxG4kKRe9EOhudsVDSG-18" sourceRef="KXy53_DV-_s5o4b85MVl-60" targetRef="KXy53_DV-_s5o4b85MVl-71" />
+    <bpmn:sequenceFlow id="KXy53_DV-_s5o4b85MVl-62" sourceRef="cZxG4kKRe9EOhudsVDSG-13" targetRef="KXy53_DV-_s5o4b85MVl-60" />
+    <bpmn:sequenceFlow id="KXy53_DV-_s5o4b85MVl-112" sourceRef="KXy53_DV-_s5o4b85MVl-103" targetRef="h6voPZgYOQRN74XCW5x1-2" />
+    <bpmn:sequenceFlow id="h6voPZgYOQRN74XCW5x1-4" sourceRef="h6voPZgYOQRN74XCW5x1-2" targetRef="dj6p0bJkFK40RtGTn1MZ-7" />
+    <bpmn:sequenceFlow id="MPGzZg49Y1iRwdM8o8AB-693" sourceRef="MPGzZg49Y1iRwdM8o8AB-685" targetRef="MPGzZg49Y1iRwdM8o8AB-692" />
+    <bpmn:sequenceFlow id="MPGzZg49Y1iRwdM8o8AB-694" sourceRef="MPGzZg49Y1iRwdM8o8AB-692" targetRef="MPGzZg49Y1iRwdM8o8AB-33" />
+    <bpmn:sequenceFlow id="MPGzZg49Y1iRwdM8o8AB-39" sourceRef="MPGzZg49Y1iRwdM8o8AB-33" targetRef="MPGzZg49Y1iRwdM8o8AB-696" />
+    <bpmn:sequenceFlow id="MPGzZg49Y1iRwdM8o8AB-712" sourceRef="MPGzZg49Y1iRwdM8o8AB-709" targetRef="MPGzZg49Y1iRwdM8o8AB-30" />
+    <bpmn:sequenceFlow id="KXy53_DV-_s5o4b85MVl-105" sourceRef="KXy53_DV-_s5o4b85MVl-1" targetRef="KXy53_DV-_s5o4b85MVl-103" />
+    <bpmn:sequenceFlow id="JL8qhNmZnZ2TMFR0FOEl-4" sourceRef="KXy53_DV-_s5o4b85MVl-118" targetRef="JL8qhNmZnZ2TMFR0FOEl-3" />
+    <bpmn:sequenceFlow id="KXy53_DV-_s5o4b85MVl-87" sourceRef="KXy53_DV-_s5o4b85MVl-71" targetRef="MPGzZg49Y1iRwdM8o8AB-40" />
+    <bpmn:sequenceFlow id="MPGzZg49Y1iRwdM8o8AB-15" name="Mos kelmaydi" sourceRef="dj6p0bJkFK40RtGTn1MZ-7" targetRef="MPGzZg49Y1iRwdM8o8AB-17">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Mos kelmaydi</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="MPGzZg49Y1iRwdM8o8AB-27" sourceRef="MPGzZg49Y1iRwdM8o8AB-17" targetRef="MPGzZg49Y1iRwdM8o8AB-685" />
+    <bpmn:sequenceFlow id="MPGzZg49Y1iRwdM8o8AB-708" sourceRef="MPGzZg49Y1iRwdM8o8AB-696" targetRef="MPGzZg49Y1iRwdM8o8AB-706" />
+    <bpmn:sequenceFlow id="MPGzZg49Y1iRwdM8o8AB-711" sourceRef="MPGzZg49Y1iRwdM8o8AB-702" targetRef="MPGzZg49Y1iRwdM8o8AB-709" />
+    <bpmn:sequenceFlow id="JL8qhNmZnZ2TMFR0FOEl-8" name="To&apos;liq mos keladi" sourceRef="JL8qhNmZnZ2TMFR0FOEl-3" targetRef="WjP1qzdbT5XaS2BX29xO-0">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">To&apos;liq mos keladi</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:textAnnotation id="KXy53_DV-_s5o4b85MVl-66">
+      <bpmn:text>Ariza formasi</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:textAnnotation id="KXy53_DV-_s5o4b85MVl-78">
+      <bpmn:text>Arizada mas&apos;ul shaxsning uyali aloqa raqami va tegishli hisob raqamlarni korsatgan holda ariza rahbar tomonidan imzolangan</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="KXy53_DV-_s5o4b85MVl-67" sourceRef="KXy53_DV-_s5o4b85MVl-66" targetRef="KXy53_DV-_s5o4b85MVl-60" associationDirection="One" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_uXHVFkfJjTyLFB0Weg1J-2" name="Mijoz" processType="Public" isExecutable="false" />
+
+  <bpmndi:BPMNDiagram id="Diagram_Process_PRC_SQB_294534">
+    <bpmndi:BPMNPlane id="Plane_Process_PRC_SQB_294534" bpmnElement="Collaboration_Process_PRC_SQB_294534">
+      <bpmndi:BPMNShape id="Participant_Process_PRC_SQB_294534_di" bpmnElement="Participant_Process_PRC_SQB_294534" isHorizontal="true">
+        <dc:Bounds x="-1641" y="-290" width="5141" height="1475" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_uXHVFkfJjTyLFB0Weg1J-2_di" bpmnElement="Participant_uXHVFkfJjTyLFB0Weg1J-2" isHorizontal="true">
+        <dc:Bounds x="-1638" y="-430" width="5150" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="uXHVFkfJjTyLFB0Weg1J-15_di" bpmnElement="uXHVFkfJjTyLFB0Weg1J-15" isHorizontal="true">
+        <dc:Bounds x="-1611" y="-290" width="5111" height="530" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="KXy53_DV-_s5o4b85MVl-0_di" bpmnElement="KXy53_DV-_s5o4b85MVl-0" isHorizontal="true">
+        <dc:Bounds x="-1611" y="240" width="5111" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="KXy53_DV-_s5o4b85MVl-11_di" bpmnElement="KXy53_DV-_s5o4b85MVl-11" isHorizontal="true">
+        <dc:Bounds x="-1611" y="480" width="5111" height="350" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="KXy53_DV-_s5o4b85MVl-33_di" bpmnElement="KXy53_DV-_s5o4b85MVl-33" isHorizontal="true">
+        <dc:Bounds x="-1611" y="830" width="5111" height="355" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="KXy53_DV-_s5o4b85MVl-1_di" bpmnElement="KXy53_DV-_s5o4b85MVl-1">
+        <dc:Bounds x="-790" y="326" width="260" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_KXy53_DV-_s5o4b85MVl-1_di" bpmnElement="Duration_KXy53_DV-_s5o4b85MVl-1">
+        <dc:Bounds x="-568" y="388" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-570" y="426" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="KXy53_DV-_s5o4b85MVl-92_di" bpmnElement="KXy53_DV-_s5o4b85MVl-92">
+        <dc:Bounds x="-890" y="338" width="80" height="55" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-867" y="399" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MPGzZg49Y1iRwdM8o8AB-40_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-40">
+        <dc:Bounds x="-727" y="270" width="40" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-791" y="281" width="58" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MPGzZg49Y1iRwdM8o8AB-702_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-702">
+        <dc:Bounds x="1100" y="348" width="260" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_MPGzZg49Y1iRwdM8o8AB-702_di" bpmnElement="Duration_MPGzZg49Y1iRwdM8o8AB-702">
+        <dc:Bounds x="1322" y="410" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1320" y="448" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MPGzZg49Y1iRwdM8o8AB-704_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-704">
+        <dc:Bounds x="1000" y="360" width="80" height="55" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1023" y="421" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MPGzZg49Y1iRwdM8o8AB-706_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-706">
+        <dc:Bounds x="1163" y="292" width="40" height="40" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1099" y="303" width="58" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MPGzZg49Y1iRwdM8o8AB-17_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-17">
+        <dc:Bounds x="230" y="510" width="149" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_MPGzZg49Y1iRwdM8o8AB-17_di" bpmnElement="Duration_MPGzZg49Y1iRwdM8o8AB-17">
+        <dc:Bounds x="341" y="592" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="339" y="630" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="uXHVFkfJjTyLFB0Weg1J-7_di" bpmnElement="uXHVFkfJjTyLFB0Weg1J-7">
+        <dc:Bounds x="-1504" y="-115" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-1541" y="-59" width="124" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cZxG4kKRe9EOhudsVDSG-13_di" bpmnElement="cZxG4kKRe9EOhudsVDSG-13">
+        <dc:Bounds x="-1412" y="-130" width="190" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_cZxG4kKRe9EOhudsVDSG-13_di" bpmnElement="Duration_cZxG4kKRe9EOhudsVDSG-13">
+        <dc:Bounds x="-1260" y="-68" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-1262" y="-30" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="KXy53_DV-_s5o4b85MVl-60_di" bpmnElement="KXy53_DV-_s5o4b85MVl-60">
+        <dc:Bounds x="-1155" y="-131" width="210" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_KXy53_DV-_s5o4b85MVl-60_di" bpmnElement="Duration_KXy53_DV-_s5o4b85MVl-60">
+        <dc:Bounds x="-983" y="-66" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-985" y="-28" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="KXy53_DV-_s5o4b85MVl-66_di" bpmnElement="KXy53_DV-_s5o4b85MVl-66">
+        <dc:Bounds x="-1150" y="-240" width="80" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="KXy53_DV-_s5o4b85MVl-71_di" bpmnElement="KXy53_DV-_s5o4b85MVl-71">
+        <dc:Bounds x="-825" y="-131" width="190" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_KXy53_DV-_s5o4b85MVl-71_di" bpmnElement="Duration_KXy53_DV-_s5o4b85MVl-71">
+        <dc:Bounds x="-673" y="-66" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-675" y="-28" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="KXy53_DV-_s5o4b85MVl-78_di" bpmnElement="KXy53_DV-_s5o4b85MVl-78">
+        <dc:Bounds x="-887" y="-240" width="200" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="KXy53_DV-_s5o4b85MVl-103_di" bpmnElement="KXy53_DV-_s5o4b85MVl-103">
+        <dc:Bounds x="-530" y="-139" width="250" height="126" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_KXy53_DV-_s5o4b85MVl-103_di" bpmnElement="Duration_KXy53_DV-_s5o4b85MVl-103">
+        <dc:Bounds x="-318" y="-31" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-320" y="7" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="KXy53_DV-_s5o4b85MVl-126_di" bpmnElement="KXy53_DV-_s5o4b85MVl-126">
+        <dc:Bounds x="-662" y="-215" width="80" height="55" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-639" y="-239" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="KXy53_DV-_s5o4b85MVl-129_di" bpmnElement="KXy53_DV-_s5o4b85MVl-129">
+        <dc:Bounds x="-1441" y="-215" width="80" height="55" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-1420" y="-239" width="38" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="dj6p0bJkFK40RtGTn1MZ-7_di" bpmnElement="dj6p0bJkFK40RtGTn1MZ-7">
+        <dc:Bounds x="10" y="-110" width="60" height="60" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-65" y="-149" width="210" height="33" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="h6voPZgYOQRN74XCW5x1-2_di" bpmnElement="h6voPZgYOQRN74XCW5x1-2">
+        <dc:Bounds x="-256" y="-130" width="190" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_h6voPZgYOQRN74XCW5x1-2_di" bpmnElement="Duration_h6voPZgYOQRN74XCW5x1-2">
+        <dc:Bounds x="-104" y="-48" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-106" y="-10" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MPGzZg49Y1iRwdM8o8AB-30_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-30">
+        <dc:Bounds x="1540" y="-95" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1517" y="-39" width="96" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MPGzZg49Y1iRwdM8o8AB-33_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-33">
+        <dc:Bounds x="831" y="-111" width="210" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_MPGzZg49Y1iRwdM8o8AB-33_di" bpmnElement="Duration_MPGzZg49Y1iRwdM8o8AB-33">
+        <dc:Bounds x="1003" y="-46" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1001" y="-8" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MPGzZg49Y1iRwdM8o8AB-42_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-42">
+        <dc:Bounds x="-480" y="-210" width="80" height="55" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-459" y="-234" width="38" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MPGzZg49Y1iRwdM8o8AB-685_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-685">
+        <dc:Bounds x="369" y="-119" width="220" height="97" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_MPGzZg49Y1iRwdM8o8AB-685_di" bpmnElement="Duration_MPGzZg49Y1iRwdM8o8AB-685">
+        <dc:Bounds x="551" y="-40" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="549" y="-2" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MPGzZg49Y1iRwdM8o8AB-692_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-692">
+        <dc:Bounds x="630" y="-95" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="594" y="-39" width="121" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MPGzZg49Y1iRwdM8o8AB-696_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-696">
+        <dc:Bounds x="1090" y="-111" width="140" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_MPGzZg49Y1iRwdM8o8AB-696_di" bpmnElement="Duration_MPGzZg49Y1iRwdM8o8AB-696">
+        <dc:Bounds x="1192" y="-46" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1190" y="-8" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MPGzZg49Y1iRwdM8o8AB-699_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-699">
+        <dc:Bounds x="1243" y="-165" width="80" height="55" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1266" y="-104" width="34" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MPGzZg49Y1iRwdM8o8AB-709_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-709">
+        <dc:Bounds x="1300" y="-110" width="200" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_MPGzZg49Y1iRwdM8o8AB-709_di" bpmnElement="Duration_MPGzZg49Y1iRwdM8o8AB-709">
+        <dc:Bounds x="1462" y="-45" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1460" y="-7" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="WjP1qzdbT5XaS2BX29xO-0_di" bpmnElement="WjP1qzdbT5XaS2BX29xO-0">
+        <dc:Bounds x="680" y="-20" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="736" y="-4" width="92" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="KXy53_DV-_s5o4b85MVl-118_di" bpmnElement="KXy53_DV-_s5o4b85MVl-118">
+        <dc:Bounds x="94" y="1060" width="230" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_KXy53_DV-_s5o4b85MVl-118_di" bpmnElement="Duration_KXy53_DV-_s5o4b85MVl-118">
+        <dc:Bounds x="286" y="1122" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="284" y="1160" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="KXy53_DV-_s5o4b85MVl-131_di" bpmnElement="KXy53_DV-_s5o4b85MVl-131">
+        <dc:Bounds x="89" y="990" width="80" height="55" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="110" y="966" width="38" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="JL8qhNmZnZ2TMFR0FOEl-3_di" bpmnElement="JL8qhNmZnZ2TMFR0FOEl-3">
+        <dc:Bounds x="399" y="1070" width="60" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="KXy53_DV-_s5o4b85MVl-99_di" bpmnElement="KXy53_DV-_s5o4b85MVl-99">
+        <di:waypoint x="-810" y="366" />
+        <di:waypoint x="-790" y="366" />
+        <di:waypoint x="-810" y="366" />
+        <di:waypoint x="-790" y="366" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="KXy53_DV-_s5o4b85MVl-91_di" bpmnElement="KXy53_DV-_s5o4b85MVl-91">
+        <di:waypoint x="-707" y="310" />
+        <di:waypoint x="-707" y="330" />
+        <di:waypoint x="-707" y="306" />
+        <di:waypoint x="-707" y="326" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MPGzZg49Y1iRwdM8o8AB-705_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-705">
+        <di:waypoint x="1080" y="388" />
+        <di:waypoint x="1100" y="388" />
+        <di:waypoint x="1080" y="388" />
+        <di:waypoint x="1100" y="388" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MPGzZg49Y1iRwdM8o8AB-707_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-707">
+        <di:waypoint x="1183" y="332" />
+        <di:waypoint x="1183" y="352" />
+        <di:waypoint x="1183" y="328" />
+        <di:waypoint x="1183" y="348" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="uXHVFkfJjTyLFB0Weg1J-33_di" bpmnElement="uXHVFkfJjTyLFB0Weg1J-33">
+        <di:waypoint x="-1454" y="-90" />
+        <di:waypoint x="-1410" y="-90" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="cZxG4kKRe9EOhudsVDSG-18_di" bpmnElement="cZxG4kKRe9EOhudsVDSG-18">
+        <di:waypoint x="-945" y="-90" />
+        <di:waypoint x="-825" y="-90" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="KXy53_DV-_s5o4b85MVl-56_di" bpmnElement="KXy53_DV-_s5o4b85MVl-56">
+        <di:waypoint x="-1386" y="-160" />
+        <di:waypoint x="-1386" y="-140" />
+        <di:waypoint x="-1386" y="-150" />
+        <di:waypoint x="-1386" y="-130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="KXy53_DV-_s5o4b85MVl-62_di" bpmnElement="KXy53_DV-_s5o4b85MVl-62">
+        <di:waypoint x="-1222" y="-90" />
+        <di:waypoint x="-1155" y="-90" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="KXy53_DV-_s5o4b85MVl-67_di" bpmnElement="KXy53_DV-_s5o4b85MVl-67">
+        <di:waypoint x="-1110" y="-170" />
+        <di:waypoint x="-1110" y="-131" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="KXy53_DV-_s5o4b85MVl-82_di" bpmnElement="KXy53_DV-_s5o4b85MVl-82">
+        <di:waypoint x="-635" y="-110" />
+        <di:waypoint x="-615" y="-110" />
+        <di:waypoint x="-615" y="-160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="KXy53_DV-_s5o4b85MVl-112_di" bpmnElement="KXy53_DV-_s5o4b85MVl-112">
+        <di:waypoint x="-280" y="-80" />
+        <di:waypoint x="-260" y="-80" />
+        <di:waypoint x="-276" y="-80" />
+        <di:waypoint x="-256" y="-80" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="h6voPZgYOQRN74XCW5x1-4_di" bpmnElement="h6voPZgYOQRN74XCW5x1-4">
+        <di:waypoint x="-66" y="-80" />
+        <di:waypoint x="10" y="-80" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MPGzZg49Y1iRwdM8o8AB-44_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-44">
+        <di:waypoint x="-440" y="-139" />
+        <di:waypoint x="-440" y="-159" />
+        <di:waypoint x="-440" y="-135" />
+        <di:waypoint x="-440" y="-155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MPGzZg49Y1iRwdM8o8AB-693_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-693">
+        <di:waypoint x="589" y="-70" />
+        <di:waypoint x="630" y="-70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MPGzZg49Y1iRwdM8o8AB-694_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-694">
+        <di:waypoint x="680" y="-70" />
+        <di:waypoint x="831" y="-70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MPGzZg49Y1iRwdM8o8AB-39_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-39">
+        <di:waypoint x="1041" y="-70" />
+        <di:waypoint x="1090" y="-70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MPGzZg49Y1iRwdM8o8AB-701_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-701">
+        <di:waypoint x="1243" y="-138" />
+        <di:waypoint x="1195" y="-138" />
+        <di:waypoint x="1195" y="-111" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MPGzZg49Y1iRwdM8o8AB-712_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-712">
+        <di:waypoint x="1500" y="-70" />
+        <di:waypoint x="1540" y="-70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="KXy53_DV-_s5o4b85MVl-105_di" bpmnElement="KXy53_DV-_s5o4b85MVl-105">
+        <di:waypoint x="-660" y="326" />
+        <di:waypoint x="-660" y="156" />
+        <di:waypoint x="-405" y="156" />
+        <di:waypoint x="-405" y="-13" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="KXy53_DV-_s5o4b85MVl-123_di" bpmnElement="KXy53_DV-_s5o4b85MVl-123">
+        <di:waypoint x="132" y="1045" />
+        <di:waypoint x="132" y="1065" />
+        <di:waypoint x="132" y="1043" />
+        <di:waypoint x="132" y="1063" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="JL8qhNmZnZ2TMFR0FOEl-4_di" bpmnElement="JL8qhNmZnZ2TMFR0FOEl-4">
+        <di:waypoint x="324" y="1100" />
+        <di:waypoint x="399" y="1100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="KXy53_DV-_s5o4b85MVl-87_di" bpmnElement="KXy53_DV-_s5o4b85MVl-87">
+        <di:waypoint x="-730" y="-48" />
+        <di:waypoint x="-730" y="-10" />
+        <di:waypoint x="-707" y="-10" />
+        <di:waypoint x="-707" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MPGzZg49Y1iRwdM8o8AB-15_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-15">
+        <di:waypoint x="40" y="-50" />
+        <di:waypoint x="40" y="230" />
+        <di:waypoint x="304" y="230" />
+        <di:waypoint x="304" y="510" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="128" y="208" width="88" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MPGzZg49Y1iRwdM8o8AB-27_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-27">
+        <di:waypoint x="374" y="510" />
+        <di:waypoint x="374" y="-22" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MPGzZg49Y1iRwdM8o8AB-708_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-708">
+        <di:waypoint x="1183" y="-28" />
+        <di:waypoint x="1183" y="292" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MPGzZg49Y1iRwdM8o8AB-711_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-711">
+        <di:waypoint x="1330" y="348" />
+        <di:waypoint x="1330" y="-27" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="JL8qhNmZnZ2TMFR0FOEl-8_di" bpmnElement="JL8qhNmZnZ2TMFR0FOEl-8">
+        <di:waypoint x="459" y="1100" />
+        <di:waypoint x="705" y="1100" />
+        <di:waypoint x="705" y="30" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="713" y="679" width="107" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Cy9Go5OJ9LhtuHQEAWb7-3_di" bpmnElement="Cy9Go5OJ9LhtuHQEAWb7-3">
+        <di:waypoint x="-1479" y="-331" />
+        <di:waypoint x="-1479" y="-370" />
+        <di:waypoint x="-1479" y="-115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="cZxG4kKRe9EOhudsVDSG-15_di" bpmnElement="cZxG4kKRe9EOhudsVDSG-15">
+        <di:waypoint x="-1050" y="-131" />
+        <di:waypoint x="-1050" y="-379" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="KXy53_DV-_s5o4b85MVl-75_di" bpmnElement="KXy53_DV-_s5o4b85MVl-75">
+        <di:waypoint x="-726" y="-385" />
+        <di:waypoint x="-706" y="-385" />
+        <di:waypoint x="-727" y="-385" />
+        <di:waypoint x="-727" y="-365" />
+        <di:waypoint x="-727" y="-394" />
+        <di:waypoint x="-727" y="-374" />
+        <di:waypoint x="-707" y="-374" />
+        <di:waypoint x="-747" y="-374" />
+        <di:waypoint x="-727" y="-374" />
+        <di:waypoint x="-727" y="-251" />
+        <di:waypoint x="-676" y="-251" />
+        <di:waypoint x="-676" y="-159" />
+        <di:waypoint x="-730" y="-159" />
+        <di:waypoint x="-730" y="-131" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-719" y="-358" width="132" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MPGzZg49Y1iRwdM8o8AB-695_di" bpmnElement="MPGzZg49Y1iRwdM8o8AB-695">
+        <di:waypoint x="936" y="-289" />
+        <di:waypoint x="936" y="-111" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

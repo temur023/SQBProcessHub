@@ -1,0 +1,1342 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  id="Definitions_proc_2b946d31"
+  targetNamespace="http://bpmn.io/schema/bpmn"
+  exporter="SQB Process Hub"
+  exporterVersion="2.0">
+
+  <!-- Process map: Naqd pul berish biznes-jarayoni -->
+  <bpmn:collaboration id="Collaboration_Process_PRC_SQB_5B793E">
+    <bpmn:participant id="Participant_Process_PRC_SQB_5B793E" name="Naqd pul berish biznes-jarayoni" processRef="Process_PRC_SQB_5B793E" />
+    <bpmn:participant id="Participant_-tSfLAPszdVLrIBoT1GS-6" name="Mijoz" processRef="Process_-tSfLAPszdVLrIBoT1GS-6" />
+    <bpmn:participant id="Participant_-tSfLAPszdVLrIBoT1GS-7" name="Korporativ markaz mijozlariga chek daftarchasi orqali naqd pul berish biznes-jarayoni" processRef="Process_-tSfLAPszdVLrIBoT1GS-7" />
+    <bpmn:messageFlow id="hqGvQ2s5txqknocTSVpu-1" sourceRef="us0bH9Fgc579xr_FyDnU-36" targetRef="Participant_-tSfLAPszdVLrIBoT1GS-6" />
+    <bpmn:messageFlow id="MessageFlow_-tSfLAPszdVLrIBoT1GS-11" sourceRef="Participant_-tSfLAPszdVLrIBoT1GS-6" targetRef="Node_-tSfLAPszdVLrIBoT1GS-12" />
+    <bpmn:messageFlow id="us0bH9Fgc579xr_FyDnU-19" sourceRef="Participant_-tSfLAPszdVLrIBoT1GS-6" targetRef="sk8cv8c54az7mczHfbmu-4" />
+    <bpmn:messageFlow id="us0bH9Fgc579xr_FyDnU-46" sourceRef="zSD57VsjHOq2rRrbwC_S-1" targetRef="Participant_-tSfLAPszdVLrIBoT1GS-6" />
+    <bpmn:messageFlow id="us0bH9Fgc579xr_FyDnU-124" sourceRef="Participant_-tSfLAPszdVLrIBoT1GS-6" targetRef="us0bH9Fgc579xr_FyDnU-15" />
+    <bpmn:messageFlow id="us0bH9Fgc579xr_FyDnU-148" sourceRef="us0bH9Fgc579xr_FyDnU-113" targetRef="Participant_-tSfLAPszdVLrIBoT1GS-6" />
+    <bpmn:messageFlow id="JaJ09ecAyT34Y_DzpQXu-23" sourceRef="Participant_-tSfLAPszdVLrIBoT1GS-6" targetRef="us0bH9Fgc579xr_FyDnU-4" />
+    <bpmn:messageFlow id="zSD57VsjHOq2rRrbwC_S-5" sourceRef="us0bH9Fgc579xr_FyDnU-4" targetRef="Participant_-tSfLAPszdVLrIBoT1GS-6" />
+    <bpmn:messageFlow id="zSD57VsjHOq2rRrbwC_S-7" sourceRef="Participant_-tSfLAPszdVLrIBoT1GS-6" targetRef="zSD57VsjHOq2rRrbwC_S-3" />
+    <bpmn:messageFlow id="hqGvQ2s5txqknocTSVpu-3" sourceRef="Participant_-tSfLAPszdVLrIBoT1GS-6" targetRef="sk8cv8c54az7mczHfbmu-3" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_PRC_SQB_5B793E" name="Naqd pul berish biznes-jarayoni" processType="Private" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_Process_PRC_SQB_5B793E">
+      <bpmn:lane id="Lane_-tSfLAPszdVLrIBoT1GS-2" name="Ofis menejer">
+        <bpmn:flowNodeRef>Node_-tSfLAPszdVLrIBoT1GS-12</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Node_-tSfLAPszdVLrIBoT1GS-12</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_-tSfLAPszdVLrIBoT1GS-8</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_-tSfLAPszdVLrIBoT1GS-4" name="Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz)">
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-36</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_us0bH9Fgc579xr_FyDnU-36</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-49</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_us0bH9Fgc579xr_FyDnU-49</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-51</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_us0bH9Fgc579xr_FyDnU-4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-25</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-15</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_us0bH9Fgc579xr_FyDnU-15</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-108</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_us0bH9Fgc579xr_FyDnU-108</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-114</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-113</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_us0bH9Fgc579xr_FyDnU-113</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-135</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_us0bH9Fgc579xr_FyDnU-135</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>JaJ09ecAyT34Y_DzpQXu-4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>JaJ09ecAyT34Y_DzpQXu-6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>JaJ09ecAyT34Y_DzpQXu-12</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_JaJ09ecAyT34Y_DzpQXu-12</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>JaJ09ecAyT34Y_DzpQXu-18</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>sk8cv8c54az7mczHfbmu-2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zG1e_BgdiC46cywwFCfz-5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_zG1e_BgdiC46cywwFCfz-5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zG1e_BgdiC46cywwFCfz-6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_zG1e_BgdiC46cywwFCfz-6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zG1e_BgdiC46cywwFCfz-10</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_zG1e_BgdiC46cywwFCfz-10</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zG1e_BgdiC46cywwFCfz-11</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_zG1e_BgdiC46cywwFCfz-11</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zG1e_BgdiC46cywwFCfz-12</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_zG1e_BgdiC46cywwFCfz-12</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zSD57VsjHOq2rRrbwC_S-3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_zSD57VsjHOq2rRrbwC_S-3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_0-jlPp4owaziDXjIvgEA-1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Node_0-jlPp4owaziDXjIvgEA-1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_0-jlPp4owaziDXjIvgEA-3</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="us0bH9Fgc579xr_FyDnU-79" name="Katta nazoratchisi (Korporativ markaz)">
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-133</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_us0bH9Fgc579xr_FyDnU-133</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-101</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_us0bH9Fgc579xr_FyDnU-101</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-78</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_2Rye-E4zDWlN9GWDJkNu-1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Node_2Rye-E4zDWlN9GWDJkNu-1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_2Rye-E4zDWlN9GWDJkNu-3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Node_2Rye-E4zDWlN9GWDJkNu-3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>sk8cv8c54az7mczHfbmu-5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zG1e_BgdiC46cywwFCfz-4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_zG1e_BgdiC46cywwFCfz-4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zG1e_BgdiC46cywwFCfz-8</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_zG1e_BgdiC46cywwFCfz-8</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>hqGvQ2s5txqknocTSVpu-7</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="us0bH9Fgc579xr_FyDnU-18" name="Kassasir (Korporativ markaz)">
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-42</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_us0bH9Fgc579xr_FyDnU-42</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-23</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_us0bH9Fgc579xr_FyDnU-23</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-20</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_us0bH9Fgc579xr_FyDnU-20</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-21</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_us0bH9Fgc579xr_FyDnU-21</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>us0bH9Fgc579xr_FyDnU-142</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_2Rye-E4zDWlN9GWDJkNu-4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_Node_2Rye-E4zDWlN9GWDJkNu-4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_2Rye-E4zDWlN9GWDJkNu-8</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_2Rye-E4zDWlN9GWDJkNu-15</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>sk8cv8c54az7mczHfbmu-3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>sk8cv8c54az7mczHfbmu-4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>sk8cv8c54az7mczHfbmu-14</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_sk8cv8c54az7mczHfbmu-14</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zG1e_BgdiC46cywwFCfz-9</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_zG1e_BgdiC46cywwFCfz-9</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zSD57VsjHOq2rRrbwC_S-1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Duration_zSD57VsjHOq2rRrbwC_S-1</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:userTask id="Node_-tSfLAPszdVLrIBoT1GS-12" name="1. Mijozni extiyojini aniqlaydi va uni Yuridik shaxslarga xizmat kursatish xizmatiga yuboradi">
+      <bpmn:documentation>Code: STEP-01; Role: Ofis menejer; System: SQB CRM / Core; ST: 2 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Flow_-tSfLAPszdVLrIBoT1GS-9</bpmn:incoming>
+      <bpmn:outgoing>Flow_-tSfLAPszdVLrIBoT1GS-13</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Node_-tSfLAPszdVLrIBoT1GS-12" name="2 мин" attachedToRef="Node_-tSfLAPszdVLrIBoT1GS-12" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:startEvent id="Node_-tSfLAPszdVLrIBoT1GS-8" name="Jarayon boshlanishi">
+      <bpmn:documentation>Code: START; Role: Ofis menejer; System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:outgoing>Flow_-tSfLAPszdVLrIBoT1GS-9</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="us0bH9Fgc579xr_FyDnU-36" name="3. Crobs dasturida arizani rasmiylashtirib mijozga imzolab taqdim etadi">
+      <bpmn:documentation>Code: STEP-03; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: CROBS Risk Engine; ST: 3 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>us0bH9Fgc579xr_FyDnU-53</bpmn:incoming>
+      <bpmn:incoming>oqkb8AqbNajjnxtb4A48-35</bpmn:incoming>
+      <bpmn:outgoing>hqGvQ2s5txqknocTSVpu-11</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_us0bH9Fgc579xr_FyDnU-36" name="3 мин" attachedToRef="us0bH9Fgc579xr_FyDnU-36" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT3M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="us0bH9Fgc579xr_FyDnU-49" name="2. Imzo namunasi va IABS dasturidan mijozga chek daftari mavjudligi tekshirish">
+      <bpmn:documentation>Code: STEP-02; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: iABS (ЦФТ-Банк); ST: 2 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Flow_-tSfLAPszdVLrIBoT1GS-17</bpmn:incoming>
+      <bpmn:incoming>oqkb8AqbNajjnxtb4A48-31</bpmn:incoming>
+      <bpmn:outgoing>FGyBwYySxp6FvuOYyCsL-9</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_us0bH9Fgc579xr_FyDnU-49" name="2 мин" attachedToRef="us0bH9Fgc579xr_FyDnU-49" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="us0bH9Fgc579xr_FyDnU-51" name="Сhek daftarcha mavjudmi?" gatewayDirection="Diverging">
+      <bpmn:documentation>Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>FGyBwYySxp6FvuOYyCsL-9</bpmn:incoming>
+      <bpmn:outgoing>us0bH9Fgc579xr_FyDnU-53</bpmn:outgoing>
+      <bpmn:outgoing>us0bH9Fgc579xr_FyDnU-56</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="us0bH9Fgc579xr_FyDnU-4" name="8. Chek daftari nomerini imzo namuna va IABS dasturiga ro&apos;yhatga oladi.">
+      <bpmn:documentation>Code: STEP-08; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: iABS (ЦФТ-Банк); ST: 2 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>oqkb8AqbNajjnxtb4A48-38</bpmn:incoming>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_us0bH9Fgc579xr_FyDnU-4" name="2 мин" attachedToRef="us0bH9Fgc579xr_FyDnU-4" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="us0bH9Fgc579xr_FyDnU-25" name="Mablag&apos;lar mavjudmi? (jumladan, bank komissiyasi)">
+      <bpmn:documentation>Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>us0bH9Fgc579xr_FyDnU-146</bpmn:incoming>
+      <bpmn:outgoing>us0bH9Fgc579xr_FyDnU-27</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="us0bH9Fgc579xr_FyDnU-15" name="13. Mijoz hisob raqamidan 10101/10111-sonli hisob raqamga buxgalteriya amaliyotini amalga oshirish">
+      <bpmn:documentation>Code: STEP-13; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: SQB CRM / Core; ST: 1 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>us0bH9Fgc579xr_FyDnU-27</bpmn:incoming>
+      <bpmn:incoming>oqkb8AqbNajjnxtb4A48-47</bpmn:incoming>
+      <bpmn:outgoing>us0bH9Fgc579xr_FyDnU-77</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_us0bH9Fgc579xr_FyDnU-15" name="1 мин" attachedToRef="us0bH9Fgc579xr_FyDnU-15" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="us0bH9Fgc579xr_FyDnU-108" name="12. Hisob raqamida yetarli mablag&apos;lar mavjudligini tekshirish">
+      <bpmn:documentation>Code: STEP-12; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: SQB CRM / Core; ST: 1 min; Category: validation; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>JaJ09ecAyT34Y_DzpQXu-10</bpmn:incoming>
+      <bpmn:incoming>JaJ09ecAyT34Y_DzpQXu-15</bpmn:incoming>
+      <bpmn:outgoing>us0bH9Fgc579xr_FyDnU-146</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_us0bH9Fgc579xr_FyDnU-108" name="1 мин" attachedToRef="us0bH9Fgc579xr_FyDnU-108" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="us0bH9Fgc579xr_FyDnU-114" name="Operatsiya muvofaqqiyatli amalga oshirildimi?">
+      <bpmn:documentation>Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>us0bH9Fgc579xr_FyDnU-77</bpmn:incoming>
+      <bpmn:outgoing>us0bH9Fgc579xr_FyDnU-115</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="us0bH9Fgc579xr_FyDnU-113" name="14. Rasmiylashtirilgan chekni imzolaydi va Katta nazoratchiga taqdim etadi. Chekdan talonni kesib mijozga taqdim etadi.">
+      <bpmn:documentation>Code: STEP-14; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: SQB CRM / Core; ST: 2 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>us0bH9Fgc579xr_FyDnU-115</bpmn:incoming>
+      <bpmn:outgoing>us0bH9Fgc579xr_FyDnU-132</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_us0bH9Fgc579xr_FyDnU-113" name="2 мин" attachedToRef="us0bH9Fgc579xr_FyDnU-113" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="us0bH9Fgc579xr_FyDnU-135" name="16. Imzolangan chekni kassaga olib boradi.">
+      <bpmn:documentation>Code: STEP-16; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: SQB CRM / Core; ST: 1 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>us0bH9Fgc579xr_FyDnU-136</bpmn:incoming>
+      <bpmn:outgoing>Flow_2Rye-E4zDWlN9GWDJkNu-6</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_us0bH9Fgc579xr_FyDnU-135" name="1 мин" attachedToRef="us0bH9Fgc579xr_FyDnU-135" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="JaJ09ecAyT34Y_DzpQXu-4" name="Vakolati mavjudmi?" gatewayDirection="Diverging">
+      <bpmn:documentation>Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>zSD57VsjHOq2rRrbwC_S-8</bpmn:incoming>
+      <bpmn:outgoing>JaJ09ecAyT34Y_DzpQXu-5</bpmn:outgoing>
+      <bpmn:outgoing>JaJ09ecAyT34Y_DzpQXu-10</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="JaJ09ecAyT34Y_DzpQXu-6" name="Tashrif buyurgan shaxsning ishonchnomasi mavjudmi" gatewayDirection="Diverging">
+      <bpmn:documentation>Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>JaJ09ecAyT34Y_DzpQXu-5</bpmn:incoming>
+      <bpmn:outgoing>JaJ09ecAyT34Y_DzpQXu-11</bpmn:outgoing>
+      <bpmn:outgoing>JaJ09ecAyT34Y_DzpQXu-20</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="JaJ09ecAyT34Y_DzpQXu-12" name="11. Ishonchnomani tekshiradi va IABS dasturiga kiritadi">
+      <bpmn:documentation>Code: STEP-11; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: iABS (ЦФТ-Банк); ST: 2 min; Category: api_service; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>JaJ09ecAyT34Y_DzpQXu-11</bpmn:incoming>
+      <bpmn:incoming>fQVIEM4XUXHr14V0wWct-6</bpmn:incoming>
+      <bpmn:outgoing>JaJ09ecAyT34Y_DzpQXu-15</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_JaJ09ecAyT34Y_DzpQXu-12" name="2 мин" attachedToRef="JaJ09ecAyT34Y_DzpQXu-12" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="JaJ09ecAyT34Y_DzpQXu-18" name="Jarayon yakunlandi">
+      <bpmn:documentation>Code: END; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>JaJ09ecAyT34Y_DzpQXu-20</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:intermediateCatchEvent id="sk8cv8c54az7mczHfbmu-2" name="Kutish vaqti">
+      <bpmn:documentation>Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Flow_-tSfLAPszdVLrIBoT1GS-13</bpmn:incoming>
+      <bpmn:outgoing>Flow_-tSfLAPszdVLrIBoT1GS-17</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT5M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="zG1e_BgdiC46cywwFCfz-5" name="IABS">
+      <bpmn:documentation>Code: STEP-01; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: iABS (ЦФТ-Банк); ST: 2 min; Category: api_service; RPA potential: 40%</bpmn:documentation>
+      <bpmn:outgoing>oqkb8AqbNajjnxtb4A48-47</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_zG1e_BgdiC46cywwFCfz-5" name="2 мин" attachedToRef="zG1e_BgdiC46cywwFCfz-5" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="zG1e_BgdiC46cywwFCfz-6" name="IABS">
+      <bpmn:documentation>Code: STEP-02; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: iABS (ЦФТ-Банк); ST: 2 min; Category: api_service; RPA potential: 40%</bpmn:documentation>
+      <bpmn:outgoing>fQVIEM4XUXHr14V0wWct-6</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_zG1e_BgdiC46cywwFCfz-6" name="2 мин" attachedToRef="zG1e_BgdiC46cywwFCfz-6" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="zG1e_BgdiC46cywwFCfz-10" name="IABS">
+      <bpmn:documentation>Code: STEP-03; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: iABS (ЦФТ-Банк); ST: 2 min; WT: 5 min; Category: api_service; RPA potential: 40%</bpmn:documentation>
+      <bpmn:outgoing>oqkb8AqbNajjnxtb4A48-31</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_zG1e_BgdiC46cywwFCfz-10" name="2 мин · ожидание 5 мин" attachedToRef="zG1e_BgdiC46cywwFCfz-10" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="zG1e_BgdiC46cywwFCfz-11" name="Crobs">
+      <bpmn:documentation>Code: STEP-04; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: CROBS Risk Engine; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:outgoing>oqkb8AqbNajjnxtb4A48-35</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_zG1e_BgdiC46cywwFCfz-11" name="1 ч" attachedToRef="zG1e_BgdiC46cywwFCfz-11" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="zG1e_BgdiC46cywwFCfz-12" name="IABS">
+      <bpmn:documentation>Code: STEP-05; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: iABS (ЦФТ-Банк); ST: 2 min; Category: api_service; RPA potential: 40%</bpmn:documentation>
+      <bpmn:outgoing>oqkb8AqbNajjnxtb4A48-38</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_zG1e_BgdiC46cywwFCfz-12" name="2 мин" attachedToRef="zG1e_BgdiC46cywwFCfz-12" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="zSD57VsjHOq2rRrbwC_S-3" name="9. Rasmiylashtirilgan chek tekshirish">
+      <bpmn:documentation>Code: STEP-09; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: SQB CRM / Core; ST: 1 min; In: Maqsadi summasi va imzo namunasiga binoan; Category: validation; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>us0bH9Fgc579xr_FyDnU-56</bpmn:incoming>
+      <bpmn:incoming>hqGvQ2s5txqknocTSVpu-9</bpmn:incoming>
+      <bpmn:outgoing>Flow_0-jlPp4owaziDXjIvgEA-4</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_zSD57VsjHOq2rRrbwC_S-3" name="1 мин" attachedToRef="zSD57VsjHOq2rRrbwC_S-3" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Node_0-jlPp4owaziDXjIvgEA-1" name="10. Rasmiylashtirilgan chek bo&apos;yicha naqd pul oluvchining vakolatini tekshirish">
+      <bpmn:documentation>Code: STEP-10; Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: SQB CRM / Core; ST: 1 min; Category: validation; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Flow_0-jlPp4owaziDXjIvgEA-7</bpmn:incoming>
+      <bpmn:outgoing>zSD57VsjHOq2rRrbwC_S-8</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Node_0-jlPp4owaziDXjIvgEA-1" name="1 мин" attachedToRef="Node_0-jlPp4owaziDXjIvgEA-1" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="Node_0-jlPp4owaziDXjIvgEA-3" name="To&apos;g&apos;ri rasmiylashtirilganmi?">
+      <bpmn:documentation>Role: Yuridik shaxslarga xizmat ko&apos;rsatish xizmati (Korporativ markaz); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Flow_0-jlPp4owaziDXjIvgEA-4</bpmn:incoming>
+      <bpmn:outgoing>Flow_0-jlPp4owaziDXjIvgEA-7</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="us0bH9Fgc579xr_FyDnU-133" name="15. Chekni belgilangan tartibda tekshirib imzolaydi">
+      <bpmn:documentation>Code: STEP-15; Role: Katta nazoratchisi (Korporativ markaz); System: SQB CRM / Core; ST: 1 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>us0bH9Fgc579xr_FyDnU-132</bpmn:incoming>
+      <bpmn:outgoing>us0bH9Fgc579xr_FyDnU-136</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_us0bH9Fgc579xr_FyDnU-133" name="1 мин" attachedToRef="us0bH9Fgc579xr_FyDnU-133" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="us0bH9Fgc579xr_FyDnU-101" name="21. O&apos;tkazilgan buxgalteriya amaliyotini tasdiqlaydi">
+      <bpmn:documentation>Code: STEP-21; Role: Katta nazoratchisi (Korporativ markaz); System: SQB CRM / Core; ST: 1 min; WT: 5 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>XYNvgjv6erU1vBA4tMUT-24</bpmn:incoming>
+      <bpmn:incoming>sk8cv8c54az7mczHfbmu-20</bpmn:incoming>
+      <bpmn:outgoing>us0bH9Fgc579xr_FyDnU-103</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_us0bH9Fgc579xr_FyDnU-101" name="1 мин · ожидание 5 мин" attachedToRef="us0bH9Fgc579xr_FyDnU-101" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="us0bH9Fgc579xr_FyDnU-78" name="Jarayon yakunlandi">
+      <bpmn:documentation>Code: END; Role: Katta nazoratchisi (Korporativ markaz); System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>us0bH9Fgc579xr_FyDnU-103</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Node_2Rye-E4zDWlN9GWDJkNu-1" name="6. Tarif bo&apos;yicha chek daftarchasi uchun bank komissiyasini avtomatik ravishda &quot;Введён&quot; holatda shakllanadi.">
+      <bpmn:documentation>Code: STEP-06; Role: Katta nazoratchisi (Korporativ markaz); System: SQB CRM / Core; ST: 3 min; Category: rpa_bot; RPA potential: 95%</bpmn:documentation>
+      <bpmn:incoming>oqkb8AqbNajjnxtb4A48-41</bpmn:incoming>
+      <bpmn:incoming>oqkb8AqbNajjnxtb4A48-28</bpmn:incoming>
+      <bpmn:outgoing>Flow_2Rye-E4zDWlN9GWDJkNu-2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Duration_Node_2Rye-E4zDWlN9GWDJkNu-1" name="3 мин" attachedToRef="Node_2Rye-E4zDWlN9GWDJkNu-1" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT3M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Node_2Rye-E4zDWlN9GWDJkNu-3" name="7. &quot;Введён&quot; holatdagi buxgalteriya amaliyotini tasdiqlaydi">
+      <bpmn:documentation>Code: STEP-07; Role: Katta nazoratchisi (Korporativ markaz); System: SQB CRM / Core; ST: 1 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Flow_2Rye-E4zDWlN9GWDJkNu-2</bpmn:incoming>
+      <bpmn:outgoing>hqGvQ2s5txqknocTSVpu-8</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Node_2Rye-E4zDWlN9GWDJkNu-3" name="1 мин" attachedToRef="Node_2Rye-E4zDWlN9GWDJkNu-3" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="sk8cv8c54az7mczHfbmu-5" name="Kutish vaqti">
+      <bpmn:documentation>Role: Katta nazoratchisi (Korporativ markaz); System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>us0bH9Fgc579xr_FyDnU-145</bpmn:incoming>
+      <bpmn:outgoing>XYNvgjv6erU1vBA4tMUT-24</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT5M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="zG1e_BgdiC46cywwFCfz-4" name="IABS">
+      <bpmn:documentation>Code: STEP-06; Role: Katta nazoratchisi (Korporativ markaz); System: iABS (ЦФТ-Банк); ST: 2 min; Category: api_service; RPA potential: 40%</bpmn:documentation>
+      <bpmn:outgoing>sk8cv8c54az7mczHfbmu-20</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_zG1e_BgdiC46cywwFCfz-4" name="2 мин" attachedToRef="zG1e_BgdiC46cywwFCfz-4" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="zG1e_BgdiC46cywwFCfz-8" name="IABS">
+      <bpmn:documentation>Code: STEP-07; Role: Katta nazoratchisi (Korporativ markaz); System: iABS (ЦФТ-Банк); ST: 2 min; Category: api_service; RPA potential: 40%</bpmn:documentation>
+      <bpmn:outgoing>oqkb8AqbNajjnxtb4A48-41</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_zG1e_BgdiC46cywwFCfz-8" name="2 мин" attachedToRef="zG1e_BgdiC46cywwFCfz-8" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateCatchEvent id="hqGvQ2s5txqknocTSVpu-7" name="Событие-сообщение">
+      <bpmn:documentation>Role: Katta nazoratchisi (Korporativ markaz); System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>hqGvQ2s5txqknocTSVpu-8</bpmn:incoming>
+      <bpmn:incoming>hqGvQ2s5txqknocTSVpu-10</bpmn:incoming>
+      <bpmn:outgoing>hqGvQ2s5txqknocTSVpu-9</bpmn:outgoing>
+      <bpmn:messageEventDefinition />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="us0bH9Fgc579xr_FyDnU-42" name="4. Arizasiga binoan chek daftarchasini mijozga taqdim etadi">
+      <bpmn:documentation>Code: STEP-04; Role: Kassasir (Korporativ markaz); System: SQB CRM / Core; ST: 3 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>oqkb8AqbNajjnxtb4A48-44</bpmn:incoming>
+      <bpmn:incoming>us0bH9Fgc579xr_FyDnU-71</bpmn:incoming>
+      <bpmn:incoming>hqGvQ2s5txqknocTSVpu-11</bpmn:incoming>
+      <bpmn:outgoing>oqkb8AqbNajjnxtb4A48-22</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_us0bH9Fgc579xr_FyDnU-42" name="3 мин" attachedToRef="us0bH9Fgc579xr_FyDnU-42" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT3M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="us0bH9Fgc579xr_FyDnU-23" name="20. Chekni mijozga imzolatib pulni taqdim etadi va Crobs dasturida tasdiqlaydi">
+      <bpmn:documentation>Code: STEP-20; Role: Kassasir (Korporativ markaz); System: CROBS Risk Engine; ST: 10 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>oqkb8AqbNajjnxtb4A48-50</bpmn:incoming>
+      <bpmn:incoming>Flow_2Rye-E4zDWlN9GWDJkNu-12</bpmn:incoming>
+      <bpmn:outgoing>us0bH9Fgc579xr_FyDnU-144</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_us0bH9Fgc579xr_FyDnU-23" name="10 мин" attachedToRef="us0bH9Fgc579xr_FyDnU-23" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="us0bH9Fgc579xr_FyDnU-20" name="18. Talon va naqd pul oluvchi shaxsini tasdiqlovchi hujjatini qabul qilib oladi">
+      <bpmn:documentation>Code: STEP-18; Role: Kassasir (Korporativ markaz); System: SQB CRM / Core; ST: 1 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>us0bH9Fgc579xr_FyDnU-74</bpmn:incoming>
+      <bpmn:incoming>Flow_2Rye-E4zDWlN9GWDJkNu-7</bpmn:incoming>
+      <bpmn:outgoing>us0bH9Fgc579xr_FyDnU-22</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_us0bH9Fgc579xr_FyDnU-20" name="1 мин" attachedToRef="us0bH9Fgc579xr_FyDnU-20" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="us0bH9Fgc579xr_FyDnU-21" name="19. Shaxsni tasdiqlovchi hujjat, talon va chekni imzolarini solishtirib tekshiradi">
+      <bpmn:documentation>Code: STEP-19; Role: Kassasir (Korporativ markaz); System: SQB CRM / Core; ST: 2 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>us0bH9Fgc579xr_FyDnU-22</bpmn:incoming>
+      <bpmn:outgoing>Flow_2Rye-E4zDWlN9GWDJkNu-9</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_us0bH9Fgc579xr_FyDnU-21" name="2 мин" attachedToRef="us0bH9Fgc579xr_FyDnU-21" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:parallelGateway id="us0bH9Fgc579xr_FyDnU-142" name="Условие">
+      <bpmn:documentation>Role: Kassasir (Korporativ markaz); System: SQB CRM / Core; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>us0bH9Fgc579xr_FyDnU-144</bpmn:incoming>
+      <bpmn:outgoing>us0bH9Fgc579xr_FyDnU-145</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:userTask id="Node_2Rye-E4zDWlN9GWDJkNu-4" name="17. Chekni qabul qilib oladi">
+      <bpmn:documentation>Code: STEP-17; Role: Kassasir (Korporativ markaz); System: SQB CRM / Core; ST: 1 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:incoming>Flow_2Rye-E4zDWlN9GWDJkNu-6</bpmn:incoming>
+      <bpmn:outgoing>Flow_2Rye-E4zDWlN9GWDJkNu-7</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_Node_2Rye-E4zDWlN9GWDJkNu-4" name="1 мин" attachedToRef="Node_2Rye-E4zDWlN9GWDJkNu-4" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="Node_2Rye-E4zDWlN9GWDJkNu-8" name="Nomuvofiqlik mavjudmi? (Talon va chek, Chek va shaxsni tasdiqlovchi hujjat, Shaxsni tasdiqlovchi hujjatdagi shaxs)" gatewayDirection="Diverging">
+      <bpmn:documentation>Role: Kassasir (Korporativ markaz); System: SQB CRM / Core; ST: 180 min; Category: approval; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Flow_2Rye-E4zDWlN9GWDJkNu-9</bpmn:incoming>
+      <bpmn:outgoing>Flow_2Rye-E4zDWlN9GWDJkNu-11</bpmn:outgoing>
+      <bpmn:outgoing>Flow_2Rye-E4zDWlN9GWDJkNu-12</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="Node_2Rye-E4zDWlN9GWDJkNu-15" name="Jarayon yakunlandi">
+      <bpmn:documentation>Code: END; Role: Kassasir (Korporativ markaz); System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:incoming>Flow_2Rye-E4zDWlN9GWDJkNu-11</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:intermediateCatchEvent id="sk8cv8c54az7mczHfbmu-3" name="Kutish vaqti">
+      <bpmn:documentation>Role: Kassasir (Korporativ markaz); System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:outgoing>us0bH9Fgc579xr_FyDnU-71</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT5M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="sk8cv8c54az7mczHfbmu-4" name="Kutish vaqti">
+      <bpmn:documentation>Role: Kassasir (Korporativ markaz); System: SQB CRM / Core; ST: 5 min; Category: notification; RPA potential: 40%</bpmn:documentation>
+      <bpmn:outgoing>us0bH9Fgc579xr_FyDnU-74</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT5M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="sk8cv8c54az7mczHfbmu-14" name="Crobs">
+      <bpmn:documentation>Code: STEP-08; Role: Kassasir (Korporativ markaz); System: CROBS Risk Engine; ST: 60 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:outgoing>oqkb8AqbNajjnxtb4A48-50</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_sk8cv8c54az7mczHfbmu-14" name="1 ч" attachedToRef="sk8cv8c54az7mczHfbmu-14" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="zG1e_BgdiC46cywwFCfz-9" name="Crobs">
+      <bpmn:documentation>Code: STEP-09; Role: Kassasir (Korporativ markaz); System: CROBS Risk Engine; ST: 60 min; WT: 5 min; Category: manual; RPA potential: 65%</bpmn:documentation>
+      <bpmn:outgoing>oqkb8AqbNajjnxtb4A48-44</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Duration_zG1e_BgdiC46cywwFCfz-9" name="1 ч · ожидание 5 мин" attachedToRef="zG1e_BgdiC46cywwFCfz-9" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="zSD57VsjHOq2rRrbwC_S-1" name="5. Crobs dasturidagi arizani tasdiqlaydi va 93609-sonli hisob raqamida o&apos;tkazma o&apos;tkaziladi">
+      <bpmn:documentation>Code: STEP-05; Role: Kassasir (Korporativ markaz); System: CROBS Risk Engine; ST: 3 min; Category: rpa_bot; RPA potential: 95%</bpmn:documentation>
+      <bpmn:incoming>oqkb8AqbNajjnxtb4A48-22</bpmn:incoming>
+      <bpmn:outgoing>oqkb8AqbNajjnxtb4A48-28</bpmn:outgoing>
+      <bpmn:outgoing>hqGvQ2s5txqknocTSVpu-10</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Duration_zSD57VsjHOq2rRrbwC_S-1" name="3 мин" attachedToRef="zSD57VsjHOq2rRrbwC_S-1" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT3M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:dataObjectReference id="us0bH9Fgc579xr_FyDnU-61" name="Maqsadi summasi va imzo namunasiga binoan" />
+    <bpmn:sequenceFlow id="Flow_-tSfLAPszdVLrIBoT1GS-9" sourceRef="Node_-tSfLAPszdVLrIBoT1GS-8" targetRef="Node_-tSfLAPszdVLrIBoT1GS-12" />
+    <bpmn:sequenceFlow id="Flow_-tSfLAPszdVLrIBoT1GS-17" sourceRef="sk8cv8c54az7mczHfbmu-2" targetRef="us0bH9Fgc579xr_FyDnU-49" />
+    <bpmn:sequenceFlow id="us0bH9Fgc579xr_FyDnU-53" name="Yo&apos;q" sourceRef="us0bH9Fgc579xr_FyDnU-51" targetRef="us0bH9Fgc579xr_FyDnU-36">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Yo&apos;q</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="us0bH9Fgc579xr_FyDnU-56" name="Ha" sourceRef="us0bH9Fgc579xr_FyDnU-51" targetRef="zSD57VsjHOq2rRrbwC_S-3">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Ha</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="us0bH9Fgc579xr_FyDnU-77" sourceRef="us0bH9Fgc579xr_FyDnU-15" targetRef="us0bH9Fgc579xr_FyDnU-114" />
+    <bpmn:sequenceFlow id="us0bH9Fgc579xr_FyDnU-27" name="Ha" sourceRef="us0bH9Fgc579xr_FyDnU-25" targetRef="us0bH9Fgc579xr_FyDnU-15">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Ha</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="us0bH9Fgc579xr_FyDnU-115" name="Ha" sourceRef="us0bH9Fgc579xr_FyDnU-114" targetRef="us0bH9Fgc579xr_FyDnU-113">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Ha</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="us0bH9Fgc579xr_FyDnU-146" sourceRef="us0bH9Fgc579xr_FyDnU-108" targetRef="us0bH9Fgc579xr_FyDnU-25" />
+    <bpmn:sequenceFlow id="FGyBwYySxp6FvuOYyCsL-9" sourceRef="us0bH9Fgc579xr_FyDnU-49" targetRef="us0bH9Fgc579xr_FyDnU-51" />
+    <bpmn:sequenceFlow id="oqkb8AqbNajjnxtb4A48-31" sourceRef="zG1e_BgdiC46cywwFCfz-10" targetRef="us0bH9Fgc579xr_FyDnU-49" />
+    <bpmn:sequenceFlow id="oqkb8AqbNajjnxtb4A48-35" sourceRef="zG1e_BgdiC46cywwFCfz-11" targetRef="us0bH9Fgc579xr_FyDnU-36" />
+    <bpmn:sequenceFlow id="oqkb8AqbNajjnxtb4A48-38" sourceRef="zG1e_BgdiC46cywwFCfz-12" targetRef="us0bH9Fgc579xr_FyDnU-4" />
+    <bpmn:sequenceFlow id="oqkb8AqbNajjnxtb4A48-47" sourceRef="zG1e_BgdiC46cywwFCfz-5" targetRef="us0bH9Fgc579xr_FyDnU-15" />
+    <bpmn:sequenceFlow id="JaJ09ecAyT34Y_DzpQXu-5" name="Yo&apos;q" sourceRef="JaJ09ecAyT34Y_DzpQXu-4" targetRef="JaJ09ecAyT34Y_DzpQXu-6">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Yo&apos;q</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="JaJ09ecAyT34Y_DzpQXu-10" name="Ha" sourceRef="JaJ09ecAyT34Y_DzpQXu-4" targetRef="us0bH9Fgc579xr_FyDnU-108">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Ha</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="JaJ09ecAyT34Y_DzpQXu-11" name="Ha" sourceRef="JaJ09ecAyT34Y_DzpQXu-6" targetRef="JaJ09ecAyT34Y_DzpQXu-12">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Ha</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="JaJ09ecAyT34Y_DzpQXu-15" sourceRef="JaJ09ecAyT34Y_DzpQXu-12" targetRef="us0bH9Fgc579xr_FyDnU-108" />
+    <bpmn:sequenceFlow id="JaJ09ecAyT34Y_DzpQXu-20" name="Yo&apos;q" sourceRef="JaJ09ecAyT34Y_DzpQXu-6" targetRef="JaJ09ecAyT34Y_DzpQXu-18">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Yo&apos;q</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="fQVIEM4XUXHr14V0wWct-6" sourceRef="zG1e_BgdiC46cywwFCfz-6" targetRef="JaJ09ecAyT34Y_DzpQXu-12" />
+    <bpmn:sequenceFlow id="zSD57VsjHOq2rRrbwC_S-8" sourceRef="Node_0-jlPp4owaziDXjIvgEA-1" targetRef="JaJ09ecAyT34Y_DzpQXu-4" />
+    <bpmn:sequenceFlow id="Flow_0-jlPp4owaziDXjIvgEA-7" name="Ha" sourceRef="Node_0-jlPp4owaziDXjIvgEA-3" targetRef="Node_0-jlPp4owaziDXjIvgEA-1">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Ha</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_0-jlPp4owaziDXjIvgEA-4" sourceRef="zSD57VsjHOq2rRrbwC_S-3" targetRef="Node_0-jlPp4owaziDXjIvgEA-3" />
+    <bpmn:sequenceFlow id="us0bH9Fgc579xr_FyDnU-103" sourceRef="us0bH9Fgc579xr_FyDnU-101" targetRef="us0bH9Fgc579xr_FyDnU-78" />
+    <bpmn:sequenceFlow id="XYNvgjv6erU1vBA4tMUT-24" sourceRef="sk8cv8c54az7mczHfbmu-5" targetRef="us0bH9Fgc579xr_FyDnU-101" />
+    <bpmn:sequenceFlow id="oqkb8AqbNajjnxtb4A48-41" sourceRef="zG1e_BgdiC46cywwFCfz-8" targetRef="Node_2Rye-E4zDWlN9GWDJkNu-1" />
+    <bpmn:sequenceFlow id="Flow_2Rye-E4zDWlN9GWDJkNu-2" sourceRef="Node_2Rye-E4zDWlN9GWDJkNu-1" targetRef="Node_2Rye-E4zDWlN9GWDJkNu-3" />
+    <bpmn:sequenceFlow id="sk8cv8c54az7mczHfbmu-20" sourceRef="zG1e_BgdiC46cywwFCfz-4" targetRef="us0bH9Fgc579xr_FyDnU-101" />
+    <bpmn:sequenceFlow id="hqGvQ2s5txqknocTSVpu-8" sourceRef="Node_2Rye-E4zDWlN9GWDJkNu-3" targetRef="hqGvQ2s5txqknocTSVpu-7" />
+    <bpmn:sequenceFlow id="us0bH9Fgc579xr_FyDnU-22" sourceRef="us0bH9Fgc579xr_FyDnU-20" targetRef="us0bH9Fgc579xr_FyDnU-21" />
+    <bpmn:sequenceFlow id="us0bH9Fgc579xr_FyDnU-74" sourceRef="sk8cv8c54az7mczHfbmu-4" targetRef="us0bH9Fgc579xr_FyDnU-20" />
+    <bpmn:sequenceFlow id="us0bH9Fgc579xr_FyDnU-144" sourceRef="us0bH9Fgc579xr_FyDnU-23" targetRef="us0bH9Fgc579xr_FyDnU-142" />
+    <bpmn:sequenceFlow id="oqkb8AqbNajjnxtb4A48-22" sourceRef="us0bH9Fgc579xr_FyDnU-42" targetRef="zSD57VsjHOq2rRrbwC_S-1" />
+    <bpmn:sequenceFlow id="oqkb8AqbNajjnxtb4A48-44" sourceRef="zG1e_BgdiC46cywwFCfz-9" targetRef="us0bH9Fgc579xr_FyDnU-42" />
+    <bpmn:sequenceFlow id="oqkb8AqbNajjnxtb4A48-50" sourceRef="sk8cv8c54az7mczHfbmu-14" targetRef="us0bH9Fgc579xr_FyDnU-23" />
+    <bpmn:sequenceFlow id="us0bH9Fgc579xr_FyDnU-71" sourceRef="sk8cv8c54az7mczHfbmu-3" targetRef="us0bH9Fgc579xr_FyDnU-42" />
+    <bpmn:sequenceFlow id="Flow_2Rye-E4zDWlN9GWDJkNu-7" sourceRef="Node_2Rye-E4zDWlN9GWDJkNu-4" targetRef="us0bH9Fgc579xr_FyDnU-20" />
+    <bpmn:sequenceFlow id="Flow_2Rye-E4zDWlN9GWDJkNu-9" sourceRef="us0bH9Fgc579xr_FyDnU-21" targetRef="Node_2Rye-E4zDWlN9GWDJkNu-8" />
+    <bpmn:sequenceFlow id="Flow_2Rye-E4zDWlN9GWDJkNu-11" name="Ha" sourceRef="Node_2Rye-E4zDWlN9GWDJkNu-8" targetRef="Node_2Rye-E4zDWlN9GWDJkNu-15">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Ha</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_2Rye-E4zDWlN9GWDJkNu-12" name="Yo&apos;q" sourceRef="Node_2Rye-E4zDWlN9GWDJkNu-8" targetRef="us0bH9Fgc579xr_FyDnU-23">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Yo&apos;q</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_-tSfLAPszdVLrIBoT1GS-13" sourceRef="Node_-tSfLAPszdVLrIBoT1GS-12" targetRef="sk8cv8c54az7mczHfbmu-2" />
+    <bpmn:sequenceFlow id="us0bH9Fgc579xr_FyDnU-132" sourceRef="us0bH9Fgc579xr_FyDnU-113" targetRef="us0bH9Fgc579xr_FyDnU-133" />
+    <bpmn:sequenceFlow id="us0bH9Fgc579xr_FyDnU-136" sourceRef="us0bH9Fgc579xr_FyDnU-133" targetRef="us0bH9Fgc579xr_FyDnU-135" />
+    <bpmn:sequenceFlow id="oqkb8AqbNajjnxtb4A48-28" sourceRef="zSD57VsjHOq2rRrbwC_S-1" targetRef="Node_2Rye-E4zDWlN9GWDJkNu-1" />
+    <bpmn:sequenceFlow id="us0bH9Fgc579xr_FyDnU-145" sourceRef="us0bH9Fgc579xr_FyDnU-142" targetRef="sk8cv8c54az7mczHfbmu-5" />
+    <bpmn:sequenceFlow id="Flow_2Rye-E4zDWlN9GWDJkNu-6" sourceRef="us0bH9Fgc579xr_FyDnU-135" targetRef="Node_2Rye-E4zDWlN9GWDJkNu-4" />
+    <bpmn:sequenceFlow id="hqGvQ2s5txqknocTSVpu-9" sourceRef="hqGvQ2s5txqknocTSVpu-7" targetRef="zSD57VsjHOq2rRrbwC_S-3" />
+    <bpmn:sequenceFlow id="hqGvQ2s5txqknocTSVpu-10" sourceRef="zSD57VsjHOq2rRrbwC_S-1" targetRef="hqGvQ2s5txqknocTSVpu-7" />
+    <bpmn:sequenceFlow id="hqGvQ2s5txqknocTSVpu-11" sourceRef="us0bH9Fgc579xr_FyDnU-36" targetRef="us0bH9Fgc579xr_FyDnU-42" />
+    <bpmn:association id="us0bH9Fgc579xr_FyDnU-64" sourceRef="us0bH9Fgc579xr_FyDnU-61" targetRef="zSD57VsjHOq2rRrbwC_S-3" associationDirection="One" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_-tSfLAPszdVLrIBoT1GS-6" name="Mijoz" processType="Public" isExecutable="false" />
+  <bpmn:process id="Process_-tSfLAPszdVLrIBoT1GS-7" name="Korporativ markaz mijozlariga chek daftarchasi orqali naqd pul berish biznes-jarayoni" processType="Public" isExecutable="false" />
+
+  <bpmndi:BPMNDiagram id="Diagram_Process_PRC_SQB_5B793E">
+    <bpmndi:BPMNPlane id="Plane_Process_PRC_SQB_5B793E" bpmnElement="Collaboration_Process_PRC_SQB_5B793E">
+      <bpmndi:BPMNShape id="Participant_Process_PRC_SQB_5B793E_di" bpmnElement="Participant_Process_PRC_SQB_5B793E" isHorizontal="true">
+        <dc:Bounds x="139" y="550" width="4950" height="1160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_-tSfLAPszdVLrIBoT1GS-6_di" bpmnElement="Participant_-tSfLAPszdVLrIBoT1GS-6" isHorizontal="true">
+        <dc:Bounds x="170" y="300" width="4920" height="130" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_-tSfLAPszdVLrIBoT1GS-7_di" bpmnElement="Participant_-tSfLAPszdVLrIBoT1GS-7" isHorizontal="true">
+        <dc:Bounds x="170" y="203" width="4920" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_-tSfLAPszdVLrIBoT1GS-2_di" bpmnElement="Lane_-tSfLAPszdVLrIBoT1GS-2" isHorizontal="true">
+        <dc:Bounds x="169" y="550" width="4920" height="250" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_-tSfLAPszdVLrIBoT1GS-4_di" bpmnElement="Lane_-tSfLAPszdVLrIBoT1GS-4" isHorizontal="true">
+        <dc:Bounds x="169" y="800" width="4920" height="410" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-79_di" bpmnElement="us0bH9Fgc579xr_FyDnU-79" isHorizontal="true">
+        <dc:Bounds x="169" y="1210" width="4920" height="210" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-18_di" bpmnElement="us0bH9Fgc579xr_FyDnU-18" isHorizontal="true">
+        <dc:Bounds x="169" y="1420" width="4920" height="290" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Node_-tSfLAPszdVLrIBoT1GS-12_di" bpmnElement="Node_-tSfLAPszdVLrIBoT1GS-12">
+        <dc:Bounds x="319" y="631" width="200" height="97" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Node_-tSfLAPszdVLrIBoT1GS-12_di" bpmnElement="Duration_Node_-tSfLAPszdVLrIBoT1GS-12">
+        <dc:Bounds x="481" y="710" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="479" y="748" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Node_-tSfLAPszdVLrIBoT1GS-8_di" bpmnElement="Node_-tSfLAPszdVLrIBoT1GS-8">
+        <dc:Bounds x="245" y="655" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="208" y="739" width="123" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-36_di" bpmnElement="us0bH9Fgc579xr_FyDnU-36">
+        <dc:Bounds x="579" y="840" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_us0bH9Fgc579xr_FyDnU-36_di" bpmnElement="Duration_us0bH9Fgc579xr_FyDnU-36">
+        <dc:Bounds x="661" y="902" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="659" y="962" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-49_di" bpmnElement="us0bH9Fgc579xr_FyDnU-49">
+        <dc:Bounds x="336" y="980" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_us0bH9Fgc579xr_FyDnU-49_di" bpmnElement="Duration_us0bH9Fgc579xr_FyDnU-49">
+        <dc:Bounds x="418" y="1042" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="416" y="1080" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-51_di" bpmnElement="us0bH9Fgc579xr_FyDnU-51">
+        <dc:Bounds x="614" y="995" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="476" y="1051" width="157" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-4_di" bpmnElement="us0bH9Fgc579xr_FyDnU-4">
+        <dc:Bounds x="1119" y="839" width="230" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_us0bH9Fgc579xr_FyDnU-4_di" bpmnElement="Duration_us0bH9Fgc579xr_FyDnU-4">
+        <dc:Bounds x="1311" y="904" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1309" y="942" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-25_di" bpmnElement="us0bH9Fgc579xr_FyDnU-25">
+        <dc:Bounds x="2619" y="995" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2559" y="1051" width="170" height="33" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-15_di" bpmnElement="us0bH9Fgc579xr_FyDnU-15">
+        <dc:Bounds x="2731" y="975" width="239" height="97" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_us0bH9Fgc579xr_FyDnU-15_di" bpmnElement="Duration_us0bH9Fgc579xr_FyDnU-15">
+        <dc:Bounds x="2932" y="1054" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2972" y="1063" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-61_di" bpmnElement="us0bH9Fgc579xr_FyDnU-61">
+        <dc:Bounds x="1418" y="902" width="80" height="70" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1408" y="834" width="100" height="62" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-108_di" bpmnElement="us0bH9Fgc579xr_FyDnU-108">
+        <dc:Bounds x="2320" y="979" width="210" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_us0bH9Fgc579xr_FyDnU-108_di" bpmnElement="Duration_us0bH9Fgc579xr_FyDnU-108">
+        <dc:Bounds x="2492" y="1044" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2490" y="1082" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-114_di" bpmnElement="us0bH9Fgc579xr_FyDnU-114">
+        <dc:Bounds x="2994" y="995" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2944" y="1094" width="150" height="33" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-113_di" bpmnElement="us0bH9Fgc579xr_FyDnU-113">
+        <dc:Bounds x="3126" y="971" width="258" height="97" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_us0bH9Fgc579xr_FyDnU-113_di" bpmnElement="Duration_us0bH9Fgc579xr_FyDnU-113">
+        <dc:Bounds x="3346" y="1050" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3344" y="1088" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-135_di" bpmnElement="us0bH9Fgc579xr_FyDnU-135">
+        <dc:Bounds x="3408" y="979" width="260" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_us0bH9Fgc579xr_FyDnU-135_di" bpmnElement="Duration_us0bH9Fgc579xr_FyDnU-135">
+        <dc:Bounds x="3630" y="1041" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3628" y="1079" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="JaJ09ecAyT34Y_DzpQXu-4_di" bpmnElement="JaJ09ecAyT34Y_DzpQXu-4">
+        <dc:Bounds x="1904" y="995" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1934" y="1051" width="121" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="JaJ09ecAyT34Y_DzpQXu-6_di" bpmnElement="JaJ09ecAyT34Y_DzpQXu-6">
+        <dc:Bounds x="2033" y="905" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1892" y="866" width="160" height="33" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="JaJ09ecAyT34Y_DzpQXu-12_di" bpmnElement="JaJ09ecAyT34Y_DzpQXu-12">
+        <dc:Bounds x="2129" y="890" width="180" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_JaJ09ecAyT34Y_DzpQXu-12_di" bpmnElement="Duration_JaJ09ecAyT34Y_DzpQXu-12">
+        <dc:Bounds x="2271" y="955" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2269" y="993" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="JaJ09ecAyT34Y_DzpQXu-18_di" bpmnElement="JaJ09ecAyT34Y_DzpQXu-18">
+        <dc:Bounds x="2033" y="814" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2089" y="830" width="119" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="sk8cv8c54az7mczHfbmu-2_di" bpmnElement="sk8cv8c54az7mczHfbmu-2">
+        <dc:Bounds x="386" y="863" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="442" y="879" width="76" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zG1e_BgdiC46cywwFCfz-5_di" bpmnElement="zG1e_BgdiC46cywwFCfz-5">
+        <dc:Bounds x="2750" y="901" width="80" height="68" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_zG1e_BgdiC46cywwFCfz-5_di" bpmnElement="Duration_zG1e_BgdiC46cywwFCfz-5">
+        <dc:Bounds x="2792" y="951" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2832" y="931" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zG1e_BgdiC46cywwFCfz-6_di" bpmnElement="zG1e_BgdiC46cywwFCfz-6">
+        <dc:Bounds x="2288" y="819" width="80" height="68" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_zG1e_BgdiC46cywwFCfz-6_di" bpmnElement="Duration_zG1e_BgdiC46cywwFCfz-6">
+        <dc:Bounds x="2330" y="869" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2328" y="907" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zG1e_BgdiC46cywwFCfz-10_di" bpmnElement="zG1e_BgdiC46cywwFCfz-10">
+        <dc:Bounds x="266" y="980" width="80" height="40" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_zG1e_BgdiC46cywwFCfz-10_di" bpmnElement="Duration_zG1e_BgdiC46cywwFCfz-10">
+        <dc:Bounds x="308" y="1002" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="257" y="1062" width="139" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zG1e_BgdiC46cywwFCfz-11_di" bpmnElement="zG1e_BgdiC46cywwFCfz-11">
+        <dc:Bounds x="515" y="835" width="80" height="40" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_zG1e_BgdiC46cywwFCfz-11_di" bpmnElement="Duration_zG1e_BgdiC46cywwFCfz-11">
+        <dc:Bounds x="557" y="857" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="521" y="895" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zG1e_BgdiC46cywwFCfz-12_di" bpmnElement="zG1e_BgdiC46cywwFCfz-12">
+        <dc:Bounds x="1170" y="939" width="80" height="68" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_zG1e_BgdiC46cywwFCfz-12_di" bpmnElement="Duration_zG1e_BgdiC46cywwFCfz-12">
+        <dc:Bounds x="1212" y="989" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1210" y="1027" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zSD57VsjHOq2rRrbwC_S-3_di" bpmnElement="zSD57VsjHOq2rRrbwC_S-3">
+        <dc:Bounds x="1403" y="980" width="220" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_zSD57VsjHOq2rRrbwC_S-3_di" bpmnElement="Duration_zSD57VsjHOq2rRrbwC_S-3">
+        <dc:Bounds x="1585" y="1042" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1625" y="1051" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Node_0-jlPp4owaziDXjIvgEA-1_di" bpmnElement="Node_0-jlPp4owaziDXjIvgEA-1">
+        <dc:Bounds x="1732" y="964" width="140" height="112" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Node_0-jlPp4owaziDXjIvgEA-1_di" bpmnElement="Duration_Node_0-jlPp4owaziDXjIvgEA-1">
+        <dc:Bounds x="1834" y="1058" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1832" y="1096" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Node_0-jlPp4owaziDXjIvgEA-3_di" bpmnElement="Node_0-jlPp4owaziDXjIvgEA-3">
+        <dc:Bounds x="1647" y="995" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1586" y="1079" width="171" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-133_di" bpmnElement="us0bH9Fgc579xr_FyDnU-133">
+        <dc:Bounds x="3170" y="1274" width="170" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_us0bH9Fgc579xr_FyDnU-133_di" bpmnElement="Duration_us0bH9Fgc579xr_FyDnU-133">
+        <dc:Bounds x="3302" y="1339" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3300" y="1377" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-101_di" bpmnElement="us0bH9Fgc579xr_FyDnU-101">
+        <dc:Bounds x="4731" y="1275" width="170" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_us0bH9Fgc579xr_FyDnU-101_di" bpmnElement="Duration_us0bH9Fgc579xr_FyDnU-101">
+        <dc:Bounds x="4863" y="1340" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4812" y="1378" width="139" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-78_di" bpmnElement="us0bH9Fgc579xr_FyDnU-78">
+        <dc:Bounds x="4961" y="1290" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4926" y="1346" width="119" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Node_2Rye-E4zDWlN9GWDJkNu-1_di" bpmnElement="Node_2Rye-E4zDWlN9GWDJkNu-1">
+        <dc:Bounds x="916" y="1275" width="233" height="97" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Node_2Rye-E4zDWlN9GWDJkNu-1_di" bpmnElement="Duration_Node_2Rye-E4zDWlN9GWDJkNu-1">
+        <dc:Bounds x="1111" y="1354" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1151" y="1363" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Node_2Rye-E4zDWlN9GWDJkNu-3_di" bpmnElement="Node_2Rye-E4zDWlN9GWDJkNu-3">
+        <dc:Bounds x="1196" y="1274" width="210" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Node_2Rye-E4zDWlN9GWDJkNu-3_di" bpmnElement="Duration_Node_2Rye-E4zDWlN9GWDJkNu-3">
+        <dc:Bounds x="1368" y="1339" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1366" y="1377" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="sk8cv8c54az7mczHfbmu-5_di" bpmnElement="sk8cv8c54az7mczHfbmu-5">
+        <dc:Bounds x="4667" y="1290" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4654" y="1346" width="76" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zG1e_BgdiC46cywwFCfz-4_di" bpmnElement="zG1e_BgdiC46cywwFCfz-4">
+        <dc:Bounds x="4851" y="1210" width="80" height="57" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_zG1e_BgdiC46cywwFCfz-4_di" bpmnElement="Duration_zG1e_BgdiC46cywwFCfz-4">
+        <dc:Bounds x="4893" y="1249" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4933" y="1258" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zG1e_BgdiC46cywwFCfz-8_di" bpmnElement="zG1e_BgdiC46cywwFCfz-8">
+        <dc:Bounds x="923" y="1210" width="80" height="61" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_zG1e_BgdiC46cywwFCfz-8_di" bpmnElement="Duration_zG1e_BgdiC46cywwFCfz-8">
+        <dc:Bounds x="965" y="1253" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1005" y="1233" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="hqGvQ2s5txqknocTSVpu-7_di" bpmnElement="hqGvQ2s5txqknocTSVpu-7">
+        <dc:Bounds x="1430" y="1290" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1460" y="1346" width="121" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-42_di" bpmnElement="us0bH9Fgc579xr_FyDnU-42">
+        <dc:Bounds x="711" y="1544" width="210" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_us0bH9Fgc579xr_FyDnU-42_di" bpmnElement="Duration_us0bH9Fgc579xr_FyDnU-42">
+        <dc:Bounds x="883" y="1609" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="881" y="1647" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-23_di" bpmnElement="us0bH9Fgc579xr_FyDnU-23">
+        <dc:Bounds x="4198" y="1545" width="255" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_us0bH9Fgc579xr_FyDnU-23_di" bpmnElement="Duration_us0bH9Fgc579xr_FyDnU-23">
+        <dc:Bounds x="4415" y="1610" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4410" y="1648" width="47" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-20_di" bpmnElement="us0bH9Fgc579xr_FyDnU-20">
+        <dc:Bounds x="3611" y="1536" width="180" height="97" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_us0bH9Fgc579xr_FyDnU-20_di" bpmnElement="Duration_us0bH9Fgc579xr_FyDnU-20">
+        <dc:Bounds x="3753" y="1615" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3751" y="1653" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-21_di" bpmnElement="us0bH9Fgc579xr_FyDnU-21">
+        <dc:Bounds x="3815" y="1544" width="240" height="83" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_us0bH9Fgc579xr_FyDnU-21_di" bpmnElement="Duration_us0bH9Fgc579xr_FyDnU-21">
+        <dc:Bounds x="4017" y="1609" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3973" y="1647" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="us0bH9Fgc579xr_FyDnU-142_di" bpmnElement="us0bH9Fgc579xr_FyDnU-142">
+        <dc:Bounds x="4477" y="1560" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4473" y="1616" width="58" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Node_2Rye-E4zDWlN9GWDJkNu-4_di" bpmnElement="Node_2Rye-E4zDWlN9GWDJkNu-4">
+        <dc:Bounds x="3413" y="1545" width="170" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_Node_2Rye-E4zDWlN9GWDJkNu-4_di" bpmnElement="Duration_Node_2Rye-E4zDWlN9GWDJkNu-4">
+        <dc:Bounds x="3545" y="1607" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3543" y="1645" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Node_2Rye-E4zDWlN9GWDJkNu-8_di" bpmnElement="Node_2Rye-E4zDWlN9GWDJkNu-8">
+        <dc:Bounds x="4092" y="1560" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4027" y="1616" width="180" height="62" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Node_2Rye-E4zDWlN9GWDJkNu-15_di" bpmnElement="Node_2Rye-E4zDWlN9GWDJkNu-15">
+        <dc:Bounds x="4092" y="1449" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4058" y="1425" width="119" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="sk8cv8c54az7mczHfbmu-3_di" bpmnElement="sk8cv8c54az7mczHfbmu-3">
+        <dc:Bounds x="826" y="1454" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="882" y="1470" width="76" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="sk8cv8c54az7mczHfbmu-4_di" bpmnElement="sk8cv8c54az7mczHfbmu-4">
+        <dc:Bounds x="3721" y="1454" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3777" y="1470" width="76" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="sk8cv8c54az7mczHfbmu-14_di" bpmnElement="sk8cv8c54az7mczHfbmu-14">
+        <dc:Bounds x="4281" y="1471" width="80" height="68" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_sk8cv8c54az7mczHfbmu-14_di" bpmnElement="Duration_sk8cv8c54az7mczHfbmu-14">
+        <dc:Bounds x="4323" y="1521" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4363" y="1501" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zG1e_BgdiC46cywwFCfz-9_di" bpmnElement="zG1e_BgdiC46cywwFCfz-9">
+        <dc:Bounds x="740" y="1451" width="80" height="68" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_zG1e_BgdiC46cywwFCfz-9_di" bpmnElement="Duration_zG1e_BgdiC46cywwFCfz-9">
+        <dc:Bounds x="782" y="1501" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="822" y="1510" width="126" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zSD57VsjHOq2rRrbwC_S-1_di" bpmnElement="zSD57VsjHOq2rRrbwC_S-1">
+        <dc:Bounds x="945" y="1536" width="200" height="97" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Duration_zSD57VsjHOq2rRrbwC_S-1_di" bpmnElement="Duration_zSD57VsjHOq2rRrbwC_S-1">
+        <dc:Bounds x="1107" y="1615" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1105" y="1653" width="40" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_-tSfLAPszdVLrIBoT1GS-9_di" bpmnElement="Flow_-tSfLAPszdVLrIBoT1GS-9">
+        <di:waypoint x="295" y="680" />
+        <di:waypoint x="319" y="680" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_-tSfLAPszdVLrIBoT1GS-17_di" bpmnElement="Flow_-tSfLAPszdVLrIBoT1GS-17">
+        <di:waypoint x="411" y="913" />
+        <di:waypoint x="411" y="946" />
+        <di:waypoint x="396" y="946" />
+        <di:waypoint x="396" y="980" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-53_di" bpmnElement="us0bH9Fgc579xr_FyDnU-53">
+        <di:waypoint x="639" y="995" />
+        <di:waypoint x="639" y="920" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="647" y="948" width="35" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-56_di" bpmnElement="us0bH9Fgc579xr_FyDnU-56">
+        <di:waypoint x="664" y="1020" />
+        <di:waypoint x="1403" y="1020" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1018" y="998" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-77_di" bpmnElement="us0bH9Fgc579xr_FyDnU-77">
+        <di:waypoint x="2970" y="1024" />
+        <di:waypoint x="2982" y="1024" />
+        <di:waypoint x="2982" y="1020" />
+        <di:waypoint x="2994" y="1020" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-27_di" bpmnElement="us0bH9Fgc579xr_FyDnU-27">
+        <di:waypoint x="2669" y="1020" />
+        <di:waypoint x="2700" y="1020" />
+        <di:waypoint x="2700" y="1024" />
+        <di:waypoint x="2731" y="1024" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2684" y="978" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-64_di" bpmnElement="us0bH9Fgc579xr_FyDnU-64">
+        <di:waypoint x="1458" y="972" />
+        <di:waypoint x="1458" y="980" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-115_di" bpmnElement="us0bH9Fgc579xr_FyDnU-115">
+        <di:waypoint x="3044" y="1020" />
+        <di:waypoint x="3126" y="1020" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3069" y="998" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-146_di" bpmnElement="us0bH9Fgc579xr_FyDnU-146">
+        <di:waypoint x="2530" y="1020" />
+        <di:waypoint x="2619" y="1020" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="FGyBwYySxp6FvuOYyCsL-9_di" bpmnElement="FGyBwYySxp6FvuOYyCsL-9">
+        <di:waypoint x="456" y="1020" />
+        <di:waypoint x="614" y="1020" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="oqkb8AqbNajjnxtb4A48-31_di" bpmnElement="oqkb8AqbNajjnxtb4A48-31">
+        <di:waypoint x="346" y="1014" />
+        <di:waypoint x="341" y="1014" />
+        <di:waypoint x="341" y="1020" />
+        <di:waypoint x="336" y="1020" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="oqkb8AqbNajjnxtb4A48-35_di" bpmnElement="oqkb8AqbNajjnxtb4A48-35">
+        <di:waypoint x="595" y="869" />
+        <di:waypoint x="587" y="869" />
+        <di:waypoint x="587" y="880" />
+        <di:waypoint x="579" y="880" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="oqkb8AqbNajjnxtb4A48-38_di" bpmnElement="oqkb8AqbNajjnxtb4A48-38">
+        <di:waypoint x="1210" y="939" />
+        <di:waypoint x="1210" y="930" />
+        <di:waypoint x="1176" y="930" />
+        <di:waypoint x="1176" y="922" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="oqkb8AqbNajjnxtb4A48-47_di" bpmnElement="oqkb8AqbNajjnxtb4A48-47">
+        <di:waypoint x="2830" y="959" />
+        <di:waypoint x="2791" y="959" />
+        <di:waypoint x="2791" y="975" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="JaJ09ecAyT34Y_DzpQXu-5_di" bpmnElement="JaJ09ecAyT34Y_DzpQXu-5">
+        <di:waypoint x="1929" y="995" />
+        <di:waypoint x="1929" y="930" />
+        <di:waypoint x="2033" y="930" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1931" y="908" width="35" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="JaJ09ecAyT34Y_DzpQXu-10_di" bpmnElement="JaJ09ecAyT34Y_DzpQXu-10">
+        <di:waypoint x="1954" y="1020" />
+        <di:waypoint x="2320" y="1020" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2121" y="998" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="JaJ09ecAyT34Y_DzpQXu-11_di" bpmnElement="JaJ09ecAyT34Y_DzpQXu-11">
+        <di:waypoint x="2083" y="930" />
+        <di:waypoint x="2106" y="930" />
+        <di:waypoint x="2106" y="932" />
+        <di:waypoint x="2129" y="932" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2090" y="909" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="JaJ09ecAyT34Y_DzpQXu-15_di" bpmnElement="JaJ09ecAyT34Y_DzpQXu-15">
+        <di:waypoint x="2309" y="932" />
+        <di:waypoint x="2372" y="932" />
+        <di:waypoint x="2372" y="979" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="JaJ09ecAyT34Y_DzpQXu-20_di" bpmnElement="JaJ09ecAyT34Y_DzpQXu-20">
+        <di:waypoint x="2058" y="905" />
+        <di:waypoint x="2058" y="864" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2066" y="876" width="35" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="fQVIEM4XUXHr14V0wWct-6_di" bpmnElement="fQVIEM4XUXHr14V0wWct-6">
+        <di:waypoint x="2288" y="877" />
+        <di:waypoint x="2275" y="877" />
+        <di:waypoint x="2275" y="890" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="zSD57VsjHOq2rRrbwC_S-8_di" bpmnElement="zSD57VsjHOq2rRrbwC_S-8">
+        <di:waypoint x="1872" y="1020" />
+        <di:waypoint x="1904" y="1020" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0-jlPp4owaziDXjIvgEA-7_di" bpmnElement="Flow_0-jlPp4owaziDXjIvgEA-7">
+        <di:waypoint x="1697" y="1020" />
+        <di:waypoint x="1732" y="1020" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1698" y="998" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0-jlPp4owaziDXjIvgEA-4_di" bpmnElement="Flow_0-jlPp4owaziDXjIvgEA-4">
+        <di:waypoint x="1623" y="1020" />
+        <di:waypoint x="1647" y="1020" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-103_di" bpmnElement="us0bH9Fgc579xr_FyDnU-103">
+        <di:waypoint x="4901" y="1316" />
+        <di:waypoint x="4931" y="1316" />
+        <di:waypoint x="4931" y="1315" />
+        <di:waypoint x="4961" y="1315" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="XYNvgjv6erU1vBA4tMUT-24_di" bpmnElement="XYNvgjv6erU1vBA4tMUT-24">
+        <di:waypoint x="4717" y="1315" />
+        <di:waypoint x="4724" y="1315" />
+        <di:waypoint x="4724" y="1316" />
+        <di:waypoint x="4731" y="1316" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="oqkb8AqbNajjnxtb4A48-41_di" bpmnElement="oqkb8AqbNajjnxtb4A48-41">
+        <di:waypoint x="1003" y="1262" />
+        <di:waypoint x="974" y="1262" />
+        <di:waypoint x="974" y="1275" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2Rye-E4zDWlN9GWDJkNu-2_di" bpmnElement="Flow_2Rye-E4zDWlN9GWDJkNu-2">
+        <di:waypoint x="1149" y="1324" />
+        <di:waypoint x="1172" y="1324" />
+        <di:waypoint x="1172" y="1316" />
+        <di:waypoint x="1196" y="1316" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="sk8cv8c54az7mczHfbmu-20_di" bpmnElement="sk8cv8c54az7mczHfbmu-20">
+        <di:waypoint x="4851" y="1258" />
+        <di:waypoint x="4858" y="1258" />
+        <di:waypoint x="4858" y="1275" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="hqGvQ2s5txqknocTSVpu-8_di" bpmnElement="hqGvQ2s5txqknocTSVpu-8">
+        <di:waypoint x="1406" y="1316" />
+        <di:waypoint x="1418" y="1316" />
+        <di:waypoint x="1418" y="1315" />
+        <di:waypoint x="1430" y="1315" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-22_di" bpmnElement="us0bH9Fgc579xr_FyDnU-22">
+        <di:waypoint x="3791" y="1584" />
+        <di:waypoint x="3803" y="1584" />
+        <di:waypoint x="3803" y="1586" />
+        <di:waypoint x="3815" y="1586" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-74_di" bpmnElement="us0bH9Fgc579xr_FyDnU-74">
+        <di:waypoint x="3746" y="1504" />
+        <di:waypoint x="3746" y="1520" />
+        <di:waypoint x="3701" y="1520" />
+        <di:waypoint x="3701" y="1536" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-144_di" bpmnElement="us0bH9Fgc579xr_FyDnU-144">
+        <di:waypoint x="4453" y="1586" />
+        <di:waypoint x="4465" y="1586" />
+        <di:waypoint x="4465" y="1585" />
+        <di:waypoint x="4477" y="1585" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="oqkb8AqbNajjnxtb4A48-22_di" bpmnElement="oqkb8AqbNajjnxtb4A48-22">
+        <di:waypoint x="921" y="1586" />
+        <di:waypoint x="933" y="1586" />
+        <di:waypoint x="933" y="1584" />
+        <di:waypoint x="945" y="1584" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="oqkb8AqbNajjnxtb4A48-44_di" bpmnElement="oqkb8AqbNajjnxtb4A48-44">
+        <di:waypoint x="820" y="1509" />
+        <di:waypoint x="764" y="1509" />
+        <di:waypoint x="764" y="1544" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="oqkb8AqbNajjnxtb4A48-50_di" bpmnElement="oqkb8AqbNajjnxtb4A48-50">
+        <di:waypoint x="4361" y="1529" />
+        <di:waypoint x="4326" y="1529" />
+        <di:waypoint x="4326" y="1545" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-71_di" bpmnElement="us0bH9Fgc579xr_FyDnU-71">
+        <di:waypoint x="851" y="1504" />
+        <di:waypoint x="851" y="1524" />
+        <di:waypoint x="816" y="1524" />
+        <di:waypoint x="816" y="1544" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2Rye-E4zDWlN9GWDJkNu-7_di" bpmnElement="Flow_2Rye-E4zDWlN9GWDJkNu-7">
+        <di:waypoint x="3583" y="1585" />
+        <di:waypoint x="3597" y="1585" />
+        <di:waypoint x="3597" y="1584" />
+        <di:waypoint x="3611" y="1584" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2Rye-E4zDWlN9GWDJkNu-9_di" bpmnElement="Flow_2Rye-E4zDWlN9GWDJkNu-9">
+        <di:waypoint x="4055" y="1586" />
+        <di:waypoint x="4074" y="1586" />
+        <di:waypoint x="4074" y="1585" />
+        <di:waypoint x="4092" y="1585" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2Rye-E4zDWlN9GWDJkNu-11_di" bpmnElement="Flow_2Rye-E4zDWlN9GWDJkNu-11">
+        <di:waypoint x="4117" y="1560" />
+        <di:waypoint x="4117" y="1499" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4125" y="1520" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2Rye-E4zDWlN9GWDJkNu-12_di" bpmnElement="Flow_2Rye-E4zDWlN9GWDJkNu-12">
+        <di:waypoint x="4142" y="1585" />
+        <di:waypoint x="4170" y="1585" />
+        <di:waypoint x="4170" y="1586" />
+        <di:waypoint x="4198" y="1586" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4152" y="1564" width="35" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_-tSfLAPszdVLrIBoT1GS-13_di" bpmnElement="Flow_-tSfLAPszdVLrIBoT1GS-13">
+        <di:waypoint x="419" y="728" />
+        <di:waypoint x="419" y="796" />
+        <di:waypoint x="411" y="796" />
+        <di:waypoint x="411" y="863" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-132_di" bpmnElement="us0bH9Fgc579xr_FyDnU-132">
+        <di:waypoint x="3255" y="1068" />
+        <di:waypoint x="3255" y="1274" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-136_di" bpmnElement="us0bH9Fgc579xr_FyDnU-136">
+        <di:waypoint x="3255" y="1274" />
+        <di:waypoint x="3255" y="1019" />
+        <di:waypoint x="3408" y="1019" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="oqkb8AqbNajjnxtb4A48-28_di" bpmnElement="oqkb8AqbNajjnxtb4A48-28">
+        <di:waypoint x="1045" y="1536" />
+        <di:waypoint x="1045" y="1454" />
+        <di:waypoint x="1032" y="1454" />
+        <di:waypoint x="1032" y="1372" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-145_di" bpmnElement="us0bH9Fgc579xr_FyDnU-145">
+        <di:waypoint x="4527" y="1585" />
+        <di:waypoint x="4622" y="1585" />
+        <di:waypoint x="4622" y="1315" />
+        <di:waypoint x="4667" y="1315" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2Rye-E4zDWlN9GWDJkNu-6_di" bpmnElement="Flow_2Rye-E4zDWlN9GWDJkNu-6">
+        <di:waypoint x="3538" y="1059" />
+        <di:waypoint x="3538" y="1302" />
+        <di:waypoint x="3498" y="1302" />
+        <di:waypoint x="3498" y="1545" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="hqGvQ2s5txqknocTSVpu-9_di" bpmnElement="hqGvQ2s5txqknocTSVpu-9">
+        <di:waypoint x="1480" y="1315" />
+        <di:waypoint x="1513" y="1315" />
+        <di:waypoint x="1513" y="1060" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="hqGvQ2s5txqknocTSVpu-10_di" bpmnElement="hqGvQ2s5txqknocTSVpu-10">
+        <di:waypoint x="1145" y="1584" />
+        <di:waypoint x="1288" y="1584" />
+        <di:waypoint x="1288" y="1315" />
+        <di:waypoint x="1430" y="1315" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="hqGvQ2s5txqknocTSVpu-11_di" bpmnElement="hqGvQ2s5txqknocTSVpu-11">
+        <di:waypoint x="699" y="880" />
+        <di:waypoint x="705" y="880" />
+        <di:waypoint x="705" y="1586" />
+        <di:waypoint x="711" y="1586" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="hqGvQ2s5txqknocTSVpu-1_di" bpmnElement="hqGvQ2s5txqknocTSVpu-1">
+        <di:waypoint x="639" y="840" />
+        <di:waypoint x="639" y="431" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_-tSfLAPszdVLrIBoT1GS-11_di" bpmnElement="MessageFlow_-tSfLAPszdVLrIBoT1GS-11">
+        <di:waypoint x="396" y="431" />
+        <di:waypoint x="396" y="531" />
+        <di:waypoint x="419" y="531" />
+        <di:waypoint x="419" y="631" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-19_di" bpmnElement="us0bH9Fgc579xr_FyDnU-19">
+        <di:waypoint x="3730" y="431" />
+        <di:waypoint x="3730" y="942" />
+        <di:waypoint x="3746" y="942" />
+        <di:waypoint x="3746" y="1454" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-46_di" bpmnElement="us0bH9Fgc579xr_FyDnU-46">
+        <di:waypoint x="1145" y="1555" />
+        <di:waypoint x="1140" y="1555" />
+        <di:waypoint x="1140" y="431" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-124_di" bpmnElement="us0bH9Fgc579xr_FyDnU-124">
+        <di:waypoint x="2849" y="431" />
+        <di:waypoint x="2849" y="703" />
+        <di:waypoint x="2850" y="703" />
+        <di:waypoint x="2850" y="975" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="us0bH9Fgc579xr_FyDnU-148_di" bpmnElement="us0bH9Fgc579xr_FyDnU-148">
+        <di:waypoint x="3255" y="971" />
+        <di:waypoint x="3255" y="701" />
+        <di:waypoint x="3256" y="701" />
+        <di:waypoint x="3256" y="431" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="JaJ09ecAyT34Y_DzpQXu-23_di" bpmnElement="JaJ09ecAyT34Y_DzpQXu-23">
+        <di:waypoint x="1235" y="431" />
+        <di:waypoint x="1235" y="635" />
+        <di:waypoint x="1234" y="635" />
+        <di:waypoint x="1234" y="839" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="zSD57VsjHOq2rRrbwC_S-5_di" bpmnElement="zSD57VsjHOq2rRrbwC_S-5">
+        <di:waypoint x="1234" y="839" />
+        <di:waypoint x="1234" y="635" />
+        <di:waypoint x="1370" y="635" />
+        <di:waypoint x="1370" y="431" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="zSD57VsjHOq2rRrbwC_S-7_di" bpmnElement="zSD57VsjHOq2rRrbwC_S-7">
+        <di:waypoint x="1540" y="431" />
+        <di:waypoint x="1540" y="706" />
+        <di:waypoint x="1513" y="706" />
+        <di:waypoint x="1513" y="980" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="hqGvQ2s5txqknocTSVpu-3_di" bpmnElement="hqGvQ2s5txqknocTSVpu-3">
+        <di:waypoint x="761" y="430" />
+        <di:waypoint x="851" y="430" />
+        <di:waypoint x="851" y="1454" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

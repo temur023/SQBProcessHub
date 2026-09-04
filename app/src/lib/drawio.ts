@@ -16,7 +16,32 @@ import { collectImportDiagnostics } from './diagnostics'
 import { parseBpmnMap } from './bpmn-import'
 
 /** Теги, которые в draw.io означают перенос строки, а не оформление внутри неё. */
-const BLOCK_TAG_RE = /<\s*\/?\s*(?:br|div|p|li|ul|ol|tr|td|h[1-6])\b[^>]*>/gi
+/**
+ * Хвост тега: атрибуты вплоть до закрывающей скобки. Значение в кавычках
+ * пропускается целиком, потому что внутри него `>` — обычный символ, а не
+ * конец тега. Наивное `[^>]*>` на таком значении обрывается посреди атрибута,
+ * и весь остаток разметки вываливается в подпись как текст.
+ */
+const TAG_TAIL = '(?:[^>"\']|"[^"]*"|\'[^\']*\')*>'
+
+/**
+ * Буфер обмена draw.io, попавший в подпись: копируя фигуры, редактор кладёт в
+ * буфер `<mxGraphModel>` со всеми ячейками, и при вставке в текстовое поле она
+ * приезжает туда как есть, обычно в процентной кодировке.
+ */
+const CLIPBOARD_PAYLOAD_RE = /(?:%3C|<)\s*mxGraphModel\b[\s\S]*/i
+
+/** Фигуры-цилиндры draw.io: все варианты базы данных из библиотеки. */
+const CYLINDER_SHAPE_RE = /^(?:cylinder\d*|datastore|db)$/i
+
+const BLOCK_TAG_RE = new RegExp(
+  `<\\s*/?\\s*(?:br|div|p|li|ul|ol|tr|td|h[1-6])\\b${TAG_TAIL}`, 'gi')
+
+/** Любой тег — снимается после блочных, уже без замены на пробел. */
+const ANY_TAG_RE = new RegExp(`<\\s*/?\\s*[a-zA-Z][^\\s/>]*${TAG_TAIL}`, 'g')
+
+/** Комментарии и служебные объявления: внутри них `>` тоже допустим. */
+const COMMENT_RE = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<![^>]*>/g
 
 /**
  * Текст подписи фигуры без разметки draw.io.
@@ -26,13 +51,20 @@ const BLOCK_TAG_RE = /<\s*\/?\s*(?:br|div|p|li|ul|ol|tr|td|h[1-6])\b[^>]*>/gi
  * посреди слова, как только к части текста применили оформление, и пробел на
  * этом месте разрывал число — «1 440 min» превращалось в «1 44» и «0 min»,
  * а время шага уезжало с 1440 минут на 0.
+ *
+ * Теги снимаются с учётом кавычек: в подпись, вставленную копированием с
+ * веб-страницы, приезжает разметка, где значение атрибута само содержит `>`.
+ * Разбор по первому попавшемуся `>` обрывался внутри атрибута, и остаток
+ * верстки уходил в название шага.
  */
 function cleanLabel(raw: string | null): string {
   if (!raw) return ''
   const stripped = raw
     .replace(/&nbsp;/gi, ' ')
+    .replace(CLIPBOARD_PAYLOAD_RE, '')
+    .replace(COMMENT_RE, '')
     .replace(BLOCK_TAG_RE, ' ')
-    .replace(/<[^>]+>/g, '')
+    .replace(ANY_TAG_RE, '')
   const textarea = document.createElement('textarea')
   textarea.innerHTML = stripped
   return (textarea.value || '')
@@ -565,6 +597,9 @@ function applyDurationBadges(
     }
     if (!best) continue
     const value = Math.max(1, Math.round(badge.minutes))
+    // Время пришло с карты — отдельной фигурой-часами рядом с шагом. Именно
+    // так его и рисует аналитик: в подписи шага цифры нет.
+    best.slaMeasured = true
     if (badge.isWait) {
       best.waitMinutes = (best.waitMinutes || 0) + value
     } else if (stSeen.has(best.id)) {
@@ -626,7 +661,10 @@ function isClipartStyle(style: string): boolean {
     s.startsWith('image;') ||
     s.includes(';image=') ||
     s.includes('shape=image') ||
-    s.includes('shape=mxgraph.signs')
+    s.includes('shape=mxgraph.signs') ||
+    // Библиотека Office — тот же клипарт: телефон, монитор, здание. Кроме
+    // документов: лист бумаги рядом с шагом — артефакт процесса.
+    (s.includes('shape=mxgraph.office.') && !s.includes('office.concepts.documents'))
   )
 }
 
@@ -895,12 +933,23 @@ function classifyVertex(
 
   // ── Артефакты (2-ILOVA: Artefaktlar) ──────────────────────────────────────
   // Хранилище данных: IABS, EHA, EDO, Korporativ pochta.
-  if (s.includes('shape=datastore') || s.includes('mxgraph.bpmn.datastore') || s.includes('kind=datastore'))
+  //
+  // Цилиндр рисуют не только фигурой BPMN: в библиотеке draw.io их несколько
+  // (`cylinder`, `cylinder2`, `cylinder3`, база из блок-схем). Нераспознанный
+  // цилиндр становился шагом — лишней строкой в регламенте.
+  if (
+    s.includes('shape=datastore') || s.includes('mxgraph.bpmn.datastore') ||
+    s.includes('kind=datastore') || CYLINDER_SHAPE_RE.test(shape) ||
+    s.includes('mxgraph.flowchart.database')
+  )
     return 'dataStore'
   // Объект данных: Dalolatnoma, Yig'ma jild, Hujjatlar ro'yxati.
-  if (s.includes('mxgraph.bpmn.data2') || shape.endsWith('bpmn.data') || s.includes('shape=dataobject'))
+  if (s.includes('mxgraph.bpmn.data2') || shape.endsWith('bpmn.data') ||
+      s.includes('shape=dataobject') || s.includes('office.concepts.documents'))
     return 'dataObject'
-  if (s.includes('shape=note') || s.includes('mxgraph.bpmn.annotation') || s.includes('shape=mxgraph.flowchart.annotation'))
+  // Выноска (`callout`) — записка к шагу, а не самостоятельный шаг.
+  if (s.includes('shape=note') || s.includes('mxgraph.bpmn.annotation') ||
+      s.includes('shape=mxgraph.flowchart.annotation') || s.includes('shape=callout'))
     return 'textAnnotation'
   if (isTextNote(style, label)) return 'textAnnotation'
 
@@ -1677,6 +1726,11 @@ export async function parseDrawio(text: string, fileName: string): Promise<Busin
     } else if (type.includes('Gateway')) {
       width = Math.max(Math.round(width || 48), 32)
       height = Math.max(Math.round(height || 48), 32)
+    } else if ((ARTIFACT_NODE_TYPES as readonly string[]).includes(type)) {
+      // Артефакт подписан снаружи, места под текст внутри ему не нужно.
+      // Минимум 80×40, рассчитанный на шаг, раздувал цилиндр базы вдвое.
+      width = Math.max(Math.round(width || 40), 24)
+      height = Math.max(Math.round(height || 30), 20)
     } else {
       width = Math.max(Math.round(width || 120), 80)
       height = Math.max(Math.round(height || 60), 40)

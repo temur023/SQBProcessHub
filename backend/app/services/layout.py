@@ -389,13 +389,30 @@ def _overlap_area(box: Box, other: Box) -> float:
     return dx * dy if dx > 0 and dy > 0 else 0.0
 
 
-def choose_label_box(candidates: List[Box], obstacles: Iterable[Box]) -> Box:
+#: Во сколько раз дороже наехать на «запретное» место, чем на обычное.
+#:
+#: Препятствия не равны между собой. Заехать подписью на пустую часть шага —
+#: терпимо, её ещё можно прочесть. Заехать на полосу с названием дорожки —
+#: нельзя: там уже напечатан повёрнутый текст, и две надписи складываются в
+#: нечитаемую кашу. Пока вес был общий, выбор мог предпочесть заголовок
+#: дорожки чуть большему перекрытию с фигурой.
+_FORBIDDEN_WEIGHT = 1000.0
+
+
+def choose_label_box(
+    candidates: List[Box],
+    obstacles: Iterable[Box],
+    forbidden: Iterable[Box] = (),
+) -> Box:
     """Первая позиция подписи, которая ни на что не наезжает.
 
     Если свободной нет, берём наименее конфликтную: подпись всё равно должна
-    где-то стоять, но пусть перекрывает как можно меньше.
+    где-то стоять, но пусть перекрывает как можно меньше. Перекрытие с
+    ``forbidden`` считается на три порядка дороже обычного — туда подпись
+    попадёт, только если других мест нет вовсе.
     """
     obstacles = list(obstacles)
+    forbidden = list(forbidden)
     best: Optional[Box] = None
     best_area: Optional[float] = None
     for box in candidates:
@@ -403,10 +420,15 @@ def choose_label_box(candidates: List[Box], obstacles: Iterable[Box]) -> Box:
         # её перекрытия незачем: на карте в сотни фигур перебор «каждый
         # кандидат против каждого препятствия» занимал секунды.
         area = 0.0
-        for obstacle in obstacles:
-            area += _overlap_area(box, obstacle)
+        for obstacle in forbidden:
+            area += _FORBIDDEN_WEIGHT * _overlap_area(box, obstacle)
             if best_area is not None and area >= best_area:
                 break
+        else:
+            for obstacle in obstacles:
+                area += _overlap_area(box, obstacle)
+                if best_area is not None and area >= best_area:
+                    break
         if area == 0:
             return box
         if best_area is None or area < best_area:
@@ -489,19 +511,32 @@ def external_label_candidates(node: ProcessNode) -> List[Box]:
         else:
             preferred = below
 
-        # Запасные позиции по диагоналям и на второй «полке»: на плотной карте
-        # четырёх сторон не хватает, и подпись садилась на соседнюю фигуру.
-        far = int(round(gap + height + 4))
+        # Запасные позиции по диагоналям и на дальних «полках»: на плотной
+        # карте четырёх сторон не хватает, и подпись садилась на соседнюю
+        # фигуру или в полосу с названием дорожки. Полок три, а не одна:
+        # заголовок дорожки теперь запретная зона, и подписи, которых он
+        # выталкивает, нужно куда-то деть — иначе они лягут друг на друга.
+        step = int(round(gap + height + 4))
         side = int(round(gap + width / 2))
-        order.extend([
-            preferred, below, above, right, left,
-            (center_x - side, below_y, width, height),
-            (center_x + side, below_y, width, height),
-            (center_x - side, above_y, width, height),
-            (center_x + side, above_y, width, height),
-            (center_x, below_y + far, width, height),
-            (center_x, above_y - far, width, height),
-        ])
+        order.extend([preferred, below, above, right, left])
+        for shelf in (1, 2, 3):
+            dy = step * shelf
+            order.extend([
+                (center_x, below_y + dy, width, height),
+                (center_x, above_y - dy, width, height),
+                (center_x - side, below_y + dy - step, width, height),
+                (center_x + side, below_y + dy - step, width, height),
+                (center_x - side, above_y - dy + step, width, height),
+                (center_x + side, above_y - dy + step, width, height),
+            ])
+        # И вбок, дальше от фигуры: у узкого события места сверху и снизу
+        # может не быть вовсе.
+        for shelf in (1, 2):
+            dx = int(round((gap + width) * shelf))
+            order.extend([
+                (int(round(g.x - dx - width)), middle_y, width, height),
+                (int(round(g.x + g.width + dx)), middle_y, width, height),
+            ])
 
     seen: List[Box] = []
     for box in order:
@@ -519,12 +554,15 @@ def node_obstacles(nodes: Iterable[ProcessNode], skip_id: str = '') -> List[Box]
 
 
 #: Отступы подписи от линии связи: вплотную, затем в стороне.
-EDGE_LABEL_GAPS = (4, 26)
+#: Кольца отступов подписи связи от линии. Три, а не два: заголовок дорожки
+#: стал запретной зоной, и подписи, которых он выталкивает, должны иметь куда
+#: отойти — иначе они ложатся друг на друга.
+EDGE_LABEL_GAPS = (4, 26, 58)
 
 #: Доли длины ломаной, около которых можно поставить подпись связи. Середина
 #: предпочтительна, но на плотной карте там бывает занято — тогда подпись
 #: сдвигается вдоль своей же линии, а не садится на чужую фигуру.
-EDGE_LABEL_FRACTIONS = (0.5, 0.4, 0.6, 0.28, 0.72, 0.15, 0.85)
+EDGE_LABEL_FRACTIONS = (0.5, 0.4, 0.6, 0.28, 0.72, 0.15, 0.85, 0.08, 0.92)
 
 
 def _point_at(route: Sequence[Tuple[int, int]], fraction: float) -> Tuple[float, float, bool]:

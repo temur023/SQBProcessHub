@@ -15,6 +15,16 @@
 
 Отсюда порядок работы: ``begin`` -> импорт руками в студии -> ``end``.
 
+КОГДА PYTHON РЯДОМ СО СТУДИЕЙ ЗАПУСТИТЬ НЕЛЬЗЯ
+
+На корпоративной машине его может не быть, а перенести туда — не всегда в
+власти сотрудника. Тогда опыт ставится в два места: пробы генерируются и
+разбираются на машине разработки, импортируются на машине со студией, а
+результаты вносятся командой ``record`` — вердикт и текст ошибки с экрана.
+Прирост журнала при этом теряется, но главный вопрос к студии — приняла или
+нет — отвечается и так, и правило по этому ответу подтверждается или снимается
+ровно как при полном цикле.
+
 ГДЕ ЛЕЖАТ ЖУРНАЛЫ
 
 Точный путь у платформы не подтверждён — эталонной установки студии здесь нет.
@@ -279,6 +289,61 @@ def cmd_end(args) -> int:
     return 0
 
 
+def cmd_record(args) -> int:
+    """Результат пробы, записанный руками, — без доступа к журналам студии.
+
+    Основной путь (``begin`` -> импорт -> ``end``) требует Python на той машине,
+    где стоит студия. На корпоративной машине его может не быть, и тогда опыт
+    иначе не поставить: сотрудник импортирует пробы там, а результаты вносит
+    здесь, по своим записям.
+
+    Что теряется: прирост журнала. Что остаётся: вердикт по каждой пробе и текст
+    сообщения с экрана — этого достаточно, чтобы правило подтвердить или снять,
+    потому что вопрос к студии всегда один и тот же — приняла или нет. Текст
+    прогоняется тем же разбором, что и журнал, поэтому знакомые сообщения
+    по-прежнему сами привязываются к правилам профиля.
+    """
+    session = _load_session(args.work_dir)
+    text = args.message or ''
+    analysis = _extract(text) if text else {
+        'exceptions': [], 'stack_frames': 0, 'stack_head': [],
+        'matched_known_rules': [], 'lines': 0,
+    }
+
+    stamp = datetime.now().isoformat(timespec='seconds')
+    run = {
+        'case': args.case,
+        'started': stamp,
+        'finished': stamp,
+        'result': args.result,
+        'note': args.note or '',
+        'screen_message': text,
+        'source': 'manual',       # отличать от проб, снятых по журналам
+        'log_files_touched': [],
+        'analysis': analysis,
+    }
+
+    # Повторный ввод той же пробы заменяет прежний: опыт переставляют, когда
+    # сомневаются в результате, и две записи об одном файле спутают сводку.
+    runs = [r for r in session.get('runs', []) if r['case'] != args.case]
+    runs.append(run)
+    session['runs'] = runs
+    _save_session(args.work_dir, session)
+
+    print(f'Записано со слов: {run["case"]}   результат: {run["result"]}')
+    if run['note']:
+        print(f'  примечание: {run["note"]}')
+    if analysis['exceptions']:
+        print('  распознанные исключения:')
+        for item in analysis['exceptions'][:6]:
+            print(f'    {item["type"]}: {item["message"][:110]}')
+    if analysis['matched_known_rules']:
+        print(f'  узнанные сообщения -> правила профиля: '
+              f'{", ".join(analysis["matched_known_rules"])}')
+    print('\nСводка по всем внесённым пробам: log_analyzer.py report')
+    return 0
+
+
 def cmd_report(args) -> int:
     """Сводка: проба -> вердикт студии -> что делать с правилом профиля."""
     session = _load_session(args.work_dir)
@@ -323,7 +388,14 @@ def cmd_report(args) -> int:
                 verdict += f' ({run["analysis"]["exceptions"][0]["type"]})'
         else:
             verdict = 'результат не записан'
-        print(f'{run["case"][:38]:<38} {result:<10} {rule:<28} {verdict}')
+        # Пробу, внесённую руками, помечаем: под ней нет журнала, и если по
+        # ней придётся спорить, вернуться не к чему, кроме слов сотрудника.
+        mark = ' ·' if run.get('source') == 'manual' else ''
+        print(f'{(run["case"][:36] + mark):<38} {result:<10} {rule:<28} {verdict}')
+
+    if any(r.get('source') == 'manual' for r in runs):
+        print('\n· — записано со слов: студия была на другой машине, журнала нет.')
+        print('  На вердикт это не влияет, но текст ошибки стоит сверить со снимком экрана.')
 
     print('\nЧто делать дальше:')
     print('  «правило ПОДТВЕРЖДЕНО» — в pix_spec_checker оставить как есть,')
@@ -355,6 +427,16 @@ def main(argv: Optional[List[str]] = None) -> int:
                           'с сообщением; crash — приложение упало')
     end.add_argument('--note', help='что показала студия на экране')
 
+    record = sub.add_parser(
+        'record', help='внести результат пробы руками (когда Python рядом со студией нет)')
+    record.add_argument('case', help='имя файла пробы, например test_01_custom_namespace.bpmn')
+    record.add_argument('--result', required=True, choices=['ok', 'refused', 'crash'],
+                        help='ok — импортировалось; refused — студия отказала '
+                             'с сообщением; crash — приложение упало')
+    record.add_argument('--message', default='',
+                        help='текст ошибки с экрана студии, дословно')
+    record.add_argument('--note', help='что было видно на карте после импорта')
+
     sub.add_parser('report', help='сводка по всем пробам')
 
     args = parser.parse_args(argv)
@@ -362,6 +444,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         'locate': cmd_locate,
         'begin': cmd_begin,
         'end': cmd_end,
+        'record': cmd_record,
         'report': cmd_report,
     }[args.command](args)
 

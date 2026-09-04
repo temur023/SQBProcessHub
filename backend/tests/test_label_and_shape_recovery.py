@@ -531,5 +531,73 @@ class GatewayBranchCompletionTests(unittest.TestCase):
         self.assertIn('Ha', texts)
 
 
+class PastedMarkupTest(unittest.TestCase):
+    """Подпись, вставленная копированием с веб-страницы.
+
+    Аналитик копирует формулировку шага прямо из браузера, и в draw.io вместе с
+    текстом приезжает разметка. Пока в атрибутах не встречалось ``>``, наивное
+    снятие тегов работало. Современная вёрстка ставит ``>`` внутрь значения
+    (классы Tailwind вида ``[&>*]:pointer-events-auto``), разбор обрывался
+    посреди атрибута, и в Процессную студию уезжало полстраницы классов и
+    data-атрибутов вместо названия шага.
+    """
+
+    def test_attribute_value_may_contain_a_closing_bracket(self):
+        raw = (
+            '<div class="markdown [&>*]:pointer-events-auto '
+            'scroll-mt-[calc(var(--header-height)+min(200px,max(70px,20svh)))]" '
+            'dir="auto" data-turn-id="e47b03b0-e67f-4c94-beed-7c6823c93123" '
+            'data-testid="conversation-turn-21" data-turn="user">'
+            'Avizlovchi bank ko\u2018rsatmalariga muvofiq hujjatlarni kiritish</div>'
+        )
+        self.assertEqual(
+            clean_label(raw),
+            'Avizlovchi bank ko\u2018rsatmalariga muvofiq hujjatlarni kiritish',
+        )
+
+    def test_single_quoted_attribute_too(self):
+        raw = "<span style='font-family:&quot;Arial&quot;' data-x='a>b'>Hisob raqam</span>"
+        self.assertEqual(clean_label(raw), 'Hisob raqam')
+
+    def test_inline_tag_still_does_not_split_a_number(self):
+        # Прежнее поведение обязано сохраниться: редактор режет подпись тегом
+        # <span> посреди числа, и пробел на этом месте ломал время шага.
+        self.assertEqual(clean_label('1 <span style="color:#000">440</span> min'), '1 440 min')
+
+    def test_block_tag_still_becomes_a_space(self):
+        self.assertEqual(clean_label('Loyiha<br/>ikkinchi qator'), 'Loyiha ikkinchi qator')
+
+    def test_comment_is_dropped_whole(self):
+        self.assertEqual(clean_label('<!-- a > b -->Hujjat'), 'Hujjat')
+
+    def test_pasted_editor_clipboard_is_cut_off(self):
+        """Копируя фигуры, draw.io кладёт в буфер их модель целиком.
+
+        При вставке в текстовое поле она приезжает туда как есть, обычно в
+        процентной кодировке: настоящая подпись остаётся в начале строки, а
+        дальше тянется полотно разметки. На карте студии оно разворачивалось
+        колонкой мусора через полсхемы.
+        """
+        raw = ("Xabarnoma to'liq %3CmxGraphModel%3E%3Croot%3E"
+               "%3CmxCell%20id%3D%220%22%2F%3E%3CmxCell%20id%3D%221%22%2F%3E")
+        self.assertEqual(clean_label(raw), "Xabarnoma to'liq")
+
+    def test_unencoded_clipboard_is_cut_off_too(self):
+        raw = 'Hujjatlar<mxGraphModel><root><mxCell id="0"/></root></mxGraphModel>'
+        self.assertEqual(clean_label(raw), 'Hujjatlar')
+
+    def test_label_that_is_only_clipboard_becomes_empty(self):
+        self.assertEqual(clean_label('%3CmxGraphModel%3E%3Croot%3E%3C%2Froot%3E'), '')
+
+    def test_markup_does_not_reach_the_exports(self):
+        node = ProcessNode(
+            id='pasted', name=clean_label(
+                '<div class="[&>*]:pointer-events-auto" data-turn="user">Hujjatni tekshirish</div>'),
+            type='userTask', geometry=Geometry(x=0, y=0, width=160, height=60))
+        self.assertEqual(node.name, 'Hujjatni tekshirish')
+        self.assertNotIn('pointer-events', node.name)
+
+
+
 if __name__ == '__main__':
     unittest.main()

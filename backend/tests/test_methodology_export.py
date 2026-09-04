@@ -12,6 +12,7 @@
 """
 import os
 import sys
+import re
 import unittest
 import xml.etree.ElementTree as ET
 import zipfile
@@ -210,6 +211,18 @@ class MethodologyImportTest(unittest.TestCase):
         self.assertTrue(all(n.laneId for n in self.process.nodes), "остались шаги без дорожки")
 
 
+#: Идентификатор ячейки draw.io: длинная мешанина из букв, цифр и дефисов.
+_CELL_ID_RE = re.compile(r'^[A-Za-z0-9_-]{12,}$')
+
+
+def _looks_like_cell_id(text: str) -> bool:
+    return bool(_CELL_ID_RE.match(text)) and any(ch.isdigit() for ch in text)
+
+
+def _tag_name(el):
+    return el.tag.rsplit('}', 1)[-1]
+
+
 class BpmnExportTest(unittest.TestCase):
     """BPMN 2.0 должен быть валидной схемой, а не просто well-formed XML."""
 
@@ -226,9 +239,58 @@ class BpmnExportTest(unittest.TestCase):
         self.assertIn("dataStoreReference", tags)
         self.assertIn("dataObjectReference", tags)
 
-    def test_associations_replace_sequence_flows_to_artifacts(self):
-        assoc = self.proc.findall("bpmn:association", BPMN_NS)
-        self.assertEqual(len(assoc), 3, "e6, e7 и e10 — все три связи с артефактами")
+    def test_data_links_are_data_associations_not_plain_ones(self):
+        """Хранилище и документ подключаются к шагу как ДАННЫЕ, а не артефакт.
+
+        ``bpmn:association`` по спецификации соединяет артефакт — текстовое
+        примечание или группу. Хранилище данных артефактом не является, и
+        Процессная студия обычную ассоциацию к нему не рисует: на карте связи
+        «шаг ↔ база» просто пропадали. Правильная конструкция —
+        ``dataInputAssociation`` / ``dataOutputAssociation`` внутри шага.
+        """
+        inputs = self.proc.findall(".//bpmn:dataInputAssociation", BPMN_NS)
+        outputs = self.proc.findall(".//bpmn:dataOutputAssociation", BPMN_NS)
+        self.assertEqual(len(inputs) + len(outputs), 3,
+                         "e6, e7 и e10 — все три связи с данными")
+        # Ни одна не должна остаться обычной ассоциацией.
+        self.assertEqual(self.proc.findall("bpmn:association", BPMN_NS), [])
+
+        data_ids = {
+            el.get("id")
+            for name in ("dataStoreReference", "dataObjectReference")
+            for el in self.proc.findall(f"bpmn:{name}", BPMN_NS)
+        }
+        for assoc in inputs:
+            source = assoc.find("bpmn:sourceRef", BPMN_NS)
+            self.assertIsNotNone(source, "у входной связи нет sourceRef")
+            self.assertIn(source.text.strip(), data_ids)
+            # targetRef указывает на property-заглушку самого шага, а не на шаг.
+            target = assoc.find("bpmn:targetRef", BPMN_NS)
+            self.assertIsNotNone(target)
+            self.assertTrue(target.text.strip().endswith("_target"))
+        for assoc in outputs:
+            target = assoc.find("bpmn:targetRef", BPMN_NS)
+            self.assertIsNotNone(target, "у выходной связи нет targetRef")
+            self.assertIn(target.text.strip(), data_ids)
+
+    def test_data_associations_live_inside_an_activity(self):
+        """Спецификация разрешает их только у активности, и порядок задан XSD."""
+        activity_tags = {"task", "userTask", "serviceTask", "subProcess"}
+        for name in ("dataInputAssociation", "dataOutputAssociation"):
+            for assoc in self.proc.findall(f".//bpmn:{name}", BPMN_NS):
+                parent = next(
+                    el for el in self.proc.iter()
+                    if assoc in list(el)
+                )
+                self.assertIn(_tag_name(parent), activity_tags)
+                children = [_tag_name(c) for c in parent]
+                # incoming/outgoing из tFlowNode идут раньше, чем данные из
+                # tActivity: иначе файл невалиден по схеме.
+                for earlier in ("incoming", "outgoing"):
+                    if earlier in children:
+                        self.assertLess(children.index(earlier), children.index(name))
+
+    def test_sequence_flows_connect_only_flow_nodes(self):
         flow_tags = {
             "startEvent", "endEvent", "intermediateCatchEvent", "intermediateThrowEvent",
             "task", "userTask", "serviceTask", "subProcess",
@@ -370,11 +432,18 @@ class BpmnExportTest(unittest.TestCase):
     def test_wait_time_joins_the_step_duration(self):
         node = ProcessNode(
             id="s", name="Шаг", type="userTask", slaMinutes=30, waitMinutes=15,
+            slaMeasured=True,
             geometry=Geometry(x=0, y=0, width=120, height=80), style="",
         )
         self.assertEqual(step_duration_text(node), "30 мин · ожидание 15 мин")
         node.slaMinutes = 0
         self.assertEqual(step_duration_text(node), "ожидание 15 мин")
+
+        # Время, подставленное импортом, значком часов не рисуется: в draw.io
+        # у такого шага часов нет, и на карте студии их быть не должно.
+        node.slaMinutes = 60
+        node.slaMeasured = False
+        self.assertEqual(step_duration_text(node), "")
 
     def test_iso_duration_formatting(self):
         self.assertEqual(iso_duration(45), "PT45M")
@@ -474,6 +543,7 @@ class PmmExportTest(unittest.TestCase):
         self.assertIn("dataStorage", used)
         self.assertIn("dataObject", used)
         self.assertIn("intermediate_event_catch_timer", used)
+        self.assertIn("boundary_non_interrupting_event_timer", used)
 
     def test_connector_label_uses_text_attribute(self):
         connectors = self.root.findall("connector")
@@ -521,19 +591,41 @@ class PmmExportTest(unittest.TestCase):
         """
         timers = [
             n for road in self.roads for n in road.findall("node")
-            if n.get("type") == "intermediate_event_catch_timer"
+            if n.get("type") == "boundary_non_interrupting_event_timer"
         ]
         labels = {n.get("label") for n in timers}
         self.assertIn("5 мин", labels, "время шага «Hujjatlarni qabul qilish» потерялось")
         self.assertIn("10 мин", labels, "время шага «Dalolatnoma tuzish» потерялось")
 
-    def test_duration_marker_is_not_connected_to_anything(self):
-        timer_ids = {
-            n.get("id") for road in self.roads for n in road.findall("node")
-            if n.get("type") == "intermediate_event_catch_timer"
+    def test_duration_marker_is_a_boundary_event_not_an_intermediate_one(self):
+        """Значок длительности — граничное событие, и это не косметика.
+
+        Промежуточное событие обязано стоять в потоке, поэтому студия писала на
+        каждом значке «отсутствует входящий поток управления» и столько же раз
+        про исходящий: на карте из трёхсот шагов список замечаний упирался в
+        «99+», и настоящих ошибок за ними видно не было.
+        """
+        by_label = {
+            n.get("label"): n.get("type")
+            for road in self.roads for n in road.findall("node")
         }
-        # Собственный таймер-ожидание карты связями соединён, значок — нет.
-        marker_ids = timer_ids - {n.get("id") for n in self.root.iter("node") if n.get("label", "").startswith("Kutish")}
+        self.assertEqual(by_label.get("5 мин"), "boundary_non_interrupting_event_timer")
+        # Собственное ожидание карты промежуточным и остаётся: оно в потоке.
+        # Подпись при этом несёт своё время, как и на исходной карте draw.io.
+        waiting = [label for label, kind in by_label.items()
+                   if kind == "intermediate_event_catch_timer"]
+        self.assertTrue(
+            any(label.startswith("Kutish vaqti") for label in waiting),
+            f'ожидание потерялось: {waiting}')
+        self.assertTrue(
+            all(any(ch.isdigit() for ch in label) for label in waiting),
+            f'у ожидания пропало время: {waiting}')
+
+    def test_duration_marker_is_not_connected_to_anything(self):
+        marker_ids = {
+            n.get("id") for road in self.roads for n in road.findall("node")
+            if n.get("type") == "boundary_non_interrupting_event_timer"
+        }
         self.assertTrue(marker_ids)
         for connector in self.root.findall("connector"):
             self.assertNotIn(connector.get("sourceNodeId"), marker_ids)
@@ -762,11 +854,22 @@ class ClientTouchpointTest(unittest.TestCase):
         roads = [n for n in self.map.findall("node") if n.get("type") == "horizontalRoad"]
         self.assertEqual({r.get("label") for r in roads}, {"Mijoz", "Bank"})
         client = next(r for r in roads if r.get("label") == "Mijoz")
+        # Линия ведётся не в саму полосу, а к маркеру сообщения на её границе.
+        # В собственных выгрузках студии связей, упирающихся в дорожку, нет ни
+        # одной: такую линию она цепляет за центр фигуры, и все пунктиры к
+        # клиенту сходились в одну точку посреди схемы.
+        self.assertEqual(
+            [c for c in self.map.findall("connector")
+             if client.get("id") in (c.get("sourceNodeId"), c.get("targetNodeId"))],
+            [], "связь не должна упираться в полосу")
+        inside = [n for n in client.findall("node")
+                  if n.get("type") == "intermediate_event_catch_message"]
+        self.assertEqual(len(inside), 1, "маркер контакта с клиентом потерян")
         touching = [
             c for c in self.map.findall("connector")
-            if client.get("id") in (c.get("sourceNodeId"), c.get("targetNodeId"))
+            if inside[0].get("id") in (c.get("sourceNodeId"), c.get("targetNodeId"))
         ]
-        self.assertEqual(len(touching), 1, "линия к полосе клиента потеряна")
+        self.assertEqual(len(touching), 1, "линия к маркеру клиента потеряна")
         # Точка контакта с клиентом — поток сообщений, и студия рисует его
         # так же, как BPMN: штриховая линия, кружок в начале, открытая
         # стрелка в конце (единственная dashed-связь в tests/fixtures/sap.pmm).
@@ -788,9 +891,18 @@ class ClientTouchpointTest(unittest.TestCase):
                 self.assertTrue(abs(x1 - x2) < 0.5 or abs(y1 - y2) < 0.5, c.get("id"))
 
     def test_map_labels_never_fall_back_to_cell_ids(self):
+        """Подпись — это текст аналитика, а не идентификатор ячейки draw.io.
+
+        Пустая подпись дефектом не является и ставится намеренно: у безымянного
+        шлюза её нет и в draw.io, у маркера контакта с клиентом — тоже. Ловим
+        именно подстановку id, из-за которой на карте появлялись надписи вида
+        «7x07wl9l_jNJTChX3Y1P-25».
+        """
         for node in self.map.iter("node"):
-            label = node.get("label") or ""
-            self.assertTrue(label.strip(), node.get("id"))
+            label = (node.get("label") or "").strip()
+            self.assertNotEqual(label, node.get("id"), "подписью стал id фигуры")
+            self.assertFalse(
+                label and _looks_like_cell_id(label), f'подпись похожа на id: {label}')
             self.assertNotRegex(label, r"Операция [A-Za-z0-9_-]{8,}")
 
 

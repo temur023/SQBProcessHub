@@ -242,6 +242,14 @@ def _validate_pmm_package(payload: bytes) -> ExportCheck:
         elif elements and kind not in elements:
             add('error', 'pmm_node_type_unknown',
                 f'Фигура «{label}»: тип «{kind}» не объявлен в нотации «{notation}».', nid)
+        elif categories and not categories.get(kind):
+            # Имени в каталоге мало: студия идёт за категорией элемента
+            # («Задачи», «Шлюзы», «События»…) и на её отсутствии падает с
+            # «Notation element not found (Parameter 'type')». В нотации BPMN
+            # так устроен ровно один элемент из 91 — ``input`` («Текст»).
+            add('error', 'pmm_node_type_no_category',
+                f'Фигура «{label}»: у типа «{kind}» в каталоге студии не '
+                f'проставлена категория — студия откажется открыть пакет.', nid)
 
         for attr in ('x', 'y', 'width', 'height'):
             if not _number_ok(node.get(attr)):

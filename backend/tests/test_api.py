@@ -482,9 +482,14 @@ class TestSQBProcessHubApi(unittest.TestCase):
         children = list(road)
         child_types = {c.get("type") for c in children}
         self.assertIn("start_event_none", child_types)
-        self.assertIn("userTask", child_types)
+        self.assertIn("task", child_types)
         self.assertIn("gateway_xor", child_types)
-        self.assertIn("serviceTask", child_types)
+        # Все действия уезжают плоской «Задачей»: студия рисует у
+        # пользовательской человечка, у сервисной шестерёнку, и рисует их в
+        # левом верхнем углу — поверх первых букв подписи. В draw.io, который
+        # для нас эталон вида карты, у шагов иконок нет.
+        self.assertNotIn("userTask", child_types)
+        self.assertNotIn("serviceTask", child_types)
         self.assertIn("end_event_none", child_types)
 
         uuid_re = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
@@ -493,7 +498,7 @@ class TestSQBProcessHubApi(unittest.TestCase):
 
         # Nested coords are relative to the road origin (lane abs = pool 10,20 + lane 0,20 => 10,40).
         # Высоту рамки подгоняют под подпись, поэтому сверяем центр по вертикали.
-        task = next(c for c in children if c.get("type") == "userTask")
+        task = next(c for c in children if c.get("type") == "task")
         self.assertEqual(int(task.get("x")), 120)
         self.assertEqual(
             int(task.get("y")) + int(task.get("height")) / 2, 60 + 60 / 2
@@ -528,6 +533,94 @@ class TestSQBProcessHubApi(unittest.TestCase):
             self.assertTrue(uuid_re.match(c.get("id") or ""), c.get("id"))
             self.assertTrue(uuid_re.match(c.get("sourceNodeId") or ""))
             self.assertTrue(uuid_re.match(c.get("targetNodeId") or ""))
+
+    def test_export_check_covers_both_rule_sets(self):
+        """Панель экспорта обязана видеть и строгий профиль студии.
+
+        Проверок на каждый файл две: по стандарту BPMN 2.0 и по профилю PIX.
+        Вторая строже, и если эндпоинт вернёт только первую, сотрудник получит
+        зелёный баннер на пакете, который Процессная студия не откроет.
+        """
+        drawio_xml = """<mxfile host="app.diagrams.net">
+          <diagram id="check-1" name="Проверка выгрузки">
+            <mxGraphModel>
+              <root>
+                <mxCell id="0" />
+                <mxCell id="1" parent="0" />
+                <mxCell id="s" value="Начало" style="ellipse;fillColor=#10b981;" vertex="1" parent="1">
+                  <mxGeometry x="100" y="100" width="48" height="48" as="geometry" />
+                </mxCell>
+                <mxCell id="t" value="STEP-01: Проверка документов" style="rounded=1;" vertex="1" parent="1">
+                  <mxGeometry x="200" y="90" width="180" height="70" as="geometry" />
+                </mxCell>
+                <mxCell id="e" value="Готово" style="ellipse;fillColor=#059669;" vertex="1" parent="1">
+                  <mxGeometry x="450" y="100" width="48" height="48" as="geometry" />
+                </mxCell>
+                <mxCell id="e1" edge="1" source="s" target="t" parent="1" />
+                <mxCell id="e2" edge="1" source="t" target="e" parent="1" />
+              </root>
+            </mxGraphModel>
+          </diagram>
+        </mxfile>"""
+
+        proc_id = self.client.post("/api/v1/import/xml", json={
+            "xml": drawio_xml, "fileName": "check.drawio",
+        }).json()["id"]
+
+        report = self.client.get(f"/api/v1/import/{proc_id}/export/check")
+        self.assertEqual(report.status_code, 200)
+        body = report.json()
+
+        formats = {f["format"] for f in body["formats"]}
+        self.assertEqual(formats, {"bpmn", "bpmn/pix", "pmm", "pmm/pix"})
+        self.assertTrue(body["ok"], body)
+        self.assertEqual(body["summary"], "ok")
+
+    def test_export_check_and_download_headers_agree(self):
+        """Один и тот же файл — один и тот же вердикт в панели и в заголовках.
+
+        Расхождение здесь опаснее любой ошибки: сотрудник поверит баннеру,
+        а студия откажет.
+        """
+        drawio_xml = """<mxfile host="app.diagrams.net">
+          <diagram id="check-2" name="Согласованность">
+            <mxGraphModel>
+              <root>
+                <mxCell id="0" />
+                <mxCell id="1" parent="0" />
+                <mxCell id="s" value="Старт" style="ellipse;fillColor=#10b981;" vertex="1" parent="1">
+                  <mxGeometry x="80" y="80" width="48" height="48" as="geometry" />
+                </mxCell>
+                <mxCell id="t" value="Операция" style="rounded=1;" vertex="1" parent="1">
+                  <mxGeometry x="200" y="70" width="160" height="60" as="geometry" />
+                </mxCell>
+                <mxCell id="e1" edge="1" source="s" target="t" parent="1" />
+              </root>
+            </mxGraphModel>
+          </diagram>
+        </mxfile>"""
+
+        proc_id = self.client.post("/api/v1/import/xml", json={
+            "xml": drawio_xml, "fileName": "agree.drawio",
+        }).json()["id"]
+
+        body = self.client.get(f"/api/v1/import/{proc_id}/export/check").json()
+        by_format = {f["format"]: f for f in body["formats"]}
+
+        for fmt in ("bpmn", "pmm"):
+            download = self.client.get(f"/api/v1/import/{proc_id}/export/{fmt}")
+            self.assertEqual(download.status_code, 200)
+            self.assertEqual(
+                download.headers["X-Export-Check-Errors"],
+                str(by_format[fmt]["errors"]),
+                f"{fmt}: панель и заголовок разошлись по стандарту",
+            )
+            self.assertEqual(
+                download.headers["X-Pix-Check-Errors"],
+                str(by_format[f"{fmt}/pix"]["errors"]),
+                f"{fmt}: панель и заголовок разошлись по профилю PIX",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

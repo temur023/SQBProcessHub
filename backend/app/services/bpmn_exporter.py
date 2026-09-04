@@ -24,12 +24,20 @@ from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple
 
 from app.models.process import (
     ARTIFACT_NODE_TYPES,
+    GATEWAY_NODE_TYPES,
     TASK_NODE_TYPES,
     BusinessProcess,
     ProcessEdge,
     ProcessNode,
 )
-from app.services.edge_routing import message_flow_endpoints, orthogonal_waypoints
+from app.services.diagnostics import is_generated_name
+from app.services.map_layout import pool_bounds, stack_lanes
+from app.services.edge_routing import (
+    Obstacles,
+    build_obstacles,
+    message_flow_endpoints,
+    orthogonal_waypoints,
+)
 from app.services.layout import (
     EXTERNAL_LABEL_TYPES,
     Box,
@@ -125,7 +133,15 @@ def duration_label(minutes: Optional[float]) -> str:
 
 
 def step_duration_text(node: ProcessNode) -> str:
-    """Подпись под часами у шага: время операции и, если есть, ожидание."""
+    """Подпись под часами у шага: время операции и, если есть, ожидание.
+
+    Пусто, если время не снято с карты. Импорт подставляет правдоподобную
+    длительность по категории шага, когда в подписи её нет, — для расчёта SLA
+    это нужно, но нарисовать её значком часов значит выдать догадку за замер.
+    В draw.io у такого шага часов нет, и на карте студии их быть не должно.
+    """
+    if not node.slaMeasured:
+        return ''
     st = duration_label(node.slaMinutes)
     wt = duration_label(node.waitMinutes)
     if st and wt:
@@ -133,6 +149,36 @@ def step_duration_text(node: ProcessNode) -> str:
     if wt:
         return f'ожидание {wt}'
     return st
+
+
+def map_label(node: ProcessNode) -> str:
+    """Подпись фигуры на карте студии. Эталон — то, как она выглядит в draw.io.
+
+    Отличий от ``node.name`` два, и оба взяты с исходной карты.
+
+    Подставленное платформой имя на карту не идёт. Безымянный шлюз аналитик
+    рисует пустым ромбом — вопрос стоит на ветках («Ha» / «Yo'q»), — а мы
+    писали в него «Условие». На карте банка таких ромбов 71 из 220: семь
+    десятков надписей, которых в эталоне нет и которые в студии ложатся
+    поверх соседних фигур. У задач подпись оставляем: пустой прямоугольник
+    хуже условного имени, по нему шаг не найти ни в регламенте, ни в отчёте.
+
+    Событию-ожиданию возвращаем время. В draw.io подпись набрана в две строки
+    («Kutish vaqti» и «15 min»), импорт разбирает вторую строку в минуты и
+    убирает из имени — в студии оставалось голое «Kutish vaqti» без единой
+    цифры. На карту пишем так же, как нарисовано в эталоне.
+    """
+    name = (node.name or '').strip()
+    if node.type in GATEWAY_NODE_TYPES and is_generated_name(name):
+        return ''
+    if node.type == 'intermediateTimerEvent' and name and not any(c.isdigit() for c in name):
+        minutes = duration_label(node.slaMinutes or node.waitMinutes)
+        if minutes:
+            # В draw.io время стоит второй строкой, и от первой её нередко
+            # отделяет двоеточие. Склеив в одну строку, получили бы
+            # «Kutish vaqti : 30 мин» — с висящим знаком посреди подписи.
+            return f'{name.rstrip(" :-—·")} {minutes}'
+    return name
 
 
 class DurationMarker(NamedTuple):
@@ -255,13 +301,16 @@ def _edge_waypoints(
     edge: ProcessEdge,
     src: Optional[ProcessNode],
     tgt: Optional[ProcessNode],
+    obstacles: Optional[Obstacles] = None,
 ) -> List[Tuple[int, int]]:
     """Ортогональная ломаная — та же, что рисует draw.io.
 
     Раньше сюда шла только пара «точка выхода — точка входа», и в bpmn.io
-    схема выглядела диагональной паутиной.
+    схема выглядела диагональной паутиной. ``obstacles`` даёт трассировщику
+    список чужих фигур: без него колено ставится посередине и линия уходит
+    сквозь то, что там стоит.
     """
-    route = orthogonal_waypoints(edge, src, tgt)
+    route = orthogonal_waypoints(edge, src, tgt, None, obstacles)
     if len(route) < 2:
         return [(100, 100), (250, 100)]
     return [(int(round(x)), int(round(y))) for x, y in route]
@@ -417,6 +466,13 @@ def _union_bounds(nodes: Iterable[ProcessNode], header: int = POOL_HEADER) -> Tu
 
 
 def generate_bpmn_xml(process: BusinessProcess) -> str:
+    # Дорожки укладываются в сплошную стопку ДО всего остального, вместе со
+    # своим содержимым. По спецификации дорожка — раздел пула, а не отдельный
+    # прямоугольник на холсте: щель или нахлёст между полосами импортёр
+    # вынужден исправлять сам, и в Процессной студии меньшие дорожки уходят
+    # под большие. См. ``map_layout.stack_lanes``.
+    process = stack_lanes(process)
+
     used: Dict[str, str] = {}
     taken: set = set()
 
@@ -469,6 +525,38 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
     # SQB — один пул, поэтому такие связи выгружаются как поток управления.
     sequence_edges = [e for e in edges if e.kind != 'association']
     association_edges = [e for e in edges if e.kind == 'association']
+
+    # ── Связи с данными отделяются от связей с примечаниями ────────────────
+    #
+    # ``bpmn:association`` по спецификации соединяет АРТЕФАКТ (текстовое
+    # примечание, группу) с чем угодно. Хранилище данных и документ артефактами
+    # не являются: это ItemAwareElement, и подключаются они к активности через
+    # ``dataInputAssociation`` / ``dataOutputAssociation`` ВНУТРИ неё. Разница
+    # не формальная — Процессная студия обычную ассоциацию к хранилищу просто
+    # не рисует, и на импортированной карте связи «шаг ↔ база» пропадали.
+    #
+    # Данные разрешено привязывать только к активности. Если на другом конце
+    # шлюз или событие, связь остаётся ассоциацией: спецификация не даёт таким
+    # узлам ни ioSpecification, ни dataInputAssociation.
+    _data_types = ('dataStore', 'dataObject')
+    node_type_of = {n.id: n.type for n in all_nodes}
+    data_edges: List[ProcessEdge] = []
+    plain_associations: List[ProcessEdge] = []
+    for edge in association_edges:
+        s_type = node_type_of.get(edge.sourceId or '')
+        t_type = node_type_of.get(edge.targetId or '')
+        data_to_task = s_type in _data_types and t_type in TASK_NODE_TYPES
+        task_to_data = s_type in TASK_NODE_TYPES and t_type in _data_types
+        (data_edges if data_to_task or task_to_data else plain_associations).append(edge)
+
+    #: Шаг -> связи с данными, которые надо перечислить внутри него.
+    data_in_of: Dict[str, List[ProcessEdge]] = {}
+    data_out_of: Dict[str, List[ProcessEdge]] = {}
+    for edge in data_edges:
+        if node_type_of.get(edge.sourceId or '') in _data_types:
+            data_in_of.setdefault(edge.targetId, []).append(edge)
+        else:
+            data_out_of.setdefault(edge.sourceId, []).append(edge)
 
     effective_type = normalize_event_types(flow_nodes, sequence_edges)
 
@@ -589,7 +677,7 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         nid = escape_xml(id_of[node.id])
         kind = effective_type[node.id]
         tag = _node_tag(node, kind)
-        name_attr = f' name="{escape_xml(node.name)}"'
+        name_attr = f' name="{escape_xml(map_label(node))}"'
         extras: List[str] = []
         if kind in _GATEWAY_TYPES:
             if len(outgoing_by_node.get(node.id, [])) > 1:
@@ -605,6 +693,32 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
             children.append(f'      <bpmn:incoming>{escape_xml(id_of[edge_id])}</bpmn:incoming>')
         for edge_id in outgoing_by_node.get(node.id, []):
             children.append(f'      <bpmn:outgoing>{escape_xml(id_of[edge_id])}</bpmn:outgoing>')
+        # Порядок внутри активности задан XSD: сначала incoming/outgoing из
+        # tFlowNode, затем property и dataInput/OutputAssociation из tActivity.
+        # Перепутав его, файл получаем невалидный по схеме.
+        for edge in data_in_of.get(node.id, []):
+            eid = escape_xml(id_of[edge.id])
+            # targetRef обязан указывать на ItemAwareElement самой активности,
+            # а не на неё саму. Стандартный приём (так делает и bpmn.io) —
+            # property-заглушка: она объявляет «вход» шага, к которому и
+            # привязывается хранилище.
+            prop_id = escape_xml(f'{eid}_target')
+            children.append(
+                f'      <bpmn:property id="{prop_id}" name="__targetRef_placeholder" />')
+            children.append(f'      <bpmn:dataInputAssociation id="{eid}">')
+            children.append(
+                f'        <bpmn:sourceRef>{escape_xml(id_of[edge.sourceId])}</bpmn:sourceRef>')
+            children.append(f'        <bpmn:targetRef>{prop_id}</bpmn:targetRef>')
+            children.append('      </bpmn:dataInputAssociation>')
+        for edge in data_out_of.get(node.id, []):
+            eid = escape_xml(id_of[edge.id])
+            # У выходной связи источник — сама активность, поэтому sourceRef
+            # не пишется: спецификация выводит его из места объявления.
+            children.append(f'      <bpmn:dataOutputAssociation id="{eid}">')
+            children.append(
+                f'        <bpmn:targetRef>{escape_xml(id_of[edge.targetId])}</bpmn:targetRef>')
+            children.append('      </bpmn:dataOutputAssociation>')
+
         if kind == 'intermediateTimerEvent':
             children.append('      <bpmn:timerEventDefinition>')
             children.append(
@@ -662,7 +776,7 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         xml.append(f'      <bpmn:text>{escape_xml(node.name)}</bpmn:text>')
         xml.append('    </bpmn:textAnnotation>')
 
-    for edge in association_edges:
+    for edge in plain_associations:
         xml.append(
             f'    <bpmn:association id="{escape_xml(id_of[edge.id])}"'
             f' sourceRef="{escape_xml(id_of[edge.sourceId])}"'
@@ -692,7 +806,12 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
     if use_collab:
         # Пул охватывает дорожки и узлы; полосы внешних участников — отдельные
         # пулы и в его границы не входят.
-        px, py, pw, ph = _union_bounds(lanes + all_nodes)
+        # Пул — ровно объединение своих дорожек. Раньше сюда входили ещё и
+        # узлы, и если хоть один стоял выше первой дорожки, пул начинался
+        # на 120-260 px выше неё: сверху оставалась полоса, не принадлежащая
+        # ни одной дорожке, и импортёр раскладывал полосы по-своему.
+        stacked = pool_bounds(lanes)
+        px, py, pw, ph = stacked if stacked else _union_bounds(lanes + all_nodes)
         xml.append(
             f'      <bpmndi:BPMNShape id="{escape_xml(participant_id)}_di" '
             f'bpmnElement="{escape_xml(participant_id)}" isHorizontal="true">'
@@ -714,7 +833,9 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
 
     for lane in lanes:
         # Полосы обязаны тайлиться внутри пула: иначе импортёр рисует их
-        # уступами, а часть карты оказывается за пределами дорожек.
+        # уступами, а часть карты оказывается за пределами дорожек. По X и
+        # ширине полоса притягивается к пулу, по Y и высоте берётся из стопки,
+        # уложенной в ``map_layout.stack_lanes``, — там они уже сплошные.
         lane_x = px + POOL_HEADER if use_collab else lane.geometry.x
         lane_w = max(pw - POOL_HEADER, 80) if use_collab else lane.geometry.width
         xml.append(
@@ -731,6 +852,17 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
     # Позиции считаем ДО отрисовки: подпись шлюза, подпись связи и подпись
     # соседнего события претендуют на одно и то же место под фигурой, и
     # разводить их можно, только зная все занятые прямоугольники сразу.
+    # Препятствия считаются один раз на схему: дорожки и пулы в них не входят,
+    # связь между дорожками обязана их пересекать.
+    # Значок длительности рисует сам экспортёр, в модели его нет. Пока
+    # трассировщик о нём не знал, линии шли прямо по часам — в PMM на это
+    # приходилась половина всех пересечений. Хозяин у рамки свой шаг: связь,
+    # идущая в этот шаг, проходит рядом со значком по праву.
+    route_obstacles = build_obstacles(
+        all_nodes,
+        extra=[(marker.marker_id, marker.node.id, marker_box(marker))
+               for marker in markers],
+    )
     routes: List[Tuple[ProcessEdge, List[Tuple[int, int]]]] = []
     for edge in edges:
         routes.append((
@@ -739,6 +871,7 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
                 edge,
                 node_by_id.get(edge.sourceId or ''),
                 node_by_id.get(edge.targetId or ''),
+                route_obstacles,
             ),
         ))
     for edge in message_flows:
@@ -746,21 +879,23 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         lane = external_by_id[edge.sourceId if lane_is_source else edge.targetId]
         peer = node_by_id[edge.targetId if lane_is_source else edge.sourceId]
         src_node, tgt_node = message_flow_endpoints(edge, peer, lane, lane_is_source)
-        routes.append((edge, _edge_waypoints(edge, src_node, tgt_node)))
+        routes.append((edge, _edge_waypoints(edge, src_node, tgt_node, route_obstacles)))
 
     taken_boxes: List[Tuple[int, int, int, int]] = node_obstacles(all_nodes)
-    # Заголовки дорожек и пулов — тоже занятое место: в них печатается
-    # повёрнутое название, и подпись, попавшая туда, ложится прямо на него.
+    # Заголовки дорожек и пулов — не просто занятое место, а запретное: в них
+    # уже напечатано повёрнутое название, и вторая надпись поверх складывается
+    # с ним в нечитаемую кашу. Держим их отдельным списком с большим весом.
+    forbidden_boxes: List[Tuple[int, int, int, int]] = []
     if use_collab:
-        taken_boxes.append((px, py, POOL_HEADER, ph))
+        forbidden_boxes.append((px, py, POOL_HEADER, ph))
         for lane in external_lanes:
             g = lane.geometry
-            taken_boxes.extend(_band_boxes(g.x, g.y, g.width, g.height, POOL_HEADER))
+            forbidden_boxes.extend(_band_boxes(g.x, g.y, g.width, g.height, POOL_HEADER))
     for lane in lanes:
         g = lane.geometry
         lane_x = px + POOL_HEADER if use_collab else g.x
         lane_w = max(pw - POOL_HEADER, 80) if use_collab else g.width
-        taken_boxes.extend(_band_boxes(lane_x, g.y, lane_w, g.height, LANE_HEADER))
+        forbidden_boxes.extend(_band_boxes(lane_x, g.y, lane_w, g.height, LANE_HEADER))
     # Часы у шага занимают место на карте так же, как фигура: подпись связи,
     # положенная на них, скрывает цифру.
     taken_boxes.extend(marker_box(m) for m in markers)
@@ -773,18 +908,23 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
         text = (edge.name or edge.condition or '').strip()
         if not text:
             continue
-        box = choose_label_box(edge_label_candidates(route, text), taken_boxes)
+        box = choose_label_box(
+            edge_label_candidates(route, text), taken_boxes, forbidden_boxes)
         edge_label_of[edge.id] = box
         taken_boxes.append(box)
 
     node_label_of: Dict[str, Tuple[int, int, int, int]] = {}
     for node in all_nodes:
-        if node.type not in EXTERNAL_LABEL_TYPES or not (node.name or '').strip():
+        # Смотрим на подпись, которая реально уедет в схему: у безымянного
+        # шлюза она пустая, и место под неё резервировать не за чем.
+        if node.type not in EXTERNAL_LABEL_TYPES or not map_label(node).strip():
             continue
-        obstacles = [b for b in taken_boxes if b != (
+        # Сама фигура своей подписи не мешает: подпись события печатается
+        # вплотную к нему и обязана иметь право стоять рядом.
+        around = [b for b in taken_boxes if b != (
             node.geometry.x, node.geometry.y, node.geometry.width, node.geometry.height
         )]
-        box = choose_label_box(external_label_candidates(node), obstacles)
+        box = choose_label_box(external_label_candidates(node), around, forbidden_boxes)
         node_label_of[node.id] = box
         taken_boxes.append(box)
 
@@ -792,7 +932,7 @@ def generate_bpmn_xml(process: BusinessProcess) -> str:
     # и событий, а не наоборот — цифру читают, подойдя к конкретному шагу.
     marker_label_of: Dict[str, Box] = {}
     for marker in markers:
-        box = choose_label_box(_duration_label_candidates(marker), taken_boxes)
+        box = choose_label_box(_duration_label_candidates(marker), taken_boxes, forbidden_boxes)
         marker_label_of[marker.marker_id] = box
         taken_boxes.append(box)
 

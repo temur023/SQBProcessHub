@@ -72,16 +72,25 @@ const ExportCheckBanner: React.FC<{
 
   // Показываем замечания того формата, который сотрудник сейчас смотрит, а при
   // отсутствии такого — все: вердикт «готово» должен относиться к обоим файлам.
-  const scoped = report.formats.filter((f) => f.format === format)
+  //
+  // Проверок на формат две, и обе относятся к одному файлу: «bpmn» — по
+  // стандарту BPMN 2.0, «bpmn/pix» — по строгому профилю студии. Поэтому
+  // сравнение по префиксу, а не на равенство: иначе баннер покажет «замечаний
+  // нет», умолчав именно о тех правилах, из-за которых студия и отказывает.
+  const scoped = report.formats.filter(
+    (f) => f.format === format || f.format.startsWith(`${format}/`)
+  )
   const shown = scoped.length ? scoped : report.formats
   const problems = shown.flatMap((f) => f.problems.map((p) => ({ ...p, format: f.format })))
+  // Один файл — одно имя в баннере, сколько бы наборов правил его ни проверяло.
+  const shownNames = [...new Set(shown.map((f) => f.format.split('/')[0].toUpperCase()))]
   const errors = problems.filter((p) => p.level === 'error')
 
   if (!problems.length) {
     return (
       <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
         <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-        Проверено правилами PIX: {shown.map((f) => f.format.toUpperCase()).join(' и ')} —
+        Проверено правилами PIX: {shownNames.join(' и ')} —
         замечаний нет, файл загрузится в Процессную студию.
       </div>
     )

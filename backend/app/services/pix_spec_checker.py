@@ -103,6 +103,20 @@ _FLOW_EDGES = {'sequenceflow', 'messageflow', 'association', 'dataassociation'}
 #: Категория каталога, которой единственной положено содержать вложенные фигуры.
 _CONTAINER_CATEGORY = 'Участники'
 
+#: Свойства фигуры, значение которых обязано быть .NET TimeSpan (catalog).
+#: Имена взяты из каталога студии: там у всех троих ``typeId="7"`` —
+#: длительность. Ключ не из каталога панель свойств не показывает, поэтому
+#: неизвестное имя проверяется отдельным правилом ниже.
+_TIMESPAN_PROPERTIES = frozenset({
+    'vremya_protsessa', 'system_process_time', 'vremya_ozhidaniya',
+})
+
+#: .NET TimeSpan: «hh:mm:ss», перед ним необязательные сутки через точку.
+#: Часы строго 0..23 — ``TimeSpan.Parse("24:00:00")`` падает, сутки выносятся
+#: отдельным полем. Проверка нужна именно поэтому: файл со значением «24:00:00»
+#: открывается любым XML-разбором и валится уже в студии.
+_TIMESPAN_RE = re.compile(r'^(?:\d+\.)?(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,7})?$')
+
 
 def _add(check: ExportCheck, level: str, code: str, message: str,
          where: Optional[str] = None) -> None:
@@ -354,9 +368,21 @@ def _validate_pmm_for_pix(payload: bytes, check: ExportCheck) -> None:
         n.get('name'): {e.get('name') for e in n.findall('element') if e.get('name')}
         for n in config.iter('notation') if n.get('name')
     }
+    # Категория элемента («Задачи», «Шлюзы», «События»…). Имени в каталоге
+    # мало: студия идёт за категорией и на её отсутствии падает с сообщением,
+    # где параметр так и назван — ``'type'``. В нотации BPMN категории нет
+    # ровно у одного элемента из 91 — ``input`` («Текст»). Источник: catalog.
+    element_category: Dict[str, Dict[str, str]] = {
+        n.get('name'): {
+            e.get('name'): e.get('type') or ''
+            for e in n.findall('element') if e.get('name')
+        }
+        for n in config.iter('notation') if n.get('name')
+    }
     canonical = {name.lower(): name for name in catalogue}
     notation_name = canonical.get(notation.lower())
     allowed = catalogue.get(notation_name) if notation_name else None
+    categories = element_category.get(notation_name or '', {})
     if allowed is None:
         _add(check, 'error', 'pix_pmm_notation',
              f'Нотация «{notation}» не объявлена в каталоге студии. '
@@ -374,6 +400,10 @@ def _validate_pmm_for_pix(payload: bytes, check: ExportCheck) -> None:
     # ни категории, ни ``canHaveChildren`` не нашлись бы, и дорожка с шагами
     # внутри выглядела бы недопустимым вложением.
     lookup = notation_name or notation
+    #: Имена шаблонов свойств из каталога: панель свойств строится по ним.
+    property_names = {
+        t.get('name') for t in config.findall('propertyTemplate') if t.get('name')
+    }
     categories = notation_categories(config, lookup)
     containers = {name for name, kind in categories.items() if kind == _CONTAINER_CATEGORY}
     with_children = {
@@ -411,6 +441,11 @@ def _validate_pmm_for_pix(payload: bytes, check: ExportCheck) -> None:
                 _add(check, 'error', 'pix_pmm_type_unknown',
                      f'Тип «{kind}» фигуры «{name}» не объявлен в нотации '
                      f'«{notation}».', nid)
+            elif not categories.get(kind, ''):
+                _add(check, 'error', 'pix_pmm_type_no_category',
+                     f'У типа «{kind}» фигуры «{name}» в каталоге студии не '
+                     f'проставлена категория — студия откажется открыть пакет.',
+                     nid)
 
             # Геометрия — целые числа (required).
             geometry: Dict[str, float] = {}
@@ -427,6 +462,29 @@ def _validate_pmm_for_pix(payload: bytes, check: ExportCheck) -> None:
             if geometry.get('width', 1) <= 0 or geometry.get('height', 1) <= 0:
                 _add(check, 'error', 'pix_pmm_zero_size',
                      f'У фигуры «{name}» нулевой размер.', nid)
+
+            # Свойства фигуры: значения времени — .NET TimeSpan (reference).
+            for props in node.findall('Properties'):
+                for prop in props.findall('Property'):
+                    pname = prop.get('name') or ''
+                    value = prop.get('value')
+                    if not pname:
+                        _add(check, 'error', 'pix_pmm_property_no_name',
+                             f'У свойства фигуры «{name}» не указано имя.', nid)
+                    elif pname not in property_names:
+                        # Ключ не из каталога студия принимает молча: значение
+                        # оседает теневым атрибутом, файл открывается без
+                        # ошибок, а в панели свойств поля просто нет. Дефект
+                        # без этого правила обнаруживается только глазами.
+                        _add(check, 'error', 'pix_pmm_property_unknown',
+                             f'Свойство «{pname}» фигуры «{name}» не объявлено '
+                             'в каталоге студии: значение сохранится, но в '
+                             'панели свойств не появится.', nid)
+                    if pname in _TIMESPAN_PROPERTIES and not _TIMESPAN_RE.match(value or ''):
+                        _add(check, 'error', 'pix_pmm_property_timespan',
+                             f'Свойство «{pname}» фигуры «{name}» = «{value}»: '
+                             'ожидается .NET TimeSpan вида «hh:mm:ss» или '
+                             '«d.hh:mm:ss» с часами в диапазоне 0..23.', nid)
 
             # Вложение: держать детей вправе только участники и элементы,
             # помеченные canHaveChildren (catalog).

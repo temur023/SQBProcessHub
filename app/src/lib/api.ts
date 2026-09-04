@@ -173,7 +173,8 @@ export interface ExportProblem {
 }
 
 export interface ExportFormatCheck {
-  format: 'bpmn' | 'pmm'
+  /** 'bpmn' | 'pmm' — по стандарту; 'bpmn/pix' | 'pmm/pix' — по профилю студии. */
+  format: string
   ok: boolean
   errors: number
   warnings: number

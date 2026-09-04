@@ -1,0 +1,782 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.0.9 Chrome/128.0.6613.186 Electron/32.2.5 Safari/537.36" version="26.0.9">
+  <diagram name="Страница-1" id="JKWPiQfeAgcHVr2YOc1y">
+    <mxGraphModel dx="3585" dy="3259" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="UiHGoX4MpkmT1GL6zPzg-2" value="SQB" style="swimlane;html=1;childLayout=stackLayout;resizeParent=1;resizeParentMax=0;horizontal=1;startSize=40;horizontalStack=0;whiteSpace=wrap;swimlaneFillColor=none;fontFamily=Helvetica;" parent="1" vertex="1">
+          <mxGeometry x="121" y="-520" width="5249" height="3000" as="geometry" />
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-2" value="&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;Sanksiyon Komplaeans xizmati&amp;nbsp;&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;(Komplaeans nazorat departamenti)&lt;/font&gt;&lt;/div&gt;" style="swimlane;startSize=79;horizontal=0;html=1;whiteSpace=wrap;fontFamily=Helvetica;" parent="UiHGoX4MpkmT1GL6zPzg-2" vertex="1">
+          <mxGeometry y="40" width="5249" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Helvetica;" parent="ymHeXXoC8FXCQA6RyLea-2" source="hkoUex0PBElwjzCZOY9d-5" target="ymHeXXoC8FXCQA6RyLea-5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UiHGoX4MpkmT1GL6zPzg-4" value="&lt;span style=&quot;font-size: 11.29px;&quot;&gt;MT700/710 formatidagi SWIFT xabarnomasini qabul qiladi.&lt;/span&gt;" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;fontFamily=Helvetica;" parent="ymHeXXoC8FXCQA6RyLea-2" vertex="1">
+          <mxGeometry x="189" y="35" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-4" value="5 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;fontFamily=Helvetica;" parent="UiHGoX4MpkmT1GL6zPzg-4" vertex="1">
+          <mxGeometry x="100" y="60" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-5" value="SWIFT&amp;nbsp; xabarnomalari TSS dasturi orqali tegishli sanksion ro&#39;yxatlar bilan avtomatik tekshiriladi" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;fontFamily=Helvetica;" parent="ymHeXXoC8FXCQA6RyLea-2" vertex="1">
+          <mxGeometry x="460" y="33" width="131" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-6" value="10&amp;nbsp;&lt;span style=&quot;background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;min&lt;/span&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;fontFamily=Helvetica;" parent="ymHeXXoC8FXCQA6RyLea-5" vertex="1">
+          <mxGeometry x="119" y="67" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="ymHeXXoC8FXCQA6RyLea-2" source="ymHeXXoC8FXCQA6RyLea-26" target="ymHeXXoC8FXCQA6RyLea-28" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="761" y="75" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-31" value="Ha" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="ymHeXXoC8FXCQA6RyLea-30" connectable="0" vertex="1">
+          <mxGeometry x="-0.105" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-26" value="Moslik aniqlandimi" style="points=[[0.25,0.25,0],[0.5,0,0],[0.75,0.25,0],[1,0.5,0],[0.75,0.75,0],[0.5,1,0],[0.25,0.75,0],[0,0.5,0]];shape=mxgraph.bpmn.gateway2;html=1;verticalLabelPosition=top;labelBackgroundColor=#ffffff;verticalAlign=bottom;align=center;perimeter=rhombusPerimeter;outlineConnect=0;outline=none;symbol=none;gwType=exclusive;fillColor=#FFFF00;strokeColor=#000000;labelPosition=center;fontFamily=Helvetica;" parent="ymHeXXoC8FXCQA6RyLea-2" vertex="1">
+          <mxGeometry x="631" y="50" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;fontFamily=Helvetica;" parent="ymHeXXoC8FXCQA6RyLea-2" source="ymHeXXoC8FXCQA6RyLea-5" target="ymHeXXoC8FXCQA6RyLea-26" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-28" value="Mijozni sanksiya yuzasidan tekshirish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="ymHeXXoC8FXCQA6RyLea-2" vertex="1">
+          <mxGeometry x="780" y="35" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-29" value="30 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="ymHeXXoC8FXCQA6RyLea-28" vertex="1">
+          <mxGeometry x="104" y="60.56" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-32" value="Ro&#39;yhatda&amp;nbsp;&lt;div&gt;mavjudmi?&lt;/div&gt;" style="points=[[0.25,0.25,0],[0.5,0,0],[0.75,0.25,0],[1,0.5,0],[0.75,0.75,0],[0.5,1,0],[0.25,0.75,0],[0,0.5,0]];shape=mxgraph.bpmn.gateway2;html=1;verticalLabelPosition=top;labelBackgroundColor=#ffffff;verticalAlign=bottom;align=center;perimeter=rhombusPerimeter;outlineConnect=0;outline=none;symbol=none;gwType=exclusive;fillColor=#FFFF00;strokeColor=#000000;labelPosition=center;" parent="ymHeXXoC8FXCQA6RyLea-2" vertex="1">
+          <mxGeometry x="980" y="50" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="ymHeXXoC8FXCQA6RyLea-2" source="ymHeXXoC8FXCQA6RyLea-28" target="ymHeXXoC8FXCQA6RyLea-32" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="ymHeXXoC8FXCQA6RyLea-2" source="ymHeXXoC8FXCQA6RyLea-32" target="sY_wsGSpVhCODAUu-eJQ-5" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1559" y="74.99999999999955" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-26" value="Ha" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="ymHeXXoC8FXCQA6RyLea-35" connectable="0" vertex="1">
+          <mxGeometry x="-0.4197" y="-2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Helvetica;" parent="ymHeXXoC8FXCQA6RyLea-2" source="UiHGoX4MpkmT1GL6zPzg-4" target="hkoUex0PBElwjzCZOY9d-5" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="-413" as="sourcePoint" />
+            <mxPoint x="602" y="-413" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-5" value="" style="points=[[0.25,0.25,0],[0.5,0,0],[0.75,0.25,0],[1,0.5,0],[0.75,0.75,0],[0.5,1,0],[0.25,0.75,0],[0,0.5,0]];shape=mxgraph.bpmn.gateway2;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=rhombusPerimeter;outlineConnect=0;outline=none;symbol=none;gwType=parallel;fillColor=#FFFF00;strokeColor=#000000;" parent="ymHeXXoC8FXCQA6RyLea-2" vertex="1">
+          <mxGeometry x="369" y="50" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-24" value="" style="points=[[0.25,0.25,0],[0.5,0,0],[0.75,0.25,0],[1,0.5,0],[0.75,0.75,0],[0.5,1,0],[0.25,0.75,0],[0,0.5,0]];shape=mxgraph.bpmn.gateway2;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=rhombusPerimeter;outlineConnect=0;outline=none;symbol=none;gwType=parallel;fillColor=#FFFF00;strokeColor=#000000;" parent="ymHeXXoC8FXCQA6RyLea-2" vertex="1">
+          <mxGeometry x="631" y="148" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="ymHeXXoC8FXCQA6RyLea-2" source="ymHeXXoC8FXCQA6RyLea-26" target="hkoUex0PBElwjzCZOY9d-24" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="720" y="165" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ymHeXXoC8FXCQA6RyLea-37" value="Yo&#39;q" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="ymHeXXoC8FXCQA6RyLea-36" connectable="0" vertex="1">
+          <mxGeometry x="-0.8854" y="1" relative="1" as="geometry">
+            <mxPoint x="-1" y="13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="ymHeXXoC8FXCQA6RyLea-2" source="ymHeXXoC8FXCQA6RyLea-32" target="hkoUex0PBElwjzCZOY9d-24" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-27" value="Yo&#39;q" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="hkoUex0PBElwjzCZOY9d-25" connectable="0" vertex="1">
+          <mxGeometry x="-0.8012" y="4" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sY_wsGSpVhCODAUu-eJQ-5" value="Natijasi yuzasidan xizmat yozishma yuboradi&amp;nbsp;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="ymHeXXoC8FXCQA6RyLea-2">
+          <mxGeometry x="1489" y="35" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-2" value="&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;AML xizmati&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;(Komplayen nazorat departamenti)&lt;/font&gt;&lt;/div&gt;" style="swimlane;startSize=79;horizontal=0;html=1;whiteSpace=wrap;" parent="UiHGoX4MpkmT1GL6zPzg-2" vertex="1">
+          <mxGeometry y="280" width="5249" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-7" value="Milliy va Xalqaro ro&#39;yxat bilan jo&#39;natuvchining&amp;nbsp; identifikatsion ma&#39;lumotlari hamda to‘lov mazmuni solishtiriladi&amp;nbsp;" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=service;" parent="hkoUex0PBElwjzCZOY9d-2" vertex="1">
+          <mxGeometry x="301" y="38" width="186" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="hkoUex0PBElwjzCZOY9d-2" source="hkoUex0PBElwjzCZOY9d-7" target="hkoUex0PBElwjzCZOY9d-11" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="468" y="78" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-8" value="AML xizmati tomonidan o&#39;rganiladi - haqiqatda Ro‘yxatdagi shaxsmi?" style="rounded=1;whiteSpace=wrap;html=1;" parent="hkoUex0PBElwjzCZOY9d-2" vertex="1">
+          <mxGeometry x="831" y="38" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="hkoUex0PBElwjzCZOY9d-2" source="hkoUex0PBElwjzCZOY9d-11" target="hkoUex0PBElwjzCZOY9d-8" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-10" value="Ha" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="hkoUex0PBElwjzCZOY9d-9" connectable="0" vertex="1">
+          <mxGeometry x="-0.2632" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-31" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="hkoUex0PBElwjzCZOY9d-2" source="hkoUex0PBElwjzCZOY9d-11" target="hkoUex0PBElwjzCZOY9d-28" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-34" value="Yo&#39;q" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="hkoUex0PBElwjzCZOY9d-31" connectable="0" vertex="1">
+          <mxGeometry x="-0.3557" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-11" value="Moslik&amp;nbsp;&lt;div&gt;aniqlandimi&lt;/div&gt;" style="points=[[0.25,0.25,0],[0.5,0,0],[0.75,0.25,0],[1,0.5,0],[0.75,0.75,0],[0.5,1,0],[0.25,0.75,0],[0,0.5,0]];shape=mxgraph.bpmn.gateway2;html=1;verticalLabelPosition=top;labelBackgroundColor=#ffffff;verticalAlign=bottom;align=center;perimeter=rhombusPerimeter;outlineConnect=0;outline=none;symbol=none;gwType=exclusive;fillColor=#FFFF00;strokeColor=#000000;labelPosition=center;" parent="hkoUex0PBElwjzCZOY9d-2" vertex="1">
+          <mxGeometry x="692" y="53" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-12" value="5 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="hkoUex0PBElwjzCZOY9d-2" vertex="1">
+          <mxGeometry x="965" y="98" width="26" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="hkoUex0PBElwjzCZOY9d-2" source="hkoUex0PBElwjzCZOY9d-19" target="hkoUex0PBElwjzCZOY9d-28" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-33" value="Yo&#39;q" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="hkoUex0PBElwjzCZOY9d-32" connectable="0" vertex="1">
+          <mxGeometry x="-0.1176" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-19" value="Ro&#39;yxatda&amp;nbsp;&lt;div&gt;mavjudmi&lt;/div&gt;" style="points=[[0.25,0.25,0],[0.5,0,0],[0.75,0.25,0],[1,0.5,0],[0.75,0.75,0],[0.5,1,0],[0.25,0.75,0],[0,0.5,0]];shape=mxgraph.bpmn.gateway2;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=rhombusPerimeter;outlineConnect=0;outline=none;symbol=none;gwType=exclusive;fillColor=#FFFF00;strokeColor=#000000;labelPosition=center;" parent="hkoUex0PBElwjzCZOY9d-2" vertex="1">
+          <mxGeometry x="886" y="148" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-15" value="Milliy&amp;nbsp;va xalqaro ro&#39;yxatidagi yoki u bilan bog‘liq amaliyotga cheklov qo&#39;yiladi" style="rounded=1;whiteSpace=wrap;html=1;" parent="hkoUex0PBElwjzCZOY9d-2" vertex="1">
+          <mxGeometry x="1099" y="133" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="hkoUex0PBElwjzCZOY9d-2" source="hkoUex0PBElwjzCZOY9d-19" target="hkoUex0PBElwjzCZOY9d-15" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-21" value="Ha" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="hkoUex0PBElwjzCZOY9d-20" connectable="0" vertex="1">
+          <mxGeometry x="-0.1686" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-16" value="Pul mablag‘lari&amp;nbsp;&lt;div&gt;bloklanadi&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=terminate2;fillColor=#f8cecc;strokeColor=#b85450;" parent="hkoUex0PBElwjzCZOY9d-2" vertex="1">
+          <mxGeometry x="1339" y="148" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="hkoUex0PBElwjzCZOY9d-2" source="hkoUex0PBElwjzCZOY9d-15" target="hkoUex0PBElwjzCZOY9d-16" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1353" y="229" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="hkoUex0PBElwjzCZOY9d-2" source="hkoUex0PBElwjzCZOY9d-8" target="hkoUex0PBElwjzCZOY9d-19" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-22" value="15 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="hkoUex0PBElwjzCZOY9d-2" vertex="1">
+          <mxGeometry x="1238" y="193" width="26" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-28" value="" style="points=[[0.25,0.25,0],[0.5,0,0],[0.75,0.25,0],[1,0.5,0],[0.75,0.75,0],[0.5,1,0],[0.25,0.75,0],[0,0.5,0]];shape=mxgraph.bpmn.gateway2;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=rhombusPerimeter;outlineConnect=0;outline=none;symbol=none;gwType=parallel;fillColor=#FFFF00;strokeColor=#000000;" parent="hkoUex0PBElwjzCZOY9d-2" vertex="1">
+          <mxGeometry x="692" y="148" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="UiHGoX4MpkmT1GL6zPzg-13" value="&lt;span style=&quot;text-wrap-mode: nowrap;&quot;&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;&lt;b&gt;Menejer&lt;/b&gt;&lt;/font&gt;&lt;/span&gt;&lt;div&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;&lt;b&gt;&lt;span style=&quot;text-wrap-mode: nowrap;&quot;&gt;SWIFT xalqaro to&#39;lovlari guruhi&lt;/span&gt;&lt;br&gt;&lt;/b&gt;&lt;/font&gt;&lt;div&gt;&lt;span style=&quot;text-wrap-mode: nowrap;&quot;&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;&lt;b&gt;&amp;nbsp;Xalqaro tranzaksiyalar xizmati&lt;/b&gt;&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;text-wrap-mode: nowrap;&quot;&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;&lt;b&gt;Operatsion departament&lt;/b&gt;&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;" style="swimlane;html=1;startSize=79;fontStyle=0;collapsible=0;horizontal=0;swimlaneLine=1;swimlaneFillColor=none;strokeWidth=1;whiteSpace=wrap;fontFamily=Helvetica;" parent="UiHGoX4MpkmT1GL6zPzg-2" vertex="1">
+          <mxGeometry y="520" width="5249" height="490" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-59" value="&lt;span style=&quot;font-size: 11.29px;&quot;&gt;Emitent-bankdan MT700/710 formatidagi eksport akkreditivini SWIFT xabarnomasini qabul qilish&lt;/span&gt;" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UiHGoX4MpkmT1GL6zPzg-13" vertex="1">
+          <mxGeometry x="642" y="186" width="150" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-60" value="5 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-59" vertex="1">
+          <mxGeometry x="127.25" y="76.25" width="23.75" height="23.75" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-63" value="xizmat yozishma yaratish va tegishli tarmoqga jo&#39;natish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UiHGoX4MpkmT1GL6zPzg-13" vertex="1">
+          <mxGeometry x="859" y="195.99842105263167" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-64" value="5 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-63" vertex="1">
+          <mxGeometry x="100" y="61" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-62" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-13" source="wqq-BlN-nB3kUFDQmOtK-59" target="wqq-BlN-nB3kUFDQmOtK-63" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="849" y="236.36842105263167" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-65" value="SWIFT xabarnoma" style="shape=datastore;html=1;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="UiHGoX4MpkmT1GL6zPzg-13" vertex="1">
+          <mxGeometry x="609" y="116" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-66" value="" style="endArrow=none;dashed=1;html=1;rounded=0;exitX=0.85;exitY=0.95;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.135;entryY=-0.012;entryDx=0;entryDy=0;entryPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-13" source="wqq-BlN-nB3kUFDQmOtK-65" target="wqq-BlN-nB3kUFDQmOtK-59" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="799" y="206" as="sourcePoint" />
+            <mxPoint x="849" y="156" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-67" value="EHA" style="shape=datastore;html=1;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" parent="UiHGoX4MpkmT1GL6zPzg-13" vertex="1">
+          <mxGeometry x="849" y="116" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-68" value="" style="endArrow=none;dashed=1;html=1;rounded=0;exitX=0.85;exitY=0.95;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-13" source="wqq-BlN-nB3kUFDQmOtK-67" target="wqq-BlN-nB3kUFDQmOtK-63" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="839" y="346" as="sourcePoint" />
+            <mxPoint x="889" y="166" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-162" value="Aniqlangan kamchiliklardan so&#39;ng tomolarni roziligi olingandan keyin to&#39;lov amalga oshiriladi" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UiHGoX4MpkmT1GL6zPzg-13" vertex="1">
+          <mxGeometry x="3008.5" y="236" width="141" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-167" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-13" source="wqq-BlN-nB3kUFDQmOtK-164" target="wqq-BlN-nB3kUFDQmOtK-169" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="3279" y="186" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-168" value="SWIFT 202" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="wqq-BlN-nB3kUFDQmOtK-167" connectable="0" vertex="1">
+          <mxGeometry x="-0.4439" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-164" value="Swift xabarnoma shakli?" style="points=[[0.25,0.25,0],[0.5,0,0],[0.75,0.25,0],[1,0.5,0],[0.75,0.75,0],[0.5,1,0],[0.25,0.75,0],[0,0.5,0]];shape=mxgraph.bpmn.gateway2;html=1;verticalLabelPosition=middle;labelBackgroundColor=#ffffff;verticalAlign=middle;align=right;perimeter=rhombusPerimeter;outlineConnect=0;outline=none;symbol=none;gwType=exclusive;fillColor=#FFFF00;labelPosition=left;" parent="UiHGoX4MpkmT1GL6zPzg-13" vertex="1">
+          <mxGeometry x="3054" y="56" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-165" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-13" source="wqq-BlN-nB3kUFDQmOtK-164" target="wqq-BlN-nB3kUFDQmOtK-162" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-166" value="SWIFT 734/750" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="wqq-BlN-nB3kUFDQmOtK-165" connectable="0" vertex="1">
+          <mxGeometry x="-0.2691" y="1" relative="1" as="geometry">
+            <mxPoint y="6" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-169" value="Bankning vakillik hisob raqamiga export&amp;nbsp;&lt;div&gt;tushumi mablag&#39; kelib tushadi&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=throwing;symbol=general;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="UiHGoX4MpkmT1GL6zPzg-13" vertex="1">
+          <mxGeometry x="3269" y="136" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-173" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-13" source="wqq-BlN-nB3kUFDQmOtK-171" target="wqq-BlN-nB3kUFDQmOtK-175" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3429" y="276" />
+              <mxPoint x="3429" y="431" />
+            </Array>
+            <mxPoint x="3439" y="496" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-171" value="Bankning vakillik hisob raqamiga export&amp;nbsp;&lt;div&gt;tushumi mablag&#39; kelib tushadi&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=throwing;symbol=general;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="UiHGoX4MpkmT1GL6zPzg-13" vertex="1">
+          <mxGeometry x="3269" y="251" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-170" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-13" source="wqq-BlN-nB3kUFDQmOtK-162" target="wqq-BlN-nB3kUFDQmOtK-171" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="3229" y="276.37037037037044" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-175" value="" style="points=[[0.25,0.25,0],[0.5,0,0],[0.75,0.25,0],[1,0.5,0],[0.75,0.75,0],[0.5,1,0],[0.25,0.75,0],[0,0.5,0]];shape=mxgraph.bpmn.gateway2;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=rhombusPerimeter;outlineConnect=0;outline=none;symbol=none;gwType=exclusive;fillColor=#FFFF00;" parent="UiHGoX4MpkmT1GL6zPzg-13" vertex="1">
+          <mxGeometry x="3469" y="406" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-174" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-13" source="wqq-BlN-nB3kUFDQmOtK-169" target="wqq-BlN-nB3kUFDQmOtK-175" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="3509" y="476" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="UiHGoX4MpkmT1GL6zPzg-6" value="&lt;b style=&quot;font-size: 11.29px; text-wrap-mode: wrap; background-color: rgb(236, 236, 236);&quot;&gt;Jarayonni boshlash&lt;/b&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=general;fillColor=light-dark(#97D077,var(--ge-dark-color, #121212));labelPosition=center;fontFamily=Helvetica;" parent="UiHGoX4MpkmT1GL6zPzg-13" vertex="1">
+          <mxGeometry x="129" y="211" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="sY_wsGSpVhCODAUu-eJQ-1" value="&lt;span style=&quot;font-size: 11.29px;&quot;&gt;MT700/710 formatidagi SWIFT xabarnomasini qabul qiladi.&lt;/span&gt;" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;fontFamily=Helvetica;" vertex="1" parent="UiHGoX4MpkmT1GL6zPzg-13">
+          <mxGeometry x="215" y="191" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="sY_wsGSpVhCODAUu-eJQ-2" value="5 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;fontFamily=Helvetica;" vertex="1" parent="sY_wsGSpVhCODAUu-eJQ-1">
+          <mxGeometry x="100" y="60" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="UiHGoX4MpkmT1GL6zPzg-5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Helvetica;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-13" source="UiHGoX4MpkmT1GL6zPzg-6" target="sY_wsGSpVhCODAUu-eJQ-1" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="179" y="-800.4999999999998" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sY_wsGSpVhCODAUu-eJQ-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="UiHGoX4MpkmT1GL6zPzg-13" source="sY_wsGSpVhCODAUu-eJQ-6" target="sY_wsGSpVhCODAUu-eJQ-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sY_wsGSpVhCODAUu-eJQ-6" value="Xizmat yozishmadan kelib chiqib mablag qaytariladi&amp;nbsp;&amp;nbsp;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="UiHGoX4MpkmT1GL6zPzg-13">
+          <mxGeometry x="1489" y="196" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="sY_wsGSpVhCODAUu-eJQ-8" value="Pul mablag‘lari&amp;nbsp;&lt;div&gt;bloklanadi&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=terminate2;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="UiHGoX4MpkmT1GL6zPzg-13">
+          <mxGeometry x="1739" y="211" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-172" value="&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;Menejer&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;Vakil banklar bilan valyuta tranzaksiyalar guruhi&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;Operatsion departament&lt;/font&gt;&lt;/div&gt;" style="swimlane;startSize=79;horizontal=0;html=1;whiteSpace=wrap;" parent="UiHGoX4MpkmT1GL6zPzg-2" vertex="1">
+          <mxGeometry y="1010" width="5249" height="350" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-178" value="Kutish vaqti : 90 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;verticalLabelPosition=middle;labelBackgroundColor=#ffffff;verticalAlign=middle;align=right;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=catching;symbol=timer;labelPosition=left;labelBorderColor=none;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="wqq-BlN-nB3kUFDQmOtK-172" vertex="1">
+          <mxGeometry x="3469" y="50" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-187" value="SWIFT tizimi orqali IABS dasturiga kiritilgan to&#39;lovlarni &quot;Utverjden I&quot; holatiga o&#39;tkazish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="wqq-BlN-nB3kUFDQmOtK-172" vertex="1">
+          <mxGeometry x="3419" y="150.5" width="150" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-188" value="5 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-187" vertex="1">
+          <mxGeometry x="124.25" y="76.25" width="28.75" height="28.75" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-189" value="IABS" style="shape=datastore;html=1;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="wqq-BlN-nB3kUFDQmOtK-172" vertex="1">
+          <mxGeometry x="3349" y="180.5" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-190" value="SWIFT" style="shape=datastore;html=1;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#b1ddf0;strokeColor=#10739e;" parent="wqq-BlN-nB3kUFDQmOtK-172" vertex="1">
+          <mxGeometry x="3349" y="100" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-191" value="" style="endArrow=none;dashed=1;html=1;rounded=0;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0.06;entryY=0.018;entryDx=0;entryDy=0;entryPerimeter=0;" parent="wqq-BlN-nB3kUFDQmOtK-172" source="wqq-BlN-nB3kUFDQmOtK-190" target="wqq-BlN-nB3kUFDQmOtK-187" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="3499" y="106" as="sourcePoint" />
+            <mxPoint x="3549" y="56" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-192" value="" style="endArrow=none;dashed=1;html=1;rounded=0;exitX=0.819;exitY=0.462;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="wqq-BlN-nB3kUFDQmOtK-172" source="wqq-BlN-nB3kUFDQmOtK-189" target="wqq-BlN-nB3kUFDQmOtK-187" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="3499" y="106" as="sourcePoint" />
+            <mxPoint x="3549" y="56" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-194" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="wqq-BlN-nB3kUFDQmOtK-172" source="wqq-BlN-nB3kUFDQmOtK-178" target="wqq-BlN-nB3kUFDQmOtK-187" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-196" value="Dasturdan &quot;Utverjden I&quot; holatdan &quot;Utverjden II&quot; holatga o&#39;tkazish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="wqq-BlN-nB3kUFDQmOtK-172" vertex="1">
+          <mxGeometry x="3679" y="155.25" width="141" height="90.5" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-197" value="5 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-196" vertex="1">
+          <mxGeometry x="123.38" y="73.53" width="26.63" height="26.63" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-195" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="wqq-BlN-nB3kUFDQmOtK-172" source="wqq-BlN-nB3kUFDQmOtK-187" target="wqq-BlN-nB3kUFDQmOtK-196" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="3699" y="201" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-199" value="Mijzoning 29801 export akkreditiv&lt;div&gt;&amp;nbsp;hisob raqamiga mablag&#39; o&#39;tkazildi&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=top;labelBackgroundColor=#ffffff;verticalAlign=bottom;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=throwing;symbol=general;fillColor=#ffe6cc;strokeColor=#d79b00;labelPosition=center;" parent="wqq-BlN-nB3kUFDQmOtK-172" vertex="1">
+          <mxGeometry x="3929" y="175.5" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-198" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="wqq-BlN-nB3kUFDQmOtK-172" source="wqq-BlN-nB3kUFDQmOtK-196" target="wqq-BlN-nB3kUFDQmOtK-199" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="3889" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="UiHGoX4MpkmT1GL6zPzg-26" value="&lt;b&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;Yetakchi menejer&lt;/font&gt;&lt;/b&gt;&lt;div&gt;&lt;b&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;Valyuta operatsiyalari hisobi va chet el valyutasida hujjatli tranzaksiyalar xizmati&amp;nbsp;&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;Operatsion departament&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;" style="swimlane;html=1;startSize=79;horizontal=0;fontStyle=0;fontFamily=Helvetica;whiteSpace=wrap;" parent="UiHGoX4MpkmT1GL6zPzg-2" vertex="1">
+          <mxGeometry y="1360" width="5249" height="440" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-79" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-26" source="wqq-BlN-nB3kUFDQmOtK-75" target="wqq-BlN-nB3kUFDQmOtK-80" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1320" y="175.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-75" value="Xizmat yozishma yaratish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UiHGoX4MpkmT1GL6zPzg-26" vertex="1">
+          <mxGeometry x="1089" y="146" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-76" value="15 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-75" vertex="1">
+          <mxGeometry x="105" y="65" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-80" value="&lt;font style=&quot;letter-spacing: 0px; font-size: 11.29px; direction: ltr; line-height: 13.548px; opacity: 1; color: rgb(0, 0, 0);&quot;&gt;MT700/710 SWIFT&amp;nbsp;&lt;/font&gt;&lt;font style=&quot;letter-spacing: 0px; font-size: 11.29px; direction: ltr; line-height: 13.548px; opacity: 1; color: rgb(0, 0, 0);&quot;&gt;xabarnomasi&lt;/font&gt;&lt;font style=&quot;letter-spacing: 0px; font-size: 11.29px; direction: ltr; line-height: 13.548px; opacity: 1; color: rgb(0, 0, 0);&quot;&gt;ni ilova qilgan holda tegishli tarmoqga tizimdan jo&#39;natish&lt;/font&gt;" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UiHGoX4MpkmT1GL6zPzg-26" vertex="1">
+          <mxGeometry x="1329" y="146" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-81" value="5 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-80" vertex="1">
+          <mxGeometry x="105" y="65" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-106" value="EHA" style="shape=datastore;html=1;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" parent="UiHGoX4MpkmT1GL6zPzg-26" vertex="1">
+          <mxGeometry x="1279" y="86.00000000000023" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-107" value="" style="endArrow=none;dashed=1;html=1;rounded=0;exitX=0.85;exitY=0.95;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.032;entryY=0.075;entryDx=0;entryDy=0;entryPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-26" source="wqq-BlN-nB3kUFDQmOtK-106" target="wqq-BlN-nB3kUFDQmOtK-80" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1289" y="326.0000000000002" as="sourcePoint" />
+            <mxPoint x="1339" y="146.00000000000023" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-142" value="Kutish vaqti : 60 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;verticalLabelPosition=middle;labelBackgroundColor=#ffffff;verticalAlign=middle;align=right;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=catching;symbol=timer;labelPosition=left;labelBorderColor=none;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="UiHGoX4MpkmT1GL6zPzg-26" vertex="1">
+          <mxGeometry x="2414.000000000001" y="346" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-146" value="Tegishli hujjatlarni qabul qilish va export akkreditiv shartlarida keltirilgan hujjatlar to&#39;plami to&#39;liqligini ko&#39;zdan kechirish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UiHGoX4MpkmT1GL6zPzg-26" vertex="1">
+          <mxGeometry x="2368.5" y="196" width="141" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-147" value="60-120 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-146" vertex="1">
+          <mxGeometry x="123.375" y="65" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-145" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-26" source="wqq-BlN-nB3kUFDQmOtK-142" target="wqq-BlN-nB3kUFDQmOtK-146" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2439.217391304348" y="246" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-156" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;dashed=1;dashPattern=8 8;" parent="UiHGoX4MpkmT1GL6zPzg-26" source="wqq-BlN-nB3kUFDQmOtK-152" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2819" y="-1450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-152" value="Tegishli hujjatlarni emitent bankga pochta orqali jo&#39;natish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UiHGoX4MpkmT1GL6zPzg-26" vertex="1">
+          <mxGeometry x="2629" y="195.9955555555557" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-153" value="20 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-152" vertex="1">
+          <mxGeometry x="105" y="65" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-151" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-26" source="wqq-BlN-nB3kUFDQmOtK-146" target="wqq-BlN-nB3kUFDQmOtK-152" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2639" y="235.55555555555566" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-157" value="Xalqaro pochta" style="shape=datastore;html=1;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;fillColor=#d5e8d4;strokeColor=#82b366;" parent="UiHGoX4MpkmT1GL6zPzg-26" vertex="1">
+          <mxGeometry x="2719" y="116" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-158" value="" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.15;entryY=0.95;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.614;exitY=0.054;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-26" source="wqq-BlN-nB3kUFDQmOtK-152" target="wqq-BlN-nB3kUFDQmOtK-157" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="2869" y="176" as="sourcePoint" />
+            <mxPoint x="2919" y="126" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-148" value="Export akkreditiv&lt;div&gt;&amp;nbsp;to&#39;lov hujjatlari&lt;/div&gt;" style="shape=mxgraph.bpmn.data2;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;size=15;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="UiHGoX4MpkmT1GL6zPzg-26" vertex="1">
+          <mxGeometry x="2319" y="156" width="40" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-154" value="Export akkreditiv&lt;div&gt;&amp;nbsp;to&#39;lov hujjatlari&lt;/div&gt;" style="shape=mxgraph.bpmn.data2;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;size=15;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="UiHGoX4MpkmT1GL6zPzg-26" vertex="1">
+          <mxGeometry x="2619" y="116" width="40" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-149" value="" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-26" source="wqq-BlN-nB3kUFDQmOtK-146" target="wqq-BlN-nB3kUFDQmOtK-148" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="2354" y="-115" as="sourcePoint" />
+            <mxPoint x="2349" y="-204" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-155" value="" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.191;exitY=0.008;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-26" source="wqq-BlN-nB3kUFDQmOtK-152" target="wqq-BlN-nB3kUFDQmOtK-154" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="2669" y="-154" as="sourcePoint" />
+            <mxPoint x="2649" y="-244" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-71" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-26" source="wqq-BlN-nB3kUFDQmOtK-70" target="wqq-BlN-nB3kUFDQmOtK-72" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="908.9999999999995" y="188.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-70" value="Kutish vaqti : 30 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;verticalLabelPosition=middle;labelBackgroundColor=#ffffff;verticalAlign=middle;align=right;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=catching;symbol=timer;labelPosition=left;labelBorderColor=none;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="UiHGoX4MpkmT1GL6zPzg-26" vertex="1">
+          <mxGeometry x="894.3333333333335" y="43.5" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-72" value="Xizmat yozishmani qabul qilish va tanishish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UiHGoX4MpkmT1GL6zPzg-26" vertex="1">
+          <mxGeometry x="858.9999999999995" y="145.5" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-73" value="10&lt;span style=&quot;background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp;min&lt;/span&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-72" vertex="1">
+          <mxGeometry x="100" y="59" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-74" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-26" source="wqq-BlN-nB3kUFDQmOtK-72" target="wqq-BlN-nB3kUFDQmOtK-75" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1069" y="-164" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-204" value="29801 tranzit hisob raqamdan mijozga tegishli hisob raqamga o&#39;tkazish uchun provodka hosil qilish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UiHGoX4MpkmT1GL6zPzg-26" vertex="1">
+          <mxGeometry x="3884" y="159" width="140" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-205" value="5 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-204" vertex="1">
+          <mxGeometry x="122.5" y="76.375" width="25.714495628535737" height="25.714495628535737" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-209" value="Hosil bo&#39;lgan provodkani &quot;Proveden&quot; holatga o&#39;tkazish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UiHGoX4MpkmT1GL6zPzg-26" vertex="1">
+          <mxGeometry x="4109" y="166" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-210" value="3 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-209" vertex="1">
+          <mxGeometry x="105" y="65" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-208" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-26" source="wqq-BlN-nB3kUFDQmOtK-204" target="wqq-BlN-nB3kUFDQmOtK-209" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="4119" y="212.92307692307668" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-214" value="Mijozning hisob raqamiga export&lt;div&gt;&amp;nbsp;akkreditiv bo&#39;yicha mablag&#39; kelib tushdi&lt;/div&gt;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=top;labelBackgroundColor=#ffffff;verticalAlign=bottom;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=throwing;symbol=general;fillColor=#ffe6cc;strokeColor=#d79b00;labelPosition=center;" parent="UiHGoX4MpkmT1GL6zPzg-26" vertex="1">
+          <mxGeometry x="4569" y="181.8888888888887" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-82" value="&lt;div&gt;&lt;b&gt;&lt;font face=&quot;Times New Roman&quot; style=&quot;font-size: 14px;&quot;&gt;Direktor&amp;nbsp;&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;&lt;font face=&quot;Times New Roman&quot; style=&quot;font-size: 14px;&quot;&gt;Operatsion departament&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;" style="swimlane;html=1;startSize=79;fontStyle=0;collapsible=0;horizontal=0;swimlaneLine=1;swimlaneFillColor=none;strokeWidth=2;whiteSpace=wrap;" parent="UiHGoX4MpkmT1GL6zPzg-2" vertex="1">
+          <mxGeometry y="1800" width="5249" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-87" value="Kutish vaqti : 30 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;verticalLabelPosition=middle;labelBackgroundColor=#ffffff;verticalAlign=middle;align=right;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=catching;symbol=timer;labelPosition=left;labelBorderColor=none;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="wqq-BlN-nB3kUFDQmOtK-82" vertex="1">
+          <mxGeometry x="1364" y="47" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-108" value="EHA" style="shape=datastore;html=1;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" parent="wqq-BlN-nB3kUFDQmOtK-82" vertex="1">
+          <mxGeometry x="1269" y="136.00000000000023" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-89" value="Tanishish va imzolash" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="wqq-BlN-nB3kUFDQmOtK-82" vertex="1">
+          <mxGeometry x="1329.461538461538" y="186.00000000000045" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-90" value="5 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-89" vertex="1">
+          <mxGeometry x="105" y="65" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-88" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="wqq-BlN-nB3kUFDQmOtK-82" source="wqq-BlN-nB3kUFDQmOtK-87" target="wqq-BlN-nB3kUFDQmOtK-89" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1389.461538461538" y="-163.99999999999955" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-109" value="" style="endArrow=none;dashed=1;html=1;rounded=0;exitX=0.85;exitY=0.95;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;entryPerimeter=0;" parent="wqq-BlN-nB3kUFDQmOtK-82" source="wqq-BlN-nB3kUFDQmOtK-108" target="wqq-BlN-nB3kUFDQmOtK-89" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1269" y="6.000000000000227" as="sourcePoint" />
+            <mxPoint x="1319" y="-173.99999999999977" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-91" value="&lt;div&gt;&lt;b&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;Direktor&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;Korporativ markaz&amp;nbsp;&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="swimlane;html=1;startSize=79;fontStyle=0;collapsible=0;horizontal=0;swimlaneLine=1;swimlaneFillColor=none;strokeWidth=2;whiteSpace=wrap;" parent="UiHGoX4MpkmT1GL6zPzg-2" vertex="1">
+          <mxGeometry y="2200" width="5249" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-97" value="Kutish vaqti : 30 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;verticalLabelPosition=middle;labelBackgroundColor=#ffffff;verticalAlign=middle;align=right;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=catching;symbol=timer;labelPosition=left;labelBorderColor=none;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="wqq-BlN-nB3kUFDQmOtK-91" vertex="1">
+          <mxGeometry x="1364.4633333333336" y="66.00000000000045" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-99" value="Tanishish va tegishli xodimga yo&#39;naltirish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="wqq-BlN-nB3kUFDQmOtK-91" vertex="1">
+          <mxGeometry x="1329.4599999999996" y="186.00000000000045" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-100" value="5 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-99" vertex="1">
+          <mxGeometry x="105" y="65" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-98" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="wqq-BlN-nB3kUFDQmOtK-91" source="wqq-BlN-nB3kUFDQmOtK-97" target="wqq-BlN-nB3kUFDQmOtK-99" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1398.9999999999995" y="226.00000000000045" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-110" value="EHA" style="shape=datastore;html=1;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" parent="wqq-BlN-nB3kUFDQmOtK-91" vertex="1">
+          <mxGeometry x="1259" y="136.00000000000023" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-111" value="" style="endArrow=none;dashed=1;html=1;rounded=0;exitX=0.85;exitY=0.95;exitDx=0;exitDy=0;exitPerimeter=0;entryX=-0.004;entryY=0.13;entryDx=0;entryDy=0;entryPerimeter=0;" parent="wqq-BlN-nB3kUFDQmOtK-91" source="wqq-BlN-nB3kUFDQmOtK-110" target="wqq-BlN-nB3kUFDQmOtK-99" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1269" y="376.0000000000002" as="sourcePoint" />
+            <mxPoint x="1319" y="196.00000000000023" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-122" value="Kutish vaqti : 30 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;verticalLabelPosition=middle;labelBackgroundColor=#ffffff;verticalAlign=middle;align=right;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=catching;symbol=timer;labelPosition=left;labelBorderColor=none;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="wqq-BlN-nB3kUFDQmOtK-91" vertex="1">
+          <mxGeometry x="1843.9952941176473" y="306" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-124" value="Tanishish va imzolash" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="wqq-BlN-nB3kUFDQmOtK-91" vertex="1">
+          <mxGeometry x="1808.9952941176473" y="186" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-125" value="3 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-124" vertex="1">
+          <mxGeometry x="105" y="65" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-123" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;" parent="wqq-BlN-nB3kUFDQmOtK-91" source="wqq-BlN-nB3kUFDQmOtK-122" target="wqq-BlN-nB3kUFDQmOtK-124" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1869.2352941176473" y="236" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-127" value="EHA" style="shape=datastore;html=1;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" parent="wqq-BlN-nB3kUFDQmOtK-91" vertex="1">
+          <mxGeometry x="1739" y="156.00000000000023" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-128" value="" style="endArrow=none;dashed=1;html=1;rounded=0;exitX=0.85;exitY=0.95;exitDx=0;exitDy=0;exitPerimeter=0;" parent="wqq-BlN-nB3kUFDQmOtK-91" source="wqq-BlN-nB3kUFDQmOtK-127" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1749" y="396.0000000000002" as="sourcePoint" />
+            <mxPoint x="1799" y="216.00000000000023" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="UfWNt4-gccrXO5sgBz6b-3" value="&lt;div&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;&lt;b&gt;Menejer&lt;/b&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;&lt;b&gt;Tranzaksion xizmat&amp;nbsp;&lt;/b&gt;&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;&lt;b&gt;(Korporativ markaz)&lt;/b&gt;&lt;/font&gt;&lt;/div&gt;&lt;/div&gt;" style="swimlane;html=1;startSize=79;fontStyle=0;collapsible=0;horizontal=0;swimlaneLine=1;swimlaneFillColor=none;strokeWidth=2;whiteSpace=wrap;" parent="UiHGoX4MpkmT1GL6zPzg-2" vertex="1">
+          <mxGeometry y="2600" width="5249" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-102" value="Kutish vaqti : 30 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;verticalLabelPosition=middle;labelBackgroundColor=#ffffff;verticalAlign=middle;align=right;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=catching;symbol=timer;labelPosition=left;labelBorderColor=none;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="UfWNt4-gccrXO5sgBz6b-3" vertex="1">
+          <mxGeometry x="1364.4599999999996" y="46" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-113" value="Xabarnomada keltirilgan ma&#39;lumotlarni ko&#39;rsatgan holda xat yaratish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UfWNt4-gccrXO5sgBz6b-3" vertex="1">
+          <mxGeometry x="1578.9999999999995" y="145.99823529411765" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-114" value="15 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-113" vertex="1">
+          <mxGeometry x="105" y="65" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-116" value="Tizimdan xatni mijozga jo&#39;natish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UfWNt4-gccrXO5sgBz6b-3" vertex="1">
+          <mxGeometry x="1809" y="146.00176470588235" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-117" value="5 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-116" vertex="1">
+          <mxGeometry x="105" y="65" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-115" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UfWNt4-gccrXO5sgBz6b-3" source="wqq-BlN-nB3kUFDQmOtK-113" target="wqq-BlN-nB3kUFDQmOtK-116" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1829" y="185.41176470588243" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-118" value="EHA" style="shape=datastore;html=1;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" parent="UfWNt4-gccrXO5sgBz6b-3" vertex="1">
+          <mxGeometry x="1799" y="76.00000000000023" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-119" value="" style="endArrow=none;dashed=1;html=1;rounded=0;exitX=0.85;exitY=0.95;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.424;entryY=0.037;entryDx=0;entryDy=0;entryPerimeter=0;" parent="UfWNt4-gccrXO5sgBz6b-3" source="wqq-BlN-nB3kUFDQmOtK-118" target="wqq-BlN-nB3kUFDQmOtK-116" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1809" y="316.0000000000002" as="sourcePoint" />
+            <mxPoint x="1859" y="136.00000000000023" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-132" value="Asoslantirilgan xat&amp;nbsp;" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=middle;labelBackgroundColor=#ffffff;verticalAlign=middle;align=right;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=message;fillColor=#f8cecc;strokeColor=#b85450;labelPosition=left;" parent="UfWNt4-gccrXO5sgBz6b-3" vertex="1">
+          <mxGeometry x="2064" y="161" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-134" value="Mijozdan tegishli hujjatlarni qabul qilish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UfWNt4-gccrXO5sgBz6b-3" vertex="1">
+          <mxGeometry x="2169" y="146" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-135" value="10 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-134" vertex="1">
+          <mxGeometry x="105" y="65" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-139" value="Export akkreditiv&lt;div&gt;&amp;nbsp;to&#39;lov hujjatlari&lt;/div&gt;" style="shape=mxgraph.bpmn.data2;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;size=15;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="UfWNt4-gccrXO5sgBz6b-3" vertex="1">
+          <mxGeometry x="2139" y="66" width="40" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-140" value="" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.125;exitY=-0.012;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UfWNt4-gccrXO5sgBz6b-3" source="wqq-BlN-nB3kUFDQmOtK-134" target="wqq-BlN-nB3kUFDQmOtK-139" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="2179" y="126" as="sourcePoint" />
+            <mxPoint x="2179" y="56" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-137" value="Tegishli tarmoqga xizmat yozishma jo&#39;natish va hujjatlarning asl nusxasini yetkazib berishni ta&#39;minlash" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UfWNt4-gccrXO5sgBz6b-3" vertex="1">
+          <mxGeometry x="2369" y="146" width="141" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-138" value="60-120 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-137" vertex="1">
+          <mxGeometry x="123.375" y="65" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-136" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UfWNt4-gccrXO5sgBz6b-3" source="wqq-BlN-nB3kUFDQmOtK-134" target="wqq-BlN-nB3kUFDQmOtK-137" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2389" y="186" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-143" value="EHA" style="shape=datastore;html=1;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" parent="UfWNt4-gccrXO5sgBz6b-3" vertex="1">
+          <mxGeometry x="2349" y="66.00000000000023" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-144" value="" style="endArrow=none;dashed=1;html=1;rounded=0;exitX=0.85;exitY=0.95;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.294;entryY=0.007;entryDx=0;entryDy=0;entryPerimeter=0;" parent="UfWNt4-gccrXO5sgBz6b-3" source="wqq-BlN-nB3kUFDQmOtK-143" target="wqq-BlN-nB3kUFDQmOtK-137" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="2359" y="306.0000000000002" as="sourcePoint" />
+            <mxPoint x="2409" y="126.00000000000023" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-104" value="Xatni va ilova qilingan ma&#39;lumotlarni ko&#39;zdan kechirish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UfWNt4-gccrXO5sgBz6b-3" vertex="1">
+          <mxGeometry x="1329.457142857143" y="146" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-105" value="20 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-104" vertex="1">
+          <mxGeometry x="105" y="65" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-103" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UfWNt4-gccrXO5sgBz6b-3" source="wqq-BlN-nB3kUFDQmOtK-102" target="wqq-BlN-nB3kUFDQmOtK-104" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1388.8571428571431" y="-164" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-112" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UfWNt4-gccrXO5sgBz6b-3" source="wqq-BlN-nB3kUFDQmOtK-104" target="wqq-BlN-nB3kUFDQmOtK-113" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1578.9999999999995" y="-163.41176470588243" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="u4vV73mcT-l_dDAUoMwu-5" value="Export akkreditiv muvaffaqiyatli yakunlandi" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=end;symbol=terminate2;fillColor=#f8cecc;strokeColor=#b85450;" parent="UfWNt4-gccrXO5sgBz6b-3" vertex="1">
+          <mxGeometry x="4829" y="145.99823529411765" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="u4vV73mcT-l_dDAUoMwu-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UfWNt4-gccrXO5sgBz6b-3" source="u4vV73mcT-l_dDAUoMwu-2" target="u4vV73mcT-l_dDAUoMwu-5" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="4799" y="171.58823529411757" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="u4vV73mcT-l_dDAUoMwu-2" value="EEISVO tizimiga tegishli export tushumni kiritish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UfWNt4-gccrXO5sgBz6b-3" vertex="1">
+          <mxGeometry x="4533.941176470588" y="131" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="u4vV73mcT-l_dDAUoMwu-3" value="20 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="u4vV73mcT-l_dDAUoMwu-2" vertex="1">
+          <mxGeometry x="105" y="65" width="25" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="UiHGoX4MpkmT1GL6zPzg-2" source="hkoUex0PBElwjzCZOY9d-5" target="hkoUex0PBElwjzCZOY9d-7" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="394" y="328" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-29" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;jumpStyle=arc;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-2" source="hkoUex0PBElwjzCZOY9d-24" target="hkoUex0PBElwjzCZOY9d-28" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hkoUex0PBElwjzCZOY9d-35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-2" source="hkoUex0PBElwjzCZOY9d-28" target="wqq-BlN-nB3kUFDQmOtK-59" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="716" y="700.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-86" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-2" source="wqq-BlN-nB3kUFDQmOtK-80" target="wqq-BlN-nB3kUFDQmOtK-87" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1388" y="1496" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-101" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-2" source="wqq-BlN-nB3kUFDQmOtK-99" target="wqq-BlN-nB3kUFDQmOtK-102" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1378.9999999999995" y="2306" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-120" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-2" source="wqq-BlN-nB3kUFDQmOtK-116" target="wqq-BlN-nB3kUFDQmOtK-122" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1869.2352941176473" y="2126" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-126" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;dashed=1;dashPattern=8 8;" parent="UiHGoX4MpkmT1GL6zPzg-2" source="wqq-BlN-nB3kUFDQmOtK-124" target="wqq-BlN-nB3kUFDQmOtK-132" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2089" y="2456" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-141" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-2" source="wqq-BlN-nB3kUFDQmOtK-137" target="wqq-BlN-nB3kUFDQmOtK-142" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2439" y="1406" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-95" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-2" source="wqq-BlN-nB3kUFDQmOtK-89" target="wqq-BlN-nB3kUFDQmOtK-97" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1389.0033333333336" y="1916.0000000000005" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-69" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-2" source="wqq-BlN-nB3kUFDQmOtK-63" target="wqq-BlN-nB3kUFDQmOtK-70" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="919.3333333333335" y="1036" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-176" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-2" source="wqq-BlN-nB3kUFDQmOtK-175" target="wqq-BlN-nB3kUFDQmOtK-178" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="3494.259259259259" y="1051" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="u4vV73mcT-l_dDAUoMwu-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="UiHGoX4MpkmT1GL6zPzg-2" source="wqq-BlN-nB3kUFDQmOtK-214" target="u4vV73mcT-l_dDAUoMwu-2" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="4593.941176470588" y="2310" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sY_wsGSpVhCODAUu-eJQ-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="UiHGoX4MpkmT1GL6zPzg-2" source="sY_wsGSpVhCODAUu-eJQ-1" target="UiHGoX4MpkmT1GL6zPzg-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sY_wsGSpVhCODAUu-eJQ-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="UiHGoX4MpkmT1GL6zPzg-2" source="sY_wsGSpVhCODAUu-eJQ-5" target="sY_wsGSpVhCODAUu-eJQ-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UiHGoX4MpkmT1GL6zPzg-56" value="&lt;div&gt;&lt;b&gt;Korporativ markaz mijozlari eksport akkreditivlarga xizmat ko&#39;rsatish&amp;nbsp;&lt;/b&gt;&lt;b style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;jarayoni&lt;/b&gt;&lt;/div&gt;" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;fontSize=41;fontFamily=Helvetica;" parent="1" vertex="1">
+          <mxGeometry x="120" y="-1038" width="5240" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="UiHGoX4MpkmT1GL6zPzg-3" value="Emitent banki ( Bank applikant )" style="swimlane;html=1;startSize=80;fontStyle=0;collapsible=0;horizontal=0;swimlaneLine=1;swimlaneFillColor=none;strokeWidth=1;whiteSpace=wrap;fontFamily=Helvetica;" parent="1" vertex="1">
+          <mxGeometry x="121" y="-858" width="5239" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-3" value="&lt;span style=&quot;font-family: Calibri; font-size: 11.29px;&quot;&gt;MT700/710 formatidagi SWIFT xabarnomasini yuboradi.&lt;/span&gt;" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UiHGoX4MpkmT1GL6zPzg-3" vertex="1">
+          <mxGeometry x="119" y="58" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-4" value="" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="wqq-BlN-nB3kUFDQmOtK-3" vertex="1">
+          <mxGeometry x="105" y="65" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="u4vV73mcT-l_dDAUoMwu-8" value="&lt;b&gt;Pochta tegishli joyga&amp;nbsp; yetib borganidan so&#39;ng ertasidan boshlab&amp;nbsp;&lt;/b&gt;&lt;b style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;5 bank ish kuni kutish&lt;/b&gt;" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;" parent="UiHGoX4MpkmT1GL6zPzg-3" vertex="1">
+          <mxGeometry x="3005" y="100" width="141" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=8 8;" parent="1" source="wqq-BlN-nB3kUFDQmOtK-3" target="UiHGoX4MpkmT1GL6zPzg-6" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UfWNt4-gccrXO5sgBz6b-4" value="&lt;font style=&quot;font-size: 14px;&quot; face=&quot;Times New Roman&quot;&gt;&lt;b&gt;&lt;br&gt;&lt;span style=&quot;color: rgb(0, 0, 0); font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; background-color: rgb(236, 236, 236); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; float: none; display: inline !important;&quot;&gt;Mijoz&amp;nbsp;&lt;/span&gt;&lt;br&gt;&lt;/b&gt;&lt;/font&gt;" style="swimlane;html=1;startSize=79;fontStyle=0;collapsible=0;horizontal=0;swimlaneLine=1;swimlaneFillColor=none;strokeWidth=2;whiteSpace=wrap;" parent="1" vertex="1">
+          <mxGeometry x="121" y="2640" width="5239" height="310" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-130" value="&lt;span style=&quot;font-size: 11.29px;&quot;&gt;Export akkreditiv bo&#39;yicha o&#39;z majburiyatlarini bajargan holda, to&#39;lov hujjatlarni bankga taqdim qilish&lt;/span&gt;" style="whiteSpace=wrap;html=1;rounded=1;fontFamily=Helvetica;" parent="UfWNt4-gccrXO5sgBz6b-4" vertex="1">
+          <mxGeometry x="2058" y="130" width="151" height="114" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-133" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.198;entryY=-0.003;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=8 8;" parent="1" source="wqq-BlN-nB3kUFDQmOtK-132" target="wqq-BlN-nB3kUFDQmOtK-130" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-131" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;dashed=1;dashPattern=8 8;" parent="1" source="wqq-BlN-nB3kUFDQmOtK-130" target="wqq-BlN-nB3kUFDQmOtK-134" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2293" y="1910" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-160" value="" style="endArrow=classic;html=1;rounded=0;dashed=1;dashPattern=8 8;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" target="wqq-BlN-nB3kUFDQmOtK-164" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="3200" y="-610" as="sourcePoint" />
+            <mxPoint x="3200" y="80" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-203" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="wqq-BlN-nB3kUFDQmOtK-202" target="wqq-BlN-nB3kUFDQmOtK-204" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="4074.333333333333" y="1020" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-202" value="Kutish vaqti : 15 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;verticalLabelPosition=middle;labelBackgroundColor=#ffffff;verticalAlign=middle;align=right;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=catching;symbol=timer;labelPosition=left;labelBorderColor=none;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="4049.894736842106" y="895.0000000000005" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-200" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="wqq-BlN-nB3kUFDQmOtK-199" target="wqq-BlN-nB3kUFDQmOtK-202" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="4074.894736842106" y="920.0000000000005" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-206" value="IABS" style="shape=datastore;html=1;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="3940" y="1010" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-207" value="" style="endArrow=none;dashed=1;html=1;rounded=0;exitX=0.819;exitY=0.462;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.008;entryY=0.32;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="wqq-BlN-nB3kUFDQmOtK-206" target="wqq-BlN-nB3kUFDQmOtK-204" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="4090" y="935.5" as="sourcePoint" />
+            <mxPoint x="4010" y="1030.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-213" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="wqq-BlN-nB3kUFDQmOtK-212" target="wqq-BlN-nB3kUFDQmOtK-214" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="4630" y="1052.8888888888887" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-212" value="Mijozga tegishli hisob raqamdan pochta xarajatlarini yechib olish" style="points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=service;" parent="1" vertex="1">
+          <mxGeometry x="4430" y="1006" width="130" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wqq-BlN-nB3kUFDQmOtK-211" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="wqq-BlN-nB3kUFDQmOtK-209" target="wqq-BlN-nB3kUFDQmOtK-212" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="4490.000000000001" y="1052.8888888888887" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="u4vV73mcT-l_dDAUoMwu-10" value="10 min" style="points=[[0.145,0.145,0],[0.5,0,0],[0.855,0.145,0],[1,0.5,0],[0.855,0.855,0],[0.5,1,0],[0.145,0.855,0],[0,0.5,0]];shape=mxgraph.bpmn.event;html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;align=center;perimeter=ellipsePerimeter;outlineConnect=0;aspect=fixed;outline=standard;symbol=timer;" parent="1" vertex="1">
+          <mxGeometry x="3251" y="300" width="28.75" height="28.75" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

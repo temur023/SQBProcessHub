@@ -88,6 +88,14 @@ export interface ProcessNode {
   role?: string // e.g. Кредитный эксперт, Робот PIX RPA
   system?: string // e.g. АБС ЦФТ, ЕПИГУ, SAP, CRM SQB
   slaMinutes?: number // ST — время выполнения операции, мин (4-ILOVA)
+  /**
+   * Время снято с карты, а не подставлено импортом.
+   *
+   * Когда в подписи шага времени нет, импорт ставит правдоподобное значение по
+   * категории. Для расчёта SLA это нужно, но на карте такое время рисовать
+   * нельзя: аналитик видит у шага часы с цифрой и считает её замером.
+   */
+  slaMeasured?: boolean
   waitMinutes?: number // WT — время ожидания перед операцией, мин (4-ILOVA)
   costPerExecution?: number // In UZS
   automationPotential?: number // 0-100%

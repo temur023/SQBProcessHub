@@ -59,6 +59,12 @@ ARTIFACT_NODE_TYPES = ('dataStore', 'dataObject', 'textAnnotation')
 #: Узлы, которые считаются шагами регламента (4-ILOVA).
 TASK_NODE_TYPES = ('task', 'userTask', 'serviceTask', 'subProcess')
 
+#: Шлюзы — точки ветвления потока. Двойник `GATEWAY_NODE_TYPES` из
+#: `app/src/types/process.ts`.
+GATEWAY_NODE_TYPES = (
+    'exclusiveGateway', 'parallelGateway', 'inclusiveGateway', 'complexGateway',
+)
+
 #: Вид соединения (2-ILOVA: Birlashtiruvchi elementlar / Flows).
 #: ``annotationLine`` — оформительская линия draw.io, у которой хотя бы один
 #: конец висит в пустоте (разделители этапов). В BPMN и PIX такой конструкции
@@ -101,6 +107,13 @@ class ProcessNode(BaseModel):
     role: Optional[str] = None
     system: Optional[str] = None
     slaMinutes: Optional[int] = 30       # ST — время выполнения операции, мин (4-ILOVA)
+    #: Время СНЯТО С КАРТЫ, а не подставлено импортом.
+    #:
+    #: Когда в подписи шага времени нет, импорт ставит правдоподобное значение
+    #: по категории (ручная операция — час, согласование — три). Для расчёта SLA
+    #: это разумно, но на карте такое время рисовать нельзя: аналитик видит у
+    #: шага часы с цифрой «1 ч» и считает, что кто-то её замерил.
+    slaMeasured: bool = False
     waitMinutes: Optional[int] = 0       # WT — время ожидания перед операцией, мин (4-ILOVA)
     costPerExecution: Optional[int] = 5000
     automationPotential: Optional[int] = 50
