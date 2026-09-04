@@ -527,10 +527,50 @@ def _candidate_routes(start: Point, d0: Direction, end: Point, d1: Direction) ->
     return routes
 
 
+#: Крюк короче этого считаем допустимым: обход препятствия честно ходит назад.
+_UTURN_TOLERANCE = 40.0
+
+
+def _doubles_back(route: Sequence[Point]) -> bool:
+    """Ломаная уходит в одну сторону и заметно возвращается обратно.
+
+    Так выглядит связь, у которой ус направлен прочь от цели: линия делает
+    двадцать пикселей вправо, разворачивается и идёт влево через собственную
+    фигуру. На карте это читается как поворот на 180°, и аналитик не понимает,
+    куда ведёт связь.
+
+    Считаем по каждой оси отдельно: если ход вперёд и ход назад сопоставимы,
+    значит линия ходила и вернулась.
+
+    Правило намеренно грубое: под него попадает и честный обход «вверх, вбок,
+    вниз», у которого возврат по одной оси компенсирован продвижением по
+    другой. Отделять одно от другого пробовали — развороты выросли с 19 до 27,
+    а линий сквозь фигуры стало больше: обход, за который никто не штрафует,
+    трассировщик начинает выбирать и там, где он не нужен. Цена ошибки здесь
+    невелика: пересечение стоит дороже разворота, поэтому обход, которым
+    действительно обходят фигуру, правило не отменяет.
+    """
+    for axis in (0, 1):
+        steps = [b[axis] - a[axis] for a, b in zip(route, route[1:])
+                 if abs(b[axis] - a[axis]) > _EPS]
+        if not steps:
+            continue
+        forward = sum(s for s in steps if s > 0)
+        backward = -sum(s for s in steps if s < 0)
+        detour = min(forward, backward)
+        if detour > _UTURN_TOLERANCE and detour > abs(forward - backward) * 0.5:
+            return True
+    return False
+
+
 def _route_cost(route: Sequence[Point], obstacles: Optional[Obstacles],
                 exclude: Sequence[str],
-                corridors: Optional[Corridors] = None) -> Tuple[int, int, float]:
-    """Чем маршрут хуже: сначала пересечения, потом изломы, потом длина.
+                corridors: Optional[Corridors] = None) -> Tuple[int, int, int, float]:
+    """Чем маршрут хуже: пересечения, разворот, изломы, длина — в этом порядке.
+
+    Разворот стоит сразу после пересечений: линия, ушедшая от цели и
+    вернувшаяся, читается как ошибка чертежа. Уступает он только обходу — если
+    вернуться назад можно лишь так, это лучше, чем пройти сквозь чужой шаг.
 
     Совпадение с уже проложенными связями входит в последний член: линия,
     легшая поверх соседней, не ошибка модели, но на карте её не видно.
@@ -539,7 +579,7 @@ def _route_cost(route: Sequence[Point], obstacles: Optional[Obstacles],
     length = sum(abs(b[0] - a[0]) + abs(b[1] - a[1]) for a, b in zip(route, route[1:]))
     if corridors is not None:
         length += _CORRIDOR_WEIGHT * corridors.overlap(route)
-    return (pierced, max(len(route) - 2, 0), length)
+    return (pierced, int(_doubles_back(route)), max(len(route) - 2, 0), length)
 
 
 # ── Трассировка в обход препятствий ─────────────────────────────────────────
@@ -735,12 +775,46 @@ def _stub_reverses(start: Point, d0: Direction, end: Point) -> bool:
 
     Разворот считается настоящим, только если цель ЯВНО позади: сдвиг по
     перпендикуляру не должен перевешивать. Иначе под правило попадёт обычная
-    связь к соседу сбоку, у которой ус чуть-чуть заходит за край.
+    связь к соседу сбоку, у которой ус чуть-чуть заходит за край, и разворотов
+    станет больше, а не меньше — проверено замером.
     """
     along = (end[0] - start[0]) * d0[0] + (end[1] - start[1]) * d0[1]
     across = abs((end[0] - start[0]) * d0[1] - (end[1] - start[1]) * d0[0])
     return along < -STUB and abs(along) > across
 
+
+
+def _unwind_bent_route(
+    src: ProcessNode,
+    tgt: ProcessNode,
+    placed: Optional[Dict[str, Tuple[int, int]]],
+    bends: Sequence[Point],
+    d0: Direction,
+    d1: Direction,
+    obstacles: Optional[Obstacles],
+    exclude: Sequence[str],
+    fallback: List[Point],
+) -> List[Point]:
+    """Перебирает грани выхода и входа, пока ломаная не перестанет разворачиваться.
+
+    Изломы аналитика остаются на месте — меняется только то, из какой грани
+    линия выходит и в какую входит. Разворот почти всегда родом отсюда: ус
+    уходит прочь от первого излома и тут же возвращается, пересекая фигуру, из
+    которой вышел.
+    """
+    best = fallback
+    best_cost = _route_cost(fallback, obstacles, exclude)
+    for alt0 in _ALL_DIRECTIONS:
+        for alt1 in _ALL_DIRECTIONS:
+            start = _anchor_for(src, alt0, placed, leaving=True)
+            end = _anchor_for(tgt, alt1, placed, leaving=False)
+            route = _route_through_bends([start, *bends, end], alt0, alt1)
+            cost = _route_cost(route, obstacles, exclude)
+            if cost < best_cost:
+                best, best_cost = route, cost
+            if best_cost[:2] == (0, 0):
+                return best
+    return best
 
 
 def _reroute_through_bends(
@@ -818,7 +892,9 @@ def _best_route(
     """
     best = min(_candidate_routes(start, d0, end, d1),
                key=lambda r: _route_cost(r, obstacles, exclude, corridors))
-    if obstacles is None or _route_cost(best, obstacles, exclude)[0] == 0:
+    if obstacles is None:
+        return best
+    if _route_cost(best, obstacles, exclude)[:2] == (0, 0):
         return best
 
     # Заготовки не подошли — ищем путь по-настоящему.
@@ -989,12 +1065,22 @@ def orthogonal_waypoints(
         # перестраивается — сначала по тем же изломам, но с обходом между
         # ними, и лишь потом целиком заново.
         bends = [(float(p.x), float(p.y)) for p in edge.points]
+        # Ус, направленный прочь от первого излома, разворачивает линию так же,
+        # как и прочь от цели: проверяем по тому, куда аналитик повёл линию.
+        if _stub_reverses(start, d0, bends[0]):
+            d0 = _axis_towards(start, bends[0])
+            start = anchor_point(src, 0.5 + d0[0] * 0.5, 0.5 + d0[1] * 0.5, placed)
+        if _stub_reverses(end, (-d1[0], -d1[1]), bends[-1]):
+            d1 = _axis_towards(bends[-1], end)
+            end = anchor_point(tgt, 0.5 - d1[0] * 0.5, 0.5 - d1[1] * 0.5, placed)
         route = _route_through_bends([start, *bends, end], d0, d1)
-        if obstacles is not None:
-            exclude = (src.id, tgt.id)
-            if _route_cost(route, obstacles, exclude)[0]:
-                route = _reroute_through_bends(
-                    start, d0, bends, end, d1, obstacles, exclude, route)
+        exclude = (src.id, tgt.id)
+        if _doubles_back(route):
+            route = _unwind_bent_route(
+                src, tgt, placed, bends, d0, d1, obstacles, exclude, route)
+        if obstacles is not None and _route_cost(route, obstacles, exclude)[0]:
+            route = _reroute_through_bends(
+                start, d0, bends, end, d1, obstacles, exclude, route)
     else:
         # Изломов аналитик не ставил — значит и лесенки в ломаной быть не
         # должно: если фигуры стоят друг напротив друга, связь прямая.
